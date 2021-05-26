@@ -1,0 +1,10 @@
+{
+  "domain": "sunspec",
+  "name": "SunSpec",
+  "documentation": "https://github.com/cjne/ha-sunspec",
+  "issue_tracker": "https://github.com/cjne/ha-sunspec/issues",
+  "dependencies": [],
+  "config_flow": true,
+  "codeowners": ["@cjne"],
+  "requirements": []
+}

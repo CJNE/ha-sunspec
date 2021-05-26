@@ -1,0 +1,10 @@
+{
+  "_template": "gh:oncleben31/cookiecutter-homeassistant-custom-component",
+  "class_name_prefix": "SunSpec",
+  "domain_name": "sunspec",
+  "friendly_name": "SunSpec",
+  "github_user": "cjne",
+  "project_name": "ha-sunspec",
+  "test_suite": "yes",
+  "version": "0.0.1"
+}
