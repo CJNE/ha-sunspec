@@ -1,21 +1,23 @@
 """Adds config flow for SunSpec."""
 import voluptuous as vol
+import logging
 from homeassistant import config_entries
 from homeassistant.core import callback
-from homeassistant.helpers.aiohttp_client import async_create_clientsession
+import homeassistant.helpers.config_validation as cv
 
 from .api import SunSpecApiClient
-from .const import CONF_PASSWORD
-from .const import CONF_USERNAME
+from .const import CONF_HOST
+from .const import CONF_PORT
+from .const import CONF_ENABLED_MODELS
 from .const import DOMAIN
-from .const import PLATFORMS
 
+_LOGGER: logging.Logger = logging.getLogger(__package__)
 
 class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for sunspec."""
 
     VERSION = 1
-    CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_POLL
+    CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_POLL
 
     def __init__(self):
         """Initialize."""
@@ -24,21 +26,22 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(self, user_input=None):
         """Handle a flow initialized by the user."""
         self._errors = {}
-
-        # Uncomment the next 2 lines if only a single instance of the integration is allowed:
-        # if self._async_current_entries():
-        #     return self.async_abort(reason="single_instance_allowed")
-
         if user_input is not None:
-            valid = await self._test_credentials(
-                user_input[CONF_USERNAME], user_input[CONF_PASSWORD]
+            host = user_input[CONF_HOST]
+            port = user_input[CONF_PORT]
+            valid = await self._test_connection(
+                host, port
             )
             if valid:
+                uid =self._device_info.getValue('SN')
+                await self.async_set_unique_id(uid)
+                self._abort_if_unique_id_configured(updates={CONF_HOST: host, CONF_PORT: port})
+                title = self._device_info.getValue('Mn')+' '+self._device_info.getValue('Md')
                 return self.async_create_entry(
-                    title=user_input[CONF_USERNAME], data=user_input
+                    title=title, data=user_input
                 )
-            else:
-                self._errors["base"] = "auth"
+
+            self._errors["base"] = "connection"
 
             return await self._show_config_form(user_input)
 
@@ -54,19 +57,20 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema(
-                {vol.Required(CONF_USERNAME): str, vol.Required(CONF_PASSWORD): str}
+                {vol.Required(CONF_HOST): str, vol.Required(CONF_PORT, default=502): int}
             ),
             errors=self._errors,
         )
 
-    async def _test_credentials(self, username, password):
+    async def _test_connection(self, host, port):
         """Return true if credentials is valid."""
         try:
-            session = async_create_clientsession(self.hass)
-            client = SunSpecApiClient(username, password, session)
-            await client.async_get_data()
+            client = SunSpecApiClient(host, port, 1, self.hass)
+            self._device_info = await client.async_get_device_info()
+            _LOGGER.info(self._device_info)
             return True
-        except Exception:  # pylint: disable=broad-except
+        except Exception as e:  # pylint: disable=broad-except
+            _LOGGER.error("Failed to connect to host %s:%s - %s", host, port, e)
             pass
         return False
 
@@ -78,23 +82,28 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
         """Initialize HACS options flow."""
         self.config_entry = config_entry
         self.options = dict(config_entry.options)
+        self.coordinator = None
 
     async def async_step_init(self, user_input=None):  # pylint: disable=unused-argument
         """Manage the options."""
-        return await self.async_step_user()
+        self.coordinator = self.hass.data[DOMAIN][self.config_entry.entry_id]
+        return await self.async_step_model_options()
 
-    async def async_step_user(self, user_input=None):
+    async def async_step_model_options(self, user_input=None):
         """Handle a flow initialized by the user."""
         if user_input is not None:
             self.options.update(user_input)
             return await self._update_options()
 
+        models = set(await self.coordinator.api.async_get_models())
+        model_filter = {str(model): str(model) for model in sorted(models)}
         return self.async_show_form(
-            step_id="user",
+            step_id="model_options",
             data_schema=vol.Schema(
                 {
-                    vol.Required(x, default=self.options.get(x, True)): bool
-                    for x in sorted(PLATFORMS)
+                vol.Optional(
+                    CONF_ENABLED_MODELS, default=self.coordinator.option_model_filter
+                ): cv.multi_select(model_filter),
                 }
             ),
         )
@@ -102,5 +111,5 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
     async def _update_options(self):
         """Update config entry options."""
         return self.async_create_entry(
-            title=self.config_entry.data.get(CONF_USERNAME), data=self.options
+            title="", data=self.options
         )

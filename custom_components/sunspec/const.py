@@ -5,7 +5,7 @@ DOMAIN = "sunspec"
 DOMAIN_DATA = f"{DOMAIN}_data"
 VERSION = "0.0.1"
 
-ATTRIBUTION = "Data provided by http://jsonplaceholder.typicode.com/"
+ATTRIBUTION = "Data provided by SunSpec alliance - https://sunspec.org"
 ISSUE_URL = "https://github.com/cjne/ha-sunspec/issues"
 
 # Icons
@@ -18,16 +18,21 @@ BINARY_SENSOR_DEVICE_CLASS = "connectivity"
 BINARY_SENSOR = "binary_sensor"
 SENSOR = "sensor"
 SWITCH = "switch"
-PLATFORMS = [BINARY_SENSOR, SENSOR, SWITCH]
+PLATFORMS = [SENSOR]
 
 
 # Configuration and options
 CONF_ENABLED = "enabled"
-CONF_USERNAME = "username"
-CONF_PASSWORD = "password"
+CONF_HOST = "host"
+CONF_PORT = "port"
+CONF_ENABLED_MODELS = "models_enabled"
 
+DEFAULT_MODELS = set([101, 102, 103, 201, 202, 203,204, 307, 308, 401, 402, 403, 404, 501, 502, 601, 701, 801, 802, 803,
+    804, 805, 806, 808, 809])
 # Defaults
 DEFAULT_NAME = DOMAIN
+
+STATE_NAMES = ['Unknonwn', 'Off', 'Sleeping', 'Starting', 'Mppt', 'Throttled', 'Shutting down', 'Fault', 'Standby']
 
 
 STARTUP_MESSAGE = f"""
@@ -39,3 +44,4 @@ If you have any issues with this you need to open an issue here:
 {ISSUE_URL}
 -------------------------------------------------------------------
 """
+

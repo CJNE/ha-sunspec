@@ -1,10 +1,11 @@
 {
   "domain": "sunspec",
   "name": "SunSpec",
+  "version": "0.0.1",
   "documentation": "https://github.com/cjne/ha-sunspec",
   "issue_tracker": "https://github.com/cjne/ha-sunspec/issues",
   "dependencies": [],
   "config_flow": true,
   "codeowners": ["@cjne"],
-  "requirements": []
+  "requirements": ["pysunspec2==1.0.4"]
 }

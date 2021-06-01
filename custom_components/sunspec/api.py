@@ -1,75 +1,104 @@
 """Sample API Client."""
 import asyncio
 import logging
-import socket
+import time
 
-import aiohttp
-import async_timeout
+from homeassistant.core import HomeAssistant
+import sunspec2.modbus.client as client
 
 TIMEOUT = 10
 
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
-HEADERS = {"Content-type": "application/json; charset=UTF-8"}
+class SunSpecModelWrapper:
+    def __init__(
+        self, models
+    ) -> None:
+        """Sunspec model wrapper"""
+        self._models = models
+        self.num_models = len(models)
 
+    def isValidPoint(self, point_name):
+        point = self.getPoint(point_name)
+        if point.value is None:
+            return False
+        if point.pdef.get('units', None) is None:
+            return False
+        return True
+
+    def getKeys(self):
+        keys = list(filter(self.isValidPoint, self._models[0].points.keys()))
+        for group_name in self._models[0].groups:
+            for idx, group in enumerate(self._models[0].groups[group_name]):
+                key_prefix = f"{group_name}:{idx}"
+                group_keys = map(lambda gp: f"{key_prefix}:{gp}", group.points.keys())
+                keys.extend(filter(self.isValidPoint, group_keys))
+        return keys
+
+    def getValue(self, point_name, model_index = 0):
+        point = self.getPoint(point_name, model_index)
+        if point.cvalue is None:
+            return point.value
+        return point.cvalue
+
+    def getMeta(self, point_name):
+        return self.getPoint(point_name).pdef
+
+    def getGroupMeta(self):
+        return self._models[0].gdef
+
+    def getPoint(self, point_name, model_index = 0):
+        point_path = point_name.split(":")
+        if len(point_path) == 1:
+            return self._models[model_index].points[point_name]
+        return self._models[model_index].groups[point_path[0]][int(point_path[1])].points[point_path[2]]
 
 class SunSpecApiClient:
     def __init__(
-        self, username: str, password: str, session: aiohttp.ClientSession
+            self, host: str, port: int, model: int, hass: HomeAssistant
     ) -> None:
-        """Sample API Client."""
-        self._username = username
-        self._passeword = password
-        self._session = session
+        """Sunspec modbus client."""
+        self._host = host
+        self._port = port
+        self._model = model
+        self._hass = hass
+        self._client = None
 
-    async def async_get_data(self) -> dict:
-        """Get data from the API."""
-        url = "https://jsonplaceholder.typicode.com/posts/1"
-        return await self.api_wrapper("get", url)
+    async def async_get_data(self, model_id) -> SunSpecModelWrapper:
+        return await self.read(model_id)
 
-    async def async_set_title(self, value: str) -> None:
-        """Get data from the API."""
-        url = "https://jsonplaceholder.typicode.com/posts/1"
-        await self.api_wrapper("patch", url, data={"title": value}, headers=HEADERS)
+    async def read(self, model_id) -> SunSpecModelWrapper:
+        return await self._hass.async_add_executor_job(self.read_model, model_id)
 
-    async def api_wrapper(
-        self, method: str, url: str, data: dict = {}, headers: dict = {}
-    ) -> dict:
-        """Get information from the API."""
-        try:
-            async with async_timeout.timeout(TIMEOUT, loop=asyncio.get_event_loop()):
-                if method == "get":
-                    response = await self._session.get(url, headers=headers)
-                    return await response.json()
+    async def async_get_device_info(self) -> SunSpecModelWrapper:
+        return await self.read(1)
 
-                elif method == "put":
-                    await self._session.put(url, headers=headers, json=data)
+    async def async_get_models(self) -> list:
+        if self._client is None:
+            await self._hass.async_add_executor_job(self.modbus_connect)
+        model_ids = sorted(list(filter(lambda m: type(m) is int, self._client.models.keys())))
+        return model_ids
 
-                elif method == "patch":
-                    await self._session.patch(url, headers=headers, json=data)
+    def close(self):
+        self._client.close()
 
-                elif method == "post":
-                    await self._session.post(url, headers=headers, json=data)
+    def reconnect(self):
+        _LOGGER.debug("Client reconnecting")
+        self._client.connect()
 
-        except asyncio.TimeoutError as exception:
-            _LOGGER.error(
-                "Timeout error fetching information from %s - %s",
-                url,
-                exception,
-            )
+    def modbus_connect(self):
+        _LOGGER.debug("Client connect")
+        self._client = client.SunSpecModbusClientDeviceTCP(slave_id=1, ipaddr=self._host, ipport=self._port)
+        self._client.scan()
 
-        except (KeyError, TypeError) as exception:
-            _LOGGER.error(
-                "Error parsing information from %s - %s",
-                url,
-                exception,
-            )
-        except (aiohttp.ClientError, socket.gaierror) as exception:
-            _LOGGER.error(
-                "Error fetching information from %s - %s",
-                url,
-                exception,
-            )
-        except Exception as exception:  # pylint: disable=broad-except
-            _LOGGER.error("Something really wrong happened! - %s", exception)
+    def read_model(self, model_id) -> dict:
+        if self._client is None:
+            self.modbus_connect()
+        models = self._client.models[model_id]
+        for model in models:
+            model.read()
+            time.sleep(0.6)
+
+        return SunSpecModelWrapper(models)
+

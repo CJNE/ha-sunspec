@@ -5,13 +5,13 @@
         "title": "SunSpec",
         "description": "If you need help with the configuration have a look here: https://github.com/cjne/ha-sunspec",
         "data": {
-          "username": "Username",
-          "password": "Password"
+          "host": "Hostname/IP",
+          "port": "Port (usually 502)"
         }
       }
     },
     "error": {
-      "auth": "Username/Password is wrong."
+      "connection": "Failed to connect, check hostname and port"
     },
     "abort": {
       "single_instance_allowed": "Only a single instance is allowed."
@@ -21,9 +21,7 @@
     "step": {
       "user": {
         "data": {
-          "binary_sensor": "Binary sensor enabled",
-          "sensor": "Sensor enabled",
-          "switch": "Switch enabled"
+          "sensor": "Sensor enabled"
         }
       }
     }

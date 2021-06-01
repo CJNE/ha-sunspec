@@ -13,11 +13,9 @@
 
 | Platform        | Description                         |
 | --------------- | ----------------------------------- |
-| `binary_sensor` | Show something `True` or `False`.   |
 | `sensor`        | Show info from API.                 |
-| `switch`        | Switch something `True` or `False`. |
 
-![example][exampleimg]
+![logo][logoimg]
 
 {% if not installed %}
 
@@ -49,7 +47,7 @@ Code template was mainly taken from [@Ludeeus](https://github.com/ludeeus)'s [in
 [hacsbadge]: https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge
 [discord]: https://discord.gg/Qa5fW2R
 [discord-shield]: https://img.shields.io/discord/330944238910963714.svg?style=for-the-badge
-[exampleimg]: example.png
+[logoimg]: logo.png
 [forum-shield]: https://img.shields.io/badge/community-forum-brightgreen.svg?style=for-the-badge
 [forum]: https://community.home-assistant.io/
 [license]: https://github.com/cjne/ha-sunspec/blob/main/LICENSE

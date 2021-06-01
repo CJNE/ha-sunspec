@@ -17,8 +17,11 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from .api import SunSpecApiClient
-from .const import CONF_PASSWORD
-from .const import CONF_USERNAME
+from .api import SunSpecModelWrapper
+from .const import CONF_HOST
+from .const import CONF_PORT
+from .const import CONF_ENABLED_MODELS
+from .const import DEFAULT_MODELS
 from .const import DOMAIN
 from .const import PLATFORMS
 from .const import STARTUP_MESSAGE
@@ -39,13 +42,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         hass.data.setdefault(DOMAIN, {})
         _LOGGER.info(STARTUP_MESSAGE)
 
-    username = entry.data.get(CONF_USERNAME)
-    password = entry.data.get(CONF_PASSWORD)
+    host = entry.data.get(CONF_HOST)
+    port = entry.data.get(CONF_PORT)
 
-    session = async_get_clientsession(hass)
-    client = SunSpecApiClient(username, password, session)
+    client = SunSpecApiClient(host, port, 1, hass)
 
-    coordinator = SunSpecDataUpdateCoordinator(hass, client=client)
+    coordinator = SunSpecDataUpdateCoordinator(hass, client=client, options=entry.options)
     await coordinator.async_refresh()
 
     if not coordinator.last_update_success:
@@ -71,18 +73,27 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
         self,
         hass: HomeAssistant,
         client: SunSpecApiClient,
+        options: dict
     ) -> None:
         """Initialize."""
         self.api = client
+        self.options = options
         self.platforms = []
-
+        self.option_model_filter = set(map(lambda m: int(m), options.get(CONF_ENABLED_MODELS, DEFAULT_MODELS)))
         super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=SCAN_INTERVAL)
 
     async def _async_update_data(self):
         """Update data via library."""
+        data = {}
+        model_ids = self.option_model_filter & set(await self.api.async_get_models())
         try:
-            return await self.api.async_get_data()
+            for model_id in model_ids:
+                data[model_id] = await self.api.async_get_data(model_id)
+            self.api.close()
+            return data
         except Exception as exception:
+            _LOGGER.error(exception)
+            self.api.reconnect()
             raise UpdateFailed() from exception
 
 
