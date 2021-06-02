@@ -27,3 +27,6 @@ class SunSpecEntity(CoordinatorEntity):
             "manufacturer": self._device_data.getValue('Mn'),
         }
 
+
+
+
