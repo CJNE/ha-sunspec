@@ -86,7 +86,7 @@ async def async_setup_entry(hass, entry, async_add_devices):
 class SunSpecSensor(SunSpecEntity):
     """sunspec Sensor class."""
     def __init__(self, coordinator, config_entry, data):
-        super().__init__(coordinator, config_entry)
+        super().__init__(coordinator, config_entry, data['device_info'])
         self.use_icon = ICON_DEFAULT
         self.model_id = data['model_id']
         self.model_index = data['model_index']
@@ -94,9 +94,10 @@ class SunSpecSensor(SunSpecEntity):
         self.key = data['key']
         self._meta = self.model_wrapper.getMeta(self.key)
         self._group_meta = self.model_wrapper.getGroupMeta()
-        self.unit = HA_UNITS.get(self._meta['units'], self._meta['units'])
+        sunspec_unit = self._meta.get('units', '')
+        self.unit = HA_UNITS.get(sunspec_unit, sunspec_unit)
         self._uniqe_id = f"{config_entry.entry_id}_{self.key}-{self.model_id}-{self.model_index}"
-        _LOGGER.debug(f"Init sensor {self._uniqe_id}")
+        #_LOGGER.debug(f"Init sensor {self._uniqe_id}")
         self._device_id = config_entry.entry_id
         name = self._group_meta.get('name', str(self.model_id))
         if(self.model_index > 0):
@@ -106,12 +107,9 @@ class SunSpecSensor(SunSpecEntity):
             name = f"{name} {key_parts[0]} {key_parts[1]}"
 
         self._name = f"{name.capitalize()} {self._meta.get('desc', self._meta.get('label', self.key))}"
-        self._device_info = {
-            "identifiers": {(DOMAIN, config_entry.entry_id)},
-            "name": data['device_info'].getValue('Md'),
-            "model": data['device_info'].getValue('Vr'),
-            "manufacturer": data['device_info'].getValue('Mn'),
-        }
+
+    #def async_will_remove_from_hass(self):
+    #    _LOGGER.debug(f"Will remove sensor {self._uniqe_id}")
 
     @property
     def name(self):
@@ -124,18 +122,23 @@ class SunSpecSensor(SunSpecEntity):
         return self._uniqe_id
 
     @property
-    def device_info(self):
-        return self._device_info
-
-    @property
     def state(self):
         """Return the state of the sensor."""
         val = self.coordinator.data[self.model_id].getValue(self.key, self.model_index)
         vtype = self._meta['type']
-        if vtype == 'enum16':
-            return self._meta['symbols'][val - 1]
-        if vtype in('bitfield32', 'bitfield16'):
-            return self._meta['symbols'][val]
+        if vtype in ('enum16', 'bitfield32'):
+            symbols = self._meta.get('symbols', None)
+            if symbols is None:
+                return val
+            if vtype == 'enum16': 
+                symbol = list(filter(lambda s: s['value'] == val, symbols))
+                if len(symbol) == 1:
+                    return symbol[0]['name']
+            else:
+                symbols = list(filter(lambda s: (val >> int(s['value'])) & 1 == 1, symbols))
+                if len(symbols) > 0:
+                    return ",".join(map(lambda s: s['name'], symbols))
+                return ""
         return val
 
     @property

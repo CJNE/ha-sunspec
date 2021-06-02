@@ -34,11 +34,12 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             )
             if valid:
                 uid =self._device_info.getValue('SN')
+                _LOGGER.debug(f"Sunspec device unique id: {uid}")
                 await self.async_set_unique_id(uid)
+
                 self._abort_if_unique_id_configured(updates={CONF_HOST: host, CONF_PORT: port})
-                title = self._device_info.getValue('Mn')+' '+self._device_info.getValue('Md')
                 return self.async_create_entry(
-                    title=title, data=user_input
+                    title='', data=user_input
                 )
 
             self._errors["base"] = "connection"
@@ -65,7 +66,7 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     async def _test_connection(self, host, port):
         """Return true if credentials is valid."""
         try:
-            client = SunSpecApiClient(host, port, 1, self.hass)
+            client = SunSpecApiClient(host, port, self.hass)
             self._device_info = await client.async_get_device_info()
             _LOGGER.info(self._device_info)
             return True

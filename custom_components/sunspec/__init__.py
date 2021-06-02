@@ -45,9 +45,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     host = entry.data.get(CONF_HOST)
     port = entry.data.get(CONF_PORT)
 
-    client = SunSpecApiClient(host, port, 1, hass)
+    _LOGGER.debug(f"Setup entry")
+    client = SunSpecApiClient(host, port, hass)
 
-    coordinator = SunSpecDataUpdateCoordinator(hass, client=client, options=entry.options)
+    unsub = entry.add_update_listener(async_reload_entry)
+
+    coordinator = SunSpecDataUpdateCoordinator(hass, client=client, options=entry.options, unsub=unsub)
     await coordinator.async_refresh()
 
     if not coordinator.last_update_success:
@@ -56,15 +59,36 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
     for platform in PLATFORMS:
-        if entry.options.get(platform, True):
-            coordinator.platforms.append(platform)
-            hass.async_add_job(
-                hass.config_entries.async_forward_entry_setup(entry, platform)
-            )
+        hass.async_add_job(
+            hass.config_entries.async_forward_entry_setup(entry, platform)
+        )
 
-    entry.add_update_listener(async_reload_entry)
+
     return True
 
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Handle removal of an entry."""
+
+    _LOGGER.debug(f"Unload entry")
+    unloaded = all(
+        await asyncio.gather(
+            *[
+                hass.config_entries.async_forward_entry_unload(entry, platform)
+                for platform in PLATFORMS
+            ]
+        )
+    )
+    if unloaded:
+        coordinator = hass.data[DOMAIN].pop(entry.entry_id)
+        coordinator.unsub()
+
+    return unloaded
+
+
+async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Reload config entry."""
+    await async_unload_entry(hass, entry)
+    await async_setup_entry(hass, entry)
 
 class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching data from the API."""
@@ -73,13 +97,14 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
         self,
         hass: HomeAssistant,
         client: SunSpecApiClient,
-        options: dict
+        options: dict,
+        unsub
     ) -> None:
         """Initialize."""
         self.api = client
         self.options = options
-        self.platforms = []
         self.option_model_filter = set(map(lambda m: int(m), options.get(CONF_ENABLED_MODELS, DEFAULT_MODELS)))
+        self.unsub = unsub
         super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=SCAN_INTERVAL)
 
     async def _async_update_data(self):
@@ -97,25 +122,3 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
             raise UpdateFailed() from exception
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Handle removal of an entry."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
-    unloaded = all(
-        await asyncio.gather(
-            *[
-                hass.config_entries.async_forward_entry_unload(entry, platform)
-                for platform in PLATFORMS
-                if platform in coordinator.platforms
-            ]
-        )
-    )
-    if unloaded:
-        hass.data[DOMAIN].pop(entry.entry_id)
-
-    return unloaded
-
-
-async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Reload config entry."""
-    await async_unload_entry(hass, entry)
-    await async_setup_entry(hass, entry)

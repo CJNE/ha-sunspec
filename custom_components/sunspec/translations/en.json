@@ -2,11 +2,11 @@
   "config": {
     "step": {
       "user": {
-        "title": "SunSpec",
+        "title": "SunSpec Modbus TCP connection",
         "description": "If you need help with the configuration have a look here: https://github.com/cjne/ha-sunspec",
         "data": {
           "host": "Hostname/IP",
-          "port": "Port (usually 502)"
+          "port": "Port"
         }
       }
     },
@@ -19,9 +19,9 @@
   },
   "options": {
     "step": {
-      "user": {
+      "model_options": {
         "data": {
-          "sensor": "Sensor enabled"
+          "models_enabled": "Read models"
         }
       }
     }
