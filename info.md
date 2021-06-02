@@ -11,9 +11,9 @@
 
 **This component will set up the following platforms.**
 
-| Platform        | Description                         |
-| --------------- | ----------------------------------- |
-| `sensor`        | Show info from API.                 |
+| Platform | Description         |
+| -------- | ------------------- |
+| `sensor` | Show info from API. |
 
 ![logo][logoimg]
 

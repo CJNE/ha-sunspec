@@ -1,20 +1,18 @@
 """Sample API Client."""
-import asyncio
 import logging
 import time
 
-from homeassistant.core import HomeAssistant
 import sunspec2.modbus.client as modbus_client
+from homeassistant.core import HomeAssistant
 
 TIMEOUT = 5
 
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
+
 class SunSpecModelWrapper:
-    def __init__(
-        self, models
-    ) -> None:
+    def __init__(self, models) -> None:
         """Sunspec model wrapper"""
         self._models = models
         self.num_models = len(models)
@@ -23,9 +21,9 @@ class SunSpecModelWrapper:
         point = self.getPoint(point_name)
         if point.value is None:
             return False
-        if point.pdef['type'] in ('enum16', 'bitfield32'):
+        if point.pdef["type"] in ("enum16", "bitfield32"):
             return True
-        if point.pdef.get('units', None) is None:
+        if point.pdef.get("units", None) is None:
             return False
         return True
 
@@ -38,7 +36,7 @@ class SunSpecModelWrapper:
                 keys.extend(filter(self.isValidPoint, group_keys))
         return keys
 
-    def getValue(self, point_name, model_index = 0):
+    def getValue(self, point_name, model_index=0):
         point = self.getPoint(point_name, model_index)
         if point.cvalue is None:
             return point.value
@@ -50,18 +48,21 @@ class SunSpecModelWrapper:
     def getGroupMeta(self):
         return self._models[0].gdef
 
-    def getPoint(self, point_name, model_index = 0):
+    def getPoint(self, point_name, model_index=0):
         point_path = point_name.split(":")
         if len(point_path) == 1:
             return self._models[model_index].points[point_name]
-        return self._models[model_index].groups[point_path[0]][int(point_path[1])].points[point_path[2]]
+        return (
+            self._models[model_index]
+            .groups[point_path[0]][int(point_path[1])]
+            .points[point_path[2]]
+        )
 
 
 class SunSpecApiClient:
     CLIENT_CACHE = {}
-    def __init__(
-            self, host: str, port: int, hass: HomeAssistant
-    ) -> None:
+
+    def __init__(self, host: str, port: int, hass: HomeAssistant) -> None:
         """Sunspec modbus client."""
 
         _LOGGER.debug("New SunspecApi Client")
@@ -106,11 +107,8 @@ class SunSpecApiClient:
     def modbus_connect(self):
         _LOGGER.debug("Client connect")
         client = modbus_client.SunSpecModbusClientDeviceTCP(
-                slave_id=1,
-                ipaddr=self._host,
-                ipport=self._port,
-                timeout=TIMEOUT
-                )
+            slave_id=1, ipaddr=self._host, ipport=self._port, timeout=TIMEOUT
+        )
         client.scan()
         return client
 
@@ -122,4 +120,3 @@ class SunSpecApiClient:
             time.sleep(0.6)
 
         return SunSpecModelWrapper(models)
-

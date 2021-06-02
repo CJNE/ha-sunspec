@@ -27,12 +27,49 @@ CONF_HOST = "host"
 CONF_PORT = "port"
 CONF_ENABLED_MODELS = "models_enabled"
 
-DEFAULT_MODELS = set([101, 102, 103, 201, 202, 203,204, 307, 308, 401, 402, 403, 404, 501, 502, 601, 701, 801, 802, 803,
-    804, 805, 806, 808, 809])
+DEFAULT_MODELS = set(
+    [
+        101,
+        102,
+        103,
+        201,
+        202,
+        203,
+        204,
+        307,
+        308,
+        401,
+        402,
+        403,
+        404,
+        501,
+        502,
+        601,
+        701,
+        801,
+        802,
+        803,
+        804,
+        805,
+        806,
+        808,
+        809,
+    ]
+)
 # Defaults
 DEFAULT_NAME = DOMAIN
 
-STATE_NAMES = ['Unknonwn', 'Off', 'Sleeping', 'Starting', 'Mppt', 'Throttled', 'Shutting down', 'Fault', 'Standby']
+STATE_NAMES = [
+    "Unknonwn",
+    "Off",
+    "Sleeping",
+    "Starting",
+    "Mppt",
+    "Throttled",
+    "Shutting down",
+    "Fault",
+    "Standby",
+]
 
 
 STARTUP_MESSAGE = f"""
@@ -44,4 +81,3 @@ If you have any issues with this you need to open an issue here:
 {ISSUE_URL}
 -------------------------------------------------------------------
 """
-

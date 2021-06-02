@@ -12,15 +12,13 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import Config
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from .api import SunSpecApiClient
-from .api import SunSpecModelWrapper
+from .const import CONF_ENABLED_MODELS
 from .const import CONF_HOST
 from .const import CONF_PORT
-from .const import CONF_ENABLED_MODELS
 from .const import DEFAULT_MODELS
 from .const import DOMAIN
 from .const import PLATFORMS
@@ -45,12 +43,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     host = entry.data.get(CONF_HOST)
     port = entry.data.get(CONF_PORT)
 
-    _LOGGER.debug(f"Setup entry")
+    _LOGGER.debug("Setup entry")
     client = SunSpecApiClient(host, port, hass)
 
     unsub = entry.add_update_listener(async_reload_entry)
 
-    coordinator = SunSpecDataUpdateCoordinator(hass, client=client, options=entry.options, unsub=unsub)
+    coordinator = SunSpecDataUpdateCoordinator(
+        hass, client=client, options=entry.options, unsub=unsub
+    )
     await coordinator.async_refresh()
 
     if not coordinator.last_update_success:
@@ -63,13 +63,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
             hass.config_entries.async_forward_entry_setup(entry, platform)
         )
 
-
     return True
+
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Handle removal of an entry."""
 
-    _LOGGER.debug(f"Unload entry")
+    _LOGGER.debug("Unload entry")
     unloaded = all(
         await asyncio.gather(
             *[
@@ -90,20 +90,19 @@ async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     await async_unload_entry(hass, entry)
     await async_setup_entry(hass, entry)
 
+
 class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching data from the API."""
 
     def __init__(
-        self,
-        hass: HomeAssistant,
-        client: SunSpecApiClient,
-        options: dict,
-        unsub
+        self, hass: HomeAssistant, client: SunSpecApiClient, options: dict, unsub
     ) -> None:
         """Initialize."""
         self.api = client
         self.options = options
-        self.option_model_filter = set(map(lambda m: int(m), options.get(CONF_ENABLED_MODELS, DEFAULT_MODELS)))
+        self.option_model_filter = set(
+            map(lambda m: int(m), options.get(CONF_ENABLED_MODELS, DEFAULT_MODELS))
+        )
         self.unsub = unsub
         super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=SCAN_INTERVAL)
 
@@ -120,5 +119,3 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
             _LOGGER.error(exception)
             self.api.reconnect()
             raise UpdateFailed() from exception
-
-

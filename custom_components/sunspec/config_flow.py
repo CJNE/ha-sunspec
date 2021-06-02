@@ -1,17 +1,19 @@
 """Adds config flow for SunSpec."""
-import voluptuous as vol
 import logging
+
+import homeassistant.helpers.config_validation as cv
+import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
-import homeassistant.helpers.config_validation as cv
 
 from .api import SunSpecApiClient
+from .const import CONF_ENABLED_MODELS
 from .const import CONF_HOST
 from .const import CONF_PORT
-from .const import CONF_ENABLED_MODELS
 from .const import DOMAIN
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
+
 
 class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for sunspec."""
@@ -29,18 +31,16 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             host = user_input[CONF_HOST]
             port = user_input[CONF_PORT]
-            valid = await self._test_connection(
-                host, port
-            )
+            valid = await self._test_connection(host, port)
             if valid:
-                uid =self._device_info.getValue('SN')
+                uid = self._device_info.getValue("SN")
                 _LOGGER.debug(f"Sunspec device unique id: {uid}")
                 await self.async_set_unique_id(uid)
 
-                self._abort_if_unique_id_configured(updates={CONF_HOST: host, CONF_PORT: port})
-                return self.async_create_entry(
-                    title='', data=user_input
+                self._abort_if_unique_id_configured(
+                    updates={CONF_HOST: host, CONF_PORT: port}
                 )
+                return self.async_create_entry(title="", data=user_input)
 
             self._errors["base"] = "connection"
 
@@ -58,7 +58,10 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema(
-                {vol.Required(CONF_HOST): str, vol.Required(CONF_PORT, default=502): int}
+                {
+                    vol.Required(CONF_HOST): str,
+                    vol.Required(CONF_PORT, default=502): int,
+                }
             ),
             errors=self._errors,
         )
@@ -102,15 +105,14 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
             step_id="model_options",
             data_schema=vol.Schema(
                 {
-                vol.Optional(
-                    CONF_ENABLED_MODELS, default=self.coordinator.option_model_filter
-                ): cv.multi_select(model_filter),
+                    vol.Optional(
+                        CONF_ENABLED_MODELS,
+                        default=self.coordinator.option_model_filter,
+                    ): cv.multi_select(model_filter),
                 }
             ),
         )
 
     async def _update_options(self):
         """Update config entry options."""
-        return self.async_create_entry(
-            title="", data=self.options
-        )
+        return self.async_create_entry(title="", data=self.options)
