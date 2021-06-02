@@ -13,12 +13,11 @@
 [![Discord][discord-shield]][discord]
 [![Community Forum][forum-shield]][forum]
 
-
 **This component will set up the following platforms.**
 
-| Platform        | Description                                                               |
-| --------------- | ------------------------------------------------------------------------- |
-| `sensor`        | Show info from SunSpec API. |
+| Platform | Description                 |
+| -------- | --------------------------- |
+| `sensor` | Show info from SunSpec API. |
 
 ![logo][logoimg]
 
@@ -40,6 +39,7 @@ custom_components/sunspec/__init__.py
 custom_components/sunspec/api.py
 custom_components/sunspec/config_flow.py
 custom_components/sunspec/const.py
+custom_components/sunspec/entity.py
 custom_components/sunspec/manifest.json
 custom_components/sunspec/sensor.py
 ```
