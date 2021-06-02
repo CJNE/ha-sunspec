@@ -14,16 +14,12 @@
 [![Discord][discord-shield]][discord]
 [![Community Forum][forum-shield]][forum]
 
-**TO BE REMOVED: If you need help, as a developer, to use this custom component tempalte,
-please look at the [User Guide in the Cookiecutter documentation](https://cookiecutter-homeassistant-custom-component.readthedocs.io/en/stable/quickstart.html)**
 
 **This component will set up the following platforms.**
 
 | Platform        | Description                                                               |
 | --------------- | ------------------------------------------------------------------------- |
-| `binary_sensor` | Show something `True` or `False`.                                         |
 | `sensor`        | Show info from SunSpec API. |
-| `switch`        | Switch something `True` or `False`.                                       |
 
 ![logo][logoimg]
 
@@ -41,20 +37,12 @@ Using your HA configuration directory (folder) as a starting point you should no
 
 ```text
 custom_components/sunspec/translations/en.json
-custom_components/sunspec/translations/fr.json
-custom_components/sunspec/translations/nb.json
-custom_components/sunspec/translations/sensor.en.json
-custom_components/sunspec/translations/sensor.fr.json
-custom_components/sunspec/translations/sensor.nb.json
-custom_components/sunspec/translations/sensor.nb.json
 custom_components/sunspec/__init__.py
 custom_components/sunspec/api.py
-custom_components/sunspec/binary_sensor.py
 custom_components/sunspec/config_flow.py
 custom_components/sunspec/const.py
 custom_components/sunspec/manifest.json
 custom_components/sunspec/sensor.py
-custom_components/sunspec/switch.py
 ```
 
 ## Configuration is done in the UI
