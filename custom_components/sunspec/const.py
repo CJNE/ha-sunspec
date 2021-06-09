@@ -25,6 +25,7 @@ PLATFORMS = [SENSOR]
 CONF_ENABLED = "enabled"
 CONF_HOST = "host"
 CONF_PORT = "port"
+CONF_SLAVE_ID = "slave_id"
 CONF_ENABLED_MODELS = "models_enabled"
 
 DEFAULT_MODELS = set(

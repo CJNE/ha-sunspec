@@ -6,7 +6,8 @@
         "description": "If you need help with the configuration have a look here: https://github.com/cjne/ha-sunspec",
         "data": {
           "host": "Hostname/IP",
-          "port": "Port"
+          "port": "Port",
+          "slave_id": "Slave ID"
         }
       }
     },

@@ -19,6 +19,7 @@ from .api import SunSpecApiClient
 from .const import CONF_ENABLED_MODELS
 from .const import CONF_HOST
 from .const import CONF_PORT
+from .const import CONF_SLAVE_ID
 from .const import DEFAULT_MODELS
 from .const import DOMAIN
 from .const import PLATFORMS
@@ -42,9 +43,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     host = entry.data.get(CONF_HOST)
     port = entry.data.get(CONF_PORT)
+    slave_id = entry.data.get(CONF_SLAVE_ID, 1)
 
     _LOGGER.debug("Setup entry")
-    client = SunSpecApiClient(host, port, hass)
+    client = SunSpecApiClient(host, port, slave_id, hass)
 
     unsub = entry.add_update_listener(async_reload_entry)
 

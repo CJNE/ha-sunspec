@@ -5,7 +5,7 @@ import time
 import sunspec2.modbus.client as modbus_client
 from homeassistant.core import HomeAssistant
 
-TIMEOUT = 5
+TIMEOUT = 30
 
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
@@ -62,14 +62,17 @@ class SunSpecModelWrapper:
 class SunSpecApiClient:
     CLIENT_CACHE = {}
 
-    def __init__(self, host: str, port: int, hass: HomeAssistant) -> None:
+    def __init__(
+        self, host: str, port: int, slave_id: int, hass: HomeAssistant
+    ) -> None:
         """Sunspec modbus client."""
 
         _LOGGER.debug("New SunspecApi Client")
         self._host = host
         self._port = port
         self._hass = hass
-        self._client_key = f"{host}:{port}"
+        self._slave_id = slave_id
+        self._client_key = f"{host}:{port}:{slave_id}"
 
     def get_client(self):
         cached = SunSpecApiClient.CLIENT_CACHE.get(self._client_key, None)
@@ -107,8 +110,12 @@ class SunSpecApiClient:
     def modbus_connect(self):
         _LOGGER.debug("Client connect")
         client = modbus_client.SunSpecModbusClientDeviceTCP(
-            slave_id=1, ipaddr=self._host, ipport=self._port, timeout=TIMEOUT
+            slave_id=self._slave_id,
+            ipaddr=self._host,
+            ipport=self._port,
+            timeout=TIMEOUT,
         )
+        _LOGGER.debug("Client connected, perform initial scan")
         client.scan()
         return client
 

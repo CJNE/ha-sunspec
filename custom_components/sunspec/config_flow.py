@@ -10,6 +10,7 @@ from .api import SunSpecApiClient
 from .const import CONF_ENABLED_MODELS
 from .const import CONF_HOST
 from .const import CONF_PORT
+from .const import CONF_SLAVE_ID
 from .const import DOMAIN
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
@@ -31,14 +32,15 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             host = user_input[CONF_HOST]
             port = user_input[CONF_PORT]
-            valid = await self._test_connection(host, port)
+            slave_id = user_input[CONF_SLAVE_ID]
+            valid = await self._test_connection(host, port, slave_id)
             if valid:
                 uid = self._device_info.getValue("SN")
                 _LOGGER.debug(f"Sunspec device unique id: {uid}")
                 await self.async_set_unique_id(uid)
 
                 self._abort_if_unique_id_configured(
-                    updates={CONF_HOST: host, CONF_PORT: port}
+                    updates={CONF_HOST: host, CONF_PORT: port, CONF_SLAVE_ID: slave_id}
                 )
                 return self.async_create_entry(title="", data=user_input)
 
@@ -61,15 +63,16 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 {
                     vol.Required(CONF_HOST): str,
                     vol.Required(CONF_PORT, default=502): int,
+                    vol.Required(CONF_SLAVE_ID, default=1): int,
                 }
             ),
             errors=self._errors,
         )
 
-    async def _test_connection(self, host, port):
+    async def _test_connection(self, host, port, slave_id):
         """Return true if credentials is valid."""
         try:
-            client = SunSpecApiClient(host, port, self.hass)
+            client = SunSpecApiClient(host, port, slave_id, self.hass)
             self._device_info = await client.async_get_device_info()
             _LOGGER.info(self._device_info)
             return True

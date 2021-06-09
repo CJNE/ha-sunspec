@@ -5,14 +5,13 @@ import aiohttp
 from custom_components.sunspec.api import (
     SunSpecApiClient,
 )
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 
 async def test_api(hass, aioclient_mock, caplog):
     """Test API calls."""
 
     # To test the api submodule, we first create an instance of our API client
-    api = SunSpecApiClient("test", "test", async_get_clientsession(hass))
+    api = SunSpecApiClient(host="test", port=123, client_id=1, hass=hass)
 
     # Use aioclient_mock which is provided by `pytest_homeassistant_custom_components`
     # to mock responses to aiohttp requests. In this case we are telling the mock to
@@ -21,7 +20,7 @@ async def test_api(hass, aioclient_mock, caplog):
     aioclient_mock.get(
         "https://jsonplaceholder.typicode.com/posts/1", json={"test": "test"}
     )
-    assert await api.async_get_data() == {"test": "test"}
+    assert await api.async_get_data(1) == {"test": "test"}
 
     # We do the same for `async_set_title`. Note the difference in the mock call
     # between the previous step and this one. We use `patch` here instead of `get`
