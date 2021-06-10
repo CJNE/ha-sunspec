@@ -31,6 +31,7 @@ DEFAULT_MODELS = set(
         101,
         102,
         103,
+        160,
         201,
         202,
         203,
@@ -57,19 +58,6 @@ DEFAULT_MODELS = set(
 )
 # Defaults
 DEFAULT_NAME = DOMAIN
-
-STATE_NAMES = [
-    "Unknonwn",
-    "Off",
-    "Sleeping",
-    "Starting",
-    "Mppt",
-    "Throttled",
-    "Shutting down",
-    "Fault",
-    "Standby",
-]
-
 
 STARTUP_MESSAGE = f"""
 -------------------------------------------------------------------
