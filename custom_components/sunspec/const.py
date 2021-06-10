@@ -3,7 +3,7 @@
 NAME = "SunSpec"
 DOMAIN = "sunspec"
 DOMAIN_DATA = f"{DOMAIN}_data"
-VERSION = "0.0.1"
+VERSION = "0.0.2"
 
 ATTRIBUTION = "Data provided by SunSpec alliance - https://sunspec.org"
 ISSUE_URL = "https://github.com/cjne/ha-sunspec/issues"
@@ -15,9 +15,7 @@ ICON = "mdi:format-quote-close"
 BINARY_SENSOR_DEVICE_CLASS = "connectivity"
 
 # Platforms
-BINARY_SENSOR = "binary_sensor"
 SENSOR = "sensor"
-SWITCH = "switch"
 PLATFORMS = [SENSOR]
 
 

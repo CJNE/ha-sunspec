@@ -2,6 +2,7 @@
 from unittest.mock import patch
 
 import pytest
+import sunspec2.file.client as modbus_client
 
 pytest_plugins = "pytest_homeassistant_custom_component"
 
@@ -23,8 +24,17 @@ def skip_notifications_fixture():
 @pytest.fixture(name="bypass_get_data")
 def bypass_get_data_fixture():
     """Skip calls to get data from API."""
-    with patch("custom_components.sunspec.SunSpecApiClient.async_get_data"), patch(
-        "custom_components.sunspec.SunSpecApiClient.get_client"
+    with patch("custom_components.sunspec.SunSpecApiClient.async_get_data"):
+        yield
+
+
+@pytest.fixture(name="sunspec_client_mock", autouse=True)
+def sunspec_client_mock():
+    """Skip calls to get data from API."""
+    client = modbus_client.FileClientDevice("./tests/test_data/inverter.json")
+    client.scan()
+    with patch(
+        "custom_components.sunspec.SunSpecApiClient.modbus_connect", return_value=client
     ):
         yield
 

@@ -42,7 +42,7 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 self._abort_if_unique_id_configured(
                     updates={CONF_HOST: host, CONF_PORT: port, CONF_SLAVE_ID: slave_id}
                 )
-                return self.async_create_entry(title="", data=user_input)
+                return self.async_create_entry(title=f"{host}:{port}", data=user_input)
 
             self._errors["base"] = "connection"
 

@@ -1,0 +1,612 @@
+{
+  "name": "device_1547",
+  "models": [
+    {
+      "ID": 1,
+      "Mn": "SunSpecTest",
+      "Md": "Test-1547-1",
+      "Opt": "opt_a_b_c",
+      "Vr": "1.2.3",
+      "SN": "sn-123456789",
+      "DA": 1,
+      "Pad": 0
+    },
+    {
+      "ID": 701,
+      "L": null,
+      "ACType": 3,
+      "St": 2,
+      "Alrm": 0,
+      "W": 9800,
+      "VA": 10000,
+      "Var": 200,
+      "PF": 985,
+      "A": 411,
+      "LLV": 2400,
+      "LNV": 2400,
+      "Hz": 60010,
+      "TotWhInj": 150,
+      "TotWhAbs": 0,
+      "TotVarhInj": 9,
+      "TotVarhAbs": 0,
+      "TmpAmb": 450,
+      "TmpCab": 550,
+      "TmpSnk": 650,
+      "TmpTrns": 500,
+      "TmpSw": 400,
+      "TmpOt": 420,
+      "WL1": 3200,
+      "VAL1": 3333,
+      "VarL1": 80,
+      "PFL1": 984,
+      "AL1": 137,
+      "VL1L2": 120,
+      "VL1": 120,
+      "TotWhInjL1": 49,
+      "TotWhAbsL1": 0,
+      "TotVarhInjL1": 2,
+      "TotVarhAbsL1": 0,
+      "WL2": 3300,
+      "VAL2": 3333,
+      "VarL2": 80,
+      "PFL2": 986,
+      "AL2": 136,
+      "VL2L3": 120,
+      "VL2": 120,
+      "TotWhInjL2": 50,
+      "TotWhAbsL2": 0,
+      "TotVarhInjL2": 3,
+      "TotVarhAbsL2": 0,
+      "WL3": 3500,
+      "VAL3": 3333,
+      "VarL3": 40,
+      "PFL3": 987,
+      "AL3": 138,
+      "VL3L1": 120,
+      "VL3N": 120,
+      "TotWhInjL3": 51,
+      "TotWhAbsL3": 0,
+      "TotVarhInjL3": 4,
+      "TotVarhAbsL3": 0,
+      "A_SF": -1,
+      "V_SF": -1,
+      "Hz_SF": -3,
+      "W_SF": 0,
+      "PF_SF": -3,
+      "VA_SF": 0,
+      "Var_SF": 0,
+      "TotWh_SF": 3,
+      "TotVarh_SF": 3,
+      "Tmp_SF": -1
+    },
+    {
+      "ID": 702,
+      "L": null,
+      "WMaxRtg": 10000,
+      "WOvrExtRtg": 10000,
+      "WOvrExtRtgPF": 1000,
+      "WUndExtRtg": 10000,
+      "WUndExtRtgPF": 1000,
+      "VAMaxRtg": 11000,
+      "VarMaxInjRtg": 2500,
+      "VarMaxAbsRtg": 0,
+      "WChaRteMaxRtg": 0,
+      "WDisChaRteMaxRtg": 0,
+      "VAChaRteMaxRtg": 0,
+      "VADisChaRteMaxRtg": 0,
+      "VNomRtg": 240,
+      "VMaxRtg": 270,
+      "VMinRtg": 210,
+      "AMaxRtg": 50,
+      "PFOvrExtRtg": 850,
+      "PFUndExtRtg": 850,
+      "ReactSusceptRtg": null,
+      "NorOpCatRtg": 2,
+      "AbnOpCatRtg": 3,
+      "CtrlModes": null,
+      "IntIslandCatRtg": null,
+      "WMax": 10000,
+      "WMaxOvrExt": null,
+      "WOvrExtPF": null,
+      "WMaxUndExt": null,
+      "WUndExtPF": null,
+      "VAMax": 10000,
+      "AMax": null,
+      "Vnom": null,
+      "VRefOfs": null,
+      "VMax": null,
+      "VMin": null,
+      "VarMaxInj": null,
+      "VarMaxAbs": null,
+      "WChaRteMax": null,
+      "WDisChaRteMax": null,
+      "VAChaRteMax": null,
+      "VADisChaRteMax": null,
+      "IntIslandCat": null,
+      "W_SF": 0,
+      "PF_SF": -3,
+      "VA_SF": 0,
+      "Var_SF": 0,
+      "V_SF": 0,
+      "A_SF": 0,
+      "S_SF": 0
+    },
+    {
+      "ID": 703,
+      "ES": 1,
+      "ESVHi": 1050,
+      "ESVLo": 917,
+      "ESHzHi": 6010,
+      "ESHzLo": 5950,
+      "ESDlyTms": 300,
+      "ESRndTms": 100,
+      "ESRmpTms": 60,
+      "V_SF": -3,
+      "Hz_SF": -2
+    },
+    {
+      "ID": 704,
+      "L": null,
+      "PFWInjEna": 0,
+      "PFWInjEnaRvrt": null,
+      "PFWInjRvrtTms": null,
+      "PFWInjRvrtRem": null,
+      "PFWAbsEna": 0,
+      "PFWAbsEnaRvrt": null,
+      "PFWAbsRvrtTms": null,
+      "PFWAbsRvrtRem": null,
+      "WMaxLimEna": 0,
+      "WMaxLim": 1000,
+      "WMaxLimRvrt": null,
+      "WMaxLimEnaRvrt": null,
+      "WMaxLimRvrtTms": null,
+      "WMaxLimRvrtRem": null,
+      "WSetEna": null,
+      "WSetMod": null,
+      "WSet": null,
+      "WSetRvrt": null,
+      "WSetPct": null,
+      "WSetPctRvrt": null,
+      "WSetEnaRvrt": null,
+      "WSetRvrtTms": null,
+      "WSetRvrtRem": null,
+      "VarSetEna": null,
+      "VarSetMod": null,
+      "VarSetPri": null,
+      "VarSet": null,
+      "VarSetRvrt": null,
+      "VarSetPct": null,
+      "VarSetPctRvrt": null,
+      "VarSetRvrtTms": null,
+      "VarSetRvrtRem": null,
+      "RGra": null,
+      "PF_SF": -3,
+      "WMaxLim_SF": -1,
+      "WSet_SF": null,
+      "WSetPct_SF": null,
+      "VarSet_SF": null,
+      "VarSetPct_SF": null,
+      "PFWInj": {
+        "PF": 950,
+        "Ext": 1
+      },
+      "PFWInjRvrt": {
+        "PF": null,
+        "Ext": null
+      },
+      "PFWAbs": {
+        "PF": null,
+        "Ext": null
+      },
+      "PFWAbsRvrt": {
+        "PF": null,
+        "Ext": null
+      }
+    },
+    {
+      "ID": 705,
+      "Ena": 1,
+      "CrvSt": 1,
+      "AdptCrvReq": 0,
+      "AdptCrvRslt": 0,
+      "NPt": 4,
+      "NCrv": 3,
+      "RvrtTms": 0,
+      "RvrtRem": 0,
+      "RvrtCrv": 0,
+      "V_SF": -2,
+      "DeptRef_SF": -2,
+      "Crv": [
+        {
+          "ActPt": 4,
+          "DeptRef": 1,
+          "Pri": 1,
+          "VRef": 1,
+          "VRefAuto": 0,
+          "VRefTms": 5,
+          "RspTms": 6,
+          "ReadOnly": 1,
+          "Pt": [
+            {
+              "V": 9200,
+              "Var": 3000
+            },
+            {
+              "V": 9670,
+              "Var": 0
+            },
+            {
+              "V": 10300,
+              "Var": 0
+            },
+            {
+              "V": 10700,
+              "Var": -3000
+            }
+          ]
+        },
+        {
+          "ActPt": 4,
+          "DeptRef": 1,
+          "Pri": 1,
+          "VRef": 1,
+          "VRefAuto": 0,
+          "VRefTms": 5,
+          "RspTms": 6,
+          "ReadOnly": 0,
+          "Pt": [
+            {
+              "V": 9300,
+              "Var": 3000
+            },
+            {
+              "V": 9570,
+              "Var": 0
+            },
+            {
+              "V": 10200,
+              "Var": 0
+            },
+            {
+              "V": 10600,
+              "Var": -4000
+            }
+          ]
+        },
+        {
+          "ActPt": 4,
+          "DeptRef": 1,
+          "Pri": 1,
+          "VRef": 1,
+          "VRefAuto": 0,
+          "VRefTms": 5,
+          "RspTms": 6,
+          "ReadOnly": 0,
+          "Pt": [
+            {
+              "V": 9400,
+              "Var": 2000
+            },
+            {
+              "V": 9570,
+              "Var": 0
+            },
+            {
+              "V": 10500,
+              "Var": 0
+            },
+            {
+              "V": 10800,
+              "Var": -2000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ID": 706,
+      "Ena": 0,
+      "CrvSt": 1,
+      "AdptCrvReq": 0,
+      "AdptCrvRslt": 0,
+      "NPt": 2,
+      "NCrv": 2,
+      "RvrtTms": null,
+      "RvrtRem": null,
+      "RvrtCrv": null,
+      "V_SF": 0,
+      "DeptRef_SF": 0,
+      "Crv": [
+        {
+          "ActPt": 2,
+          "DeptRef": 1,
+          "RspTms": 10,
+          "ReadOnly": 1,
+          "Pt": [
+            {
+              "V": 106,
+              "W": 100
+            },
+            {
+              "V": 110,
+              "W": 0
+            }
+          ]
+        },
+        {
+          "ActPt": 2,
+          "DeptRef": 1,
+          "RspTms": 5,
+          "ReadOnly": 0,
+          "Pt": [
+            {
+              "V": 105,
+              "W": 100
+            },
+            {
+              "V": 109,
+              "W": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ID": 707,
+      "L": null,
+      "Ena": 1,
+      "CrvSt": null,
+      "AdptCrvReq": null,
+      "AdptCrvRslt": null,
+      "NPt": 1,
+      "NCrvSet": 1,
+      "V_SF": -2,
+      "Tms_SF": 0,
+      "Crv": [
+        {
+          "MustTrip": {
+            "ActPt": 1,
+            "Pt": [
+              {
+                "V": 5000,
+                "Tms": 5
+              }
+            ]
+          },
+          "MayTrip": {
+            "ActPt": 1,
+            "Pt": [
+              {
+                "V": 7000,
+                "Tms": 5
+              }
+            ]
+          },
+          "MomCess": {
+            "ActPt": 1,
+            "Pt": [
+              {
+                "V": 6000,
+                "Tms": 5
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "ID": 708,
+      "L": null,
+      "Ena": 1,
+      "CrvSt": null,
+      "AdptCrvReq": null,
+      "AdptCrvRslt": null,
+      "NPt": 1,
+      "NCrvSet": 1,
+      "V_SF": -2,
+      "Tms_SF": 0,
+      "Crv": [
+        {
+          "MustTrip": {
+            "ActPt": 1,
+            "Pt": [
+              {
+                "V": 12000,
+                "Tms": 5
+              }
+            ]
+          },
+          "MayTrip": {
+            "ActPt": 1,
+            "Pt": [
+              {
+                "V": 10000,
+                "Tms": 5
+              }
+            ]
+          },
+          "MomCess": {
+            "ActPt": 1,
+            "Pt": [
+              {
+                "V": 10000,
+                "Tms": 5
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "ID": 709,
+      "L": null,
+      "Ena": 1,
+      "CrvSt": null,
+      "AdptCrvReq": null,
+      "AdptCrvRslt": null,
+      "NPt": 1,
+      "NCrvSet": 1,
+      "Freq_SF": null,
+      "Tms_SF": -2,
+      "Crv": [
+        {
+          "MustTrip": {
+            "ActPt": 1,
+            "Pt": [
+              {
+                "Freq": 5300,
+                "Tms": 5
+              }
+            ]
+          },
+          "MayTrip": {
+            "ActPt": 1,
+            "Pt": [
+              {
+                "Freq": 5850,
+                "Tms": 5
+              }
+            ]
+          },
+          "MomCess": {
+            "ActPt": 1,
+            "Pt": [
+              {
+                "Freq": 5850,
+                "Tms": 5
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "ID": 710,
+      "L": null,
+      "Ena": null,
+      "CrvSt": null,
+      "AdptCrvReq": null,
+      "AdptCrvRslt": null,
+      "NPt": 1,
+      "NCrvSet": 1,
+      "Freq_SF": null,
+      "Tms_SF": -2,
+      "Crv": [
+        {
+          "MustTrip": {
+            "ActPt": 1,
+            "Pt": [
+              {
+                "Freq": 6500,
+                "Tms": 5
+              }
+            ]
+          },
+          "MayTrip": {
+            "ActPt": 1,
+            "Pt": [
+              {
+                "Freq": 6050,
+                "Tms": 5
+              }
+            ]
+          },
+          "MomCess": {
+            "ActPt": 1,
+            "Pt": [
+              {
+                "Freq": 6050,
+                "Tms": 5
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "ID": 711,
+      "L": null,
+      "Ena": null,
+      "CrvSt": null,
+      "AdptCrvReq": null,
+      "AdptCrvRslt": null,
+      "NCtl": 1,
+      "RvrtTms": 0,
+      "RvrtRem": 0,
+      "RvrtCrv": 0,
+      "Db_SF": -2,
+      "K_SF": -2,
+      "RspTms_SF": 0,
+      "Ctl": [
+        {
+          "DbOf": 60030,
+          "DbUf": 59970,
+          "KOf": 40,
+          "KUf": 40,
+          "RspTms": 600
+        }
+      ]
+    },
+    {
+      "ID": 712,
+      "L": null,
+      "Ena": null,
+      "CrvSt": null,
+      "AdptCrvReq": null,
+      "AdptCrvRslt": null,
+      "NPt": 1,
+      "NCrv": 1,
+      "RvrtTms": 0,
+      "RvrtRem": 0,
+      "RvrtCrv": 0,
+      "DeptRef_SF": -2,
+      "Crv": [
+        {
+          "ActPt": 1,
+          "DeptRef": null,
+          "Pri": null,
+          "ReadOnly": null,
+          "Pt": [
+            {
+              "W": null,
+              "Var": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ID": 713,
+      "L": null,
+      "PrtAlrms": null,
+      "NPrt": 1,
+      "DCA": null,
+      "DCW": null,
+      "DCWhInj": null,
+      "DCWhAbs": null,
+      "DCA_SF": null,
+      "DCV_SF": null,
+      "DCW_SF": null,
+      "DCWH_SF": null,
+      "Prt": [
+        {
+          "PrtTyp": null,
+          "ID": null,
+          "IDStr": null,
+          "DCA": null,
+          "DCV": null,
+          "DCW": null,
+          "DCWhInj": null,
+          "DCWhAbs": null,
+          "Tmp": null,
+          "DCSt": null,
+          "DCAlrm": null
+        }
+      ]
+    },
+    {
+      "ID": 65535,
+      "L": 0
+    }
+  ]
+}
