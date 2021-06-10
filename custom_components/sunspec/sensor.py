@@ -36,7 +36,7 @@ ICON_AC_AMPS = "mdi:current-ac"
 ICON_DC_AMPS = "mdi:current-dc"
 ICON_VOLT = "mdi:lightning-bolt"
 ICON_POWER = "mdi:solar-power"
-ICON_FREQ = "mdi:solar-panel"
+ICON_FREQ = "mdi:sine-wave"
 ICON_ENERGY = "mdi:solar-panel"
 ICON_TEMP = "mdi:thermometer"
 
