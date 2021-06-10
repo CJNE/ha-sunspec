@@ -20,6 +20,7 @@ class SunSpecEntity(CoordinatorEntity):
         return {
             "identifiers": {(DOMAIN, self.config_entry.entry_id)},
             "name": self._device_data.getValue("Md"),
-            "model": self._device_data.getValue("Vr"),
+            "model": self._device_data.getValue("Md"),
+            "sw_version": self._device_data.getValue("Vr"),
             "manufacturer": self._device_data.getValue("Mn"),
         }
