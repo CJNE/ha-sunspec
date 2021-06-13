@@ -191,4 +191,10 @@ class SunSpecSensor(SunSpecEntity):
         label = self._meta.get("label", None)
         if label is not None:
             attrs["label"] = label
+
+        vtype = self._meta["type"]
+        if vtype in ("enum16", "bitfield32"):
+            attrs["raw"] = self.coordinator.data[self.model_id].getValue(
+                self.key, self.model_index
+            )
         return attrs
