@@ -9,6 +9,14 @@
           "port": "Port",
           "slave_id": "Slave ID"
         }
+      },
+      "settings": {
+        "title": "Sensor prefix and model selection (optional)",
+        "description": "Enter an optional prefix for sensor names and select any additional SunSpec models (data registers) you would like to create sensors for. This can alsb be changed later in the component configuration.",
+        "data": {
+          "models_enabled": "Read models",
+          "prefix": "Sensors prefix"
+        }
       }
     },
     "error": {
@@ -21,6 +29,8 @@
   "options": {
     "step": {
       "model_options": {
+        "title": "Sensor prefix and model selection (optional)",
+        "description": "Select what SunSpec models (data registers) you would like to create sensors for.",
         "data": {
           "models_enabled": "Read models"
         }

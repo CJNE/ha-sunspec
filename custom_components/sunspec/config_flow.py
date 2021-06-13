@@ -10,7 +10,9 @@ from .api import SunSpecApiClient
 from .const import CONF_ENABLED_MODELS
 from .const import CONF_HOST
 from .const import CONF_PORT
+from .const import CONF_PREFIX
 from .const import CONF_SLAVE_ID
+from .const import DEFAULT_MODELS
 from .const import DOMAIN
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
@@ -42,13 +44,28 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 self._abort_if_unique_id_configured(
                     updates={CONF_HOST: host, CONF_PORT: port, CONF_SLAVE_ID: slave_id}
                 )
-                return self.async_create_entry(title=f"{host}:{port}", data=user_input)
+                self.init_info = user_input
+                return await self.async_step_settings()
+
+                # return self.async_create_entry(title=f"{host}:{port}", data=user_input)
 
             self._errors["base"] = "connection"
 
             return await self._show_config_form(user_input)
 
         return await self._show_config_form(user_input)
+
+    async def async_step_settings(self, user_input=None):
+        self._errors = {}
+        if user_input is not None:
+            self.init_info[CONF_PREFIX] = user_input[CONF_PREFIX]
+            self.init_info[CONF_ENABLED_MODELS] = user_input[CONF_ENABLED_MODELS]
+            host = self.init_info[CONF_HOST]
+            port = self.init_info[CONF_PORT]
+            _LOGGER.debug("Creating entry with data %s", self.init_info)
+            return self.async_create_entry(title=f"{host}:{port}", data=self.init_info)
+
+        return await self._show_settings_form(user_input)
 
     @staticmethod
     @callback
@@ -69,11 +86,29 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             errors=self._errors,
         )
 
+    async def _show_settings_form(self, user_input):  # pylint: disable=unused-argument
+        """Show the configuration form to edit location data."""
+        models = set(await self.client.async_get_models())
+        model_filter = {str(model): str(model) for model in sorted(models)}
+        return self.async_show_form(
+            step_id="settings",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(CONF_PREFIX, default=""): str,
+                    vol.Optional(
+                        CONF_ENABLED_MODELS,
+                        default=DEFAULT_MODELS,
+                    ): cv.multi_select(model_filter),
+                }
+            ),
+            errors=self._errors,
+        )
+
     async def _test_connection(self, host, port, slave_id):
         """Return true if credentials is valid."""
         try:
-            client = SunSpecApiClient(host, port, slave_id, self.hass)
-            self._device_info = await client.async_get_device_info()
+            self.client = SunSpecApiClient(host, port, slave_id, self.hass)
+            self._device_info = await self.client.async_get_device_info()
             _LOGGER.info(self._device_info)
             return True
         except Exception as e:  # pylint: disable=broad-except

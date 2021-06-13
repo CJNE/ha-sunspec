@@ -26,6 +26,7 @@ from homeassistant.const import TIME_MILLISECONDS
 from homeassistant.const import TIME_SECONDS
 from homeassistant.const import VOLT
 
+from .const import CONF_PREFIX
 from .const import DOMAIN
 from .entity import SunSpecEntity
 
@@ -70,10 +71,16 @@ async def async_setup_entry(hass, entry, async_add_devices):
     coordinator = hass.data[DOMAIN][entry.entry_id]
     sensors = []
     device_info = await coordinator.api.async_get_device_info()
+    prefix = entry.data.get(CONF_PREFIX, "")
     for model_id in coordinator.data.keys():
         model_wrapper = coordinator.data[model_id]
         for key in model_wrapper.getKeys():
-            _LOGGER.debug("Create sensor for %s in model %s", key, model_id)
+            _LOGGER.debug(
+                "Create sensor for %s in model %s using prefix %s",
+                key,
+                model_id,
+                prefix,
+            )
             for model_index in range(model_wrapper.num_models):
                 data = {
                     "device_info": device_info,
@@ -81,6 +88,7 @@ async def async_setup_entry(hass, entry, async_add_devices):
                     "model_id": model_id,
                     "model_index": model_index,
                     "model": model_wrapper,
+                    "prefix": prefix,
                 }
                 sensors.append(SunSpecSensor(coordinator, entry, data))
     async_add_devices(sensors)
@@ -117,6 +125,9 @@ class SunSpecSensor(SunSpecEntity):
         desc = self._meta.get("desc", self._meta.get("label", self.key))
         if self.unit == ELECTRICAL_CURRENT_AMPERE and "DC" in desc:
             self.use_icon = ICON_DC_AMPS
+
+        if data["prefix"] != "":
+            name = f"{data['prefix']} {name}"
 
         self._name = f"{name.capitalize()} {desc}"
 

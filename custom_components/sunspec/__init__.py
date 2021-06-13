@@ -45,13 +45,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     port = entry.data.get(CONF_PORT)
     slave_id = entry.data.get(CONF_SLAVE_ID, 1)
 
-    _LOGGER.debug("Setup entry")
+    models = entry.options.get(
+        CONF_ENABLED_MODELS, entry.data.get(CONF_ENABLED_MODELS, DEFAULT_MODELS)
+    )
+    _LOGGER.debug("Setup entry with models %s", models)
+
     client = SunSpecApiClient(host, port, slave_id, hass)
 
     unsub = entry.add_update_listener(async_reload_entry)
 
     coordinator = SunSpecDataUpdateCoordinator(
-        hass, client=client, options=entry.options, unsub=unsub
+        hass, client=client, models=models, unsub=unsub
     )
     await coordinator.async_refresh()
 
@@ -97,14 +101,11 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching data from the API."""
 
     def __init__(
-        self, hass: HomeAssistant, client: SunSpecApiClient, options: dict, unsub
+        self, hass: HomeAssistant, client: SunSpecApiClient, models: list, unsub
     ) -> None:
         """Initialize."""
         self.api = client
-        self.options = options
-        self.option_model_filter = set(
-            map(lambda m: int(m), options.get(CONF_ENABLED_MODELS, DEFAULT_MODELS))
-        )
+        self.option_model_filter = set(map(lambda m: int(m), models))
         self.unsub = unsub
         super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=SCAN_INTERVAL)
 
