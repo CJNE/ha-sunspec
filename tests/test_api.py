@@ -4,7 +4,9 @@ from custom_components.sunspec.api import (
 )
 
 
-async def test_api(hass, aioclient_mock, caplog, sunspec_client_mock):
+async def test_api(
+    hass, aioclient_mock, caplog, sunspec_client_mock, enable_custom_integrations
+):
     """Test API calls."""
 
     # To test the api submodule, we first create an instance of our API client

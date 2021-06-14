@@ -73,7 +73,7 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         return SunSpecOptionsFlowHandler(config_entry)
 
     async def _show_config_form(self, user_input):  # pylint: disable=unused-argument
-        """Show the configuration form to edit location data."""
+        """Show the configuration form to edit connection data."""
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema(
@@ -87,7 +87,7 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def _show_settings_form(self, user_input):  # pylint: disable=unused-argument
-        """Show the configuration form to edit location data."""
+        """Show the configuration form to edit settings data."""
         models = set(await self.client.async_get_models())
         model_filter = {str(model): str(model) for model in sorted(models)}
         return self.async_show_form(
