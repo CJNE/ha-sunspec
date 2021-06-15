@@ -97,6 +97,13 @@ async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     await async_setup_entry(hass, entry)
 
 
+def get_sunspec_unique_id(
+    config_entry_id: str, key: str, model_id: int, model_index: int
+) -> str:
+    """Create a uniqe id for a SunSpec entity"""
+    return f"{config_entry_id}_{key}-{model_id}-{model_index}"
+
+
 class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching data from the API."""
 

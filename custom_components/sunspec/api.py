@@ -38,8 +38,6 @@ class SunSpecModelWrapper:
 
     def getValue(self, point_name, model_index=0):
         point = self.getPoint(point_name, model_index)
-        if point.cvalue is None:
-            return point.value
         return point.cvalue
 
     def getMeta(self, point_name):

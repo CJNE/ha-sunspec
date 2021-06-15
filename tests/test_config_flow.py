@@ -9,9 +9,9 @@ from homeassistant import data_entry_flow
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from . import MockSunSpecDataUpdateCoordinator
+from .const import MOCK_CONFIG
 from .const import MOCK_CONFIG_STEP_1
-from .const import MOCK_CONFIG_STEP_2
-from .const import MOCK_SETTINGS_NO_PREFIX
+from .const import MOCK_SETTINGS
 
 
 # This fixture bypasses the actual setup of the integration
@@ -31,7 +31,7 @@ def bypass_setup_fixture():
 # Note that we use the `bypass_get_data` fixture here because
 # we want the config flow validation to succeed during the test.
 async def test_successful_config_flow(
-    hass, bypass_get_data, enable_custom_integrations
+    hass, bypass_get_data, enable_custom_integrations, sunspec_client_mock
 ):
     """Test a successful config flow."""
     # Initialize a config flow
@@ -55,12 +55,12 @@ async def test_successful_config_flow(
     assert result["type"] == data_entry_flow.RESULT_TYPE_FORM
 
     result = await hass.config_entries.flow.async_configure(
-        flow_id, user_input=MOCK_SETTINGS_NO_PREFIX
+        flow_id, user_input=MOCK_SETTINGS
     )
 
     assert result["type"] == data_entry_flow.RESULT_TYPE_CREATE_ENTRY
     assert result["title"] == "test_host:123"
-    assert result["data"] == MOCK_CONFIG_STEP_2
+    assert result["data"] == MOCK_CONFIG
     assert result["result"]
 
 
@@ -68,7 +68,9 @@ async def test_successful_config_flow(
 # We use the `error_on_get_data` mock instead of `bypass_get_data`
 # (note the function parameters) to raise an Exception during
 # validation of the input config.
-async def test_failed_config_flow(hass, error_on_get_data, error_on_get_device_info):
+async def test_failed_config_flow(
+    hass, error_on_get_data, error_on_get_device_info, sunspec_client_mock
+):
     """Test a failed config flow due to credential validation failure."""
 
     result = await hass.config_entries.flow.async_init(
@@ -91,7 +93,7 @@ async def test_options_flow(hass, sunspec_client_mock):
     """Test an options flow."""
     # Create a new MockConfigEntry and add to HASS (we're bypassing config
     # flow entirely)
-    entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG_STEP_2, entry_id="test")
+    entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG, entry_id="test")
     entry.add_to_hass(hass)
 
     coordinator = MockSunSpecDataUpdateCoordinator(hass, [1, 2])

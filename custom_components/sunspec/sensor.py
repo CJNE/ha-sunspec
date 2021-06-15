@@ -26,6 +26,7 @@ from homeassistant.const import TIME_MILLISECONDS
 from homeassistant.const import TIME_SECONDS
 from homeassistant.const import VOLT
 
+from . import get_sunspec_unique_id
 from .const import CONF_PREFIX
 from .const import DOMAIN
 from .entity import SunSpecEntity
@@ -75,12 +76,6 @@ async def async_setup_entry(hass, entry, async_add_devices):
     for model_id in coordinator.data.keys():
         model_wrapper = coordinator.data[model_id]
         for key in model_wrapper.getKeys():
-            _LOGGER.debug(
-                "Create sensor for %s in model %s using prefix %s",
-                key,
-                model_id,
-                prefix,
-            )
             for model_index in range(model_wrapper.num_models):
                 data = {
                     "device_info": device_info,
@@ -111,9 +106,10 @@ class SunSpecSensor(SunSpecEntity):
         self.use_icon = ha_meta[1]
         self.use_device_class = ha_meta[2]
 
-        self._uniqe_id = (
-            f"{config_entry.entry_id}_{self.key}-{self.model_id}-{self.model_index}"
+        self._uniqe_id = get_sunspec_unique_id(
+            config_entry.entry_id, self.key, self.model_id, self.model_index
         )
+
         self._device_id = config_entry.entry_id
         name = self._group_meta.get("name", str(self.model_id))
         if self.model_index > 0:
@@ -130,6 +126,14 @@ class SunSpecSensor(SunSpecEntity):
             name = f"{data['prefix']} {name}"
 
         self._name = f"{name.capitalize()} {desc}"
+        _LOGGER.debug(
+            "Createed sensor for %s in model %s using prefix %s: %s uid %s",
+            self.key,
+            self.model_id,
+            data["prefix"],
+            self._name,
+            self._uniqe_id,
+        )
 
     # def async_will_remove_from_hass(self):
     #    _LOGGER.debug(f"Will remove sensor {self._uniqe_id}")

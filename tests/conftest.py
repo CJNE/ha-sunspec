@@ -1,5 +1,6 @@
 """Global fixtures for SunSpec integration."""
 from typing import Any
+from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
@@ -45,13 +46,23 @@ def bypass_get_data_fixture():
         yield
 
 
-@pytest.fixture(name="sunspec_client_mock", autouse=True)
+@pytest.fixture(name="sunspec_client_mock")
 def sunspec_client_mock():
     """Skip calls to get data from API."""
     client = modbus_client.FileClientDevice("./tests/test_data/inverter.json")
     client.scan()
     with patch(
         "custom_components.sunspec.SunSpecApiClient.modbus_connect", return_value=client
+    ):
+        yield
+
+
+@pytest.fixture(name="sunspec_modbus_client_mock")
+def sunspec_modbus_client_mock():
+    """Skip calls to get data from API."""
+    mock = Mock()
+    with patch(
+        "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP", return_value=mock
     ):
         yield
 
