@@ -1,2 +1,2 @@
-homeassistant==2021.6.2
+homeassistant==2021.6.4
 pysunspec2==1.0.4
