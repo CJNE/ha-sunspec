@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 import pytest
 from custom_components.sunspec.const import CONF_ENABLED_MODELS
+from custom_components.sunspec.const import CONF_SCAN_INTERVAL
 from custom_components.sunspec.const import DOMAIN
 from homeassistant import config_entries
 from homeassistant import data_entry_flow
@@ -110,7 +111,7 @@ async def test_options_flow(hass, sunspec_client_mock):
 
     # Enter some fake data into the form
     result = await hass.config_entries.options.async_configure(
-        result["flow_id"], user_input={CONF_ENABLED_MODELS: []}
+        result["flow_id"], user_input={CONF_ENABLED_MODELS: [], CONF_SCAN_INTERVAL: 10}
     )
 
     # Verify that the flow finishes
