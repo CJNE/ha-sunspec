@@ -11,11 +11,12 @@
         }
       },
       "settings": {
-        "title": "Sensor prefix and model selection (optional)",
-        "description": "Enter an optional prefix for sensor names and select any additional SunSpec models (data registers) you would like to create sensors for. This can alsb be changed later in the component configuration.",
+        "title": "Sensor options",
+        "description": "Enter an optional prefix for sensor names and select any additional SunSpec models (data registers) you would like to create sensors for. This can also be changed later in the component configuration.",
         "data": {
           "models_enabled": "Read models",
-          "prefix": "Sensors prefix"
+          "prefix": "Sensors prefix",
+          "scan_interval": "Scan interval (seconds)"
         }
       }
     },
@@ -29,10 +30,11 @@
   "options": {
     "step": {
       "model_options": {
-        "title": "Sensor prefix and model selection (optional)",
+        "title": "Sensor options",
         "description": "Select what SunSpec models (data registers) you would like to create sensors for.",
         "data": {
-          "models_enabled": "Read models"
+          "models_enabled": "Read models",
+          "scan_interval": "Scan interval (seconds)"
         }
       }
     }

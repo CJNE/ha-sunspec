@@ -6,11 +6,13 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
 
+from . import SCAN_INTERVAL
 from .api import SunSpecApiClient
 from .const import CONF_ENABLED_MODELS
 from .const import CONF_HOST
 from .const import CONF_PORT
 from .const import CONF_PREFIX
+from .const import CONF_SCAN_INTERVAL
 from .const import CONF_SLAVE_ID
 from .const import DEFAULT_MODELS
 from .const import DOMAIN
@@ -60,6 +62,7 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             self.init_info[CONF_PREFIX] = user_input[CONF_PREFIX]
             self.init_info[CONF_ENABLED_MODELS] = user_input[CONF_ENABLED_MODELS]
+            self.init_info[CONF_SCAN_INTERVAL] = user_input[CONF_SCAN_INTERVAL]
             host = self.init_info[CONF_HOST]
             port = self.init_info[CONF_PORT]
             _LOGGER.debug("Creating entry with data %s", self.init_info)
@@ -95,6 +98,9 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Optional(CONF_PREFIX, default=""): str,
+                    vol.Optional(
+                        CONF_SCAN_INTERVAL, default=SCAN_INTERVAL.total_seconds()
+                    ): int,
                     vol.Optional(
                         CONF_ENABLED_MODELS,
                         default=DEFAULT_MODELS,
@@ -137,12 +143,16 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
             self.options.update(user_input)
             return await self._update_options()
 
+        scan_interval = self.config_entry.options.get(
+            CONF_SCAN_INTERVAL, self.config_entry.data.get(CONF_SCAN_INTERVAL)
+        )
         models = set(await self.coordinator.api.async_get_models())
         model_filter = {str(model): str(model) for model in sorted(models)}
         return self.async_show_form(
             step_id="model_options",
             data_schema=vol.Schema(
                 {
+                    vol.Optional(CONF_SCAN_INTERVAL, default=scan_interval): int,
                     vol.Optional(
                         CONF_ENABLED_MODELS,
                         default=self.coordinator.option_model_filter,

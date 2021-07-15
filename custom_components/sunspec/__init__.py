@@ -19,6 +19,7 @@ from .api import SunSpecApiClient
 from .const import CONF_ENABLED_MODELS
 from .const import CONF_HOST
 from .const import CONF_PORT
+from .const import CONF_SCAN_INTERVAL
 from .const import CONF_SLAVE_ID
 from .const import DEFAULT_MODELS
 from .const import DOMAIN
@@ -45,18 +46,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     port = entry.data.get(CONF_PORT)
     slave_id = entry.data.get(CONF_SLAVE_ID, 1)
 
-    models = entry.options.get(
-        CONF_ENABLED_MODELS, entry.data.get(CONF_ENABLED_MODELS, DEFAULT_MODELS)
-    )
-    _LOGGER.debug("Setup entry with models %s", models)
-
     client = SunSpecApiClient(host, port, slave_id, hass)
 
-    unsub = entry.add_update_listener(async_reload_entry)
-
-    coordinator = SunSpecDataUpdateCoordinator(
-        hass, client=client, models=models, unsub=unsub
-    )
+    coordinator = SunSpecDataUpdateCoordinator(hass, client=client, entry=entry)
     await coordinator.async_refresh()
 
     if not coordinator.last_update_success:
@@ -107,14 +99,25 @@ def get_sunspec_unique_id(
 class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching data from the API."""
 
-    def __init__(
-        self, hass: HomeAssistant, client: SunSpecApiClient, models: list, unsub
-    ) -> None:
+    def __init__(self, hass: HomeAssistant, client: SunSpecApiClient, entry) -> None:
         """Initialize."""
         self.api = client
+
+        models = entry.options.get(
+            CONF_ENABLED_MODELS, entry.data.get(CONF_ENABLED_MODELS, DEFAULT_MODELS)
+        )
+        scan_interval = timedelta(
+            seconds=entry.options.get(
+                CONF_SCAN_INTERVAL,
+                entry.data.get(CONF_SCAN_INTERVAL, SCAN_INTERVAL.total_seconds()),
+            )
+        )
         self.option_model_filter = set(map(lambda m: int(m), models))
-        self.unsub = unsub
-        super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=SCAN_INTERVAL)
+        self.unsub = entry.add_update_listener(async_reload_entry)
+        _LOGGER.debug(
+            "Setup entry with models %s, scan interval %s", models, scan_interval
+        )
+        super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=scan_interval)
 
     async def _async_update_data(self):
         """Update data via library."""
