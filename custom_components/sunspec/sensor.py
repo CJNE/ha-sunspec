@@ -9,8 +9,8 @@ from homeassistant.const import DEVICE_CLASS_ENERGY
 from homeassistant.const import DEVICE_CLASS_POWER
 from homeassistant.const import DEVICE_CLASS_TEMPERATURE
 from homeassistant.const import DEVICE_CLASS_VOLTAGE
-from homeassistant.const import ELECTRICAL_CURRENT_AMPERE
-from homeassistant.const import ELECTRICAL_VOLT_AMPERE
+from homeassistant.const import ELECTRIC_CURRENT_AMPERE
+from homeassistant.const import POWER_VOLT_AMPERE
 from homeassistant.const import ENERGY_KILO_WATT_HOUR
 from homeassistant.const import ENERGY_WATT_HOUR
 from homeassistant.const import FREQUENCY_HERTZ
@@ -43,12 +43,12 @@ ICON_ENERGY = "mdi:solar-panel"
 ICON_TEMP = "mdi:thermometer"
 
 HA_META = {
-    "A": [ELECTRICAL_CURRENT_AMPERE, ICON_AC_AMPS, DEVICE_CLASS_CURRENT],
+    "A": [ELECTRIC_CURRENT_AMPERE, ICON_AC_AMPS, DEVICE_CLASS_CURRENT],
     "HPa": [PRESSURE_HPA, ICON_DEFAULT, DEVICE_CLASS_TEMPERATURE],
     "Hz": [FREQUENCY_HERTZ, ICON_FREQ, None],
     "Mbps": [DATA_RATE_MEGABITS_PER_SECOND, ICON_DEFAULT, None],
     "V": [VOLT, ICON_VOLT, DEVICE_CLASS_VOLTAGE],
-    "VA": [ELECTRICAL_VOLT_AMPERE, ICON_POWER, DEVICE_CLASS_POWER],
+    "VA": [POWER_VOLT_AMPERE, ICON_POWER, DEVICE_CLASS_POWER],
     "W": [POWER_WATT, ICON_POWER, DEVICE_CLASS_POWER],
     "W/m2": [IRRADIATION_WATTS_PER_SQUARE_METER, ICON_DEFAULT, None],
     "Wh": [ENERGY_WATT_HOUR, ICON_ENERGY, DEVICE_CLASS_ENERGY],
@@ -119,7 +119,7 @@ class SunSpecSensor(SunSpecEntity):
             name = f"{name} {key_parts[0]} {key_parts[1]}"
 
         desc = self._meta.get("desc", self._meta.get("label", self.key))
-        if self.unit == ELECTRICAL_CURRENT_AMPERE and "DC" in desc:
+        if self.unit == ELECTRIC_CURRENT_AMPERE and "DC" in desc:
             self.use_icon = ICON_DC_AMPS
 
         if data["prefix"] != "":
