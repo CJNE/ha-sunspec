@@ -10,7 +10,6 @@ from homeassistant.const import DEVICE_CLASS_POWER
 from homeassistant.const import DEVICE_CLASS_TEMPERATURE
 from homeassistant.const import DEVICE_CLASS_VOLTAGE
 from homeassistant.const import ELECTRIC_CURRENT_AMPERE
-from homeassistant.const import POWER_VOLT_AMPERE
 from homeassistant.const import ENERGY_KILO_WATT_HOUR
 from homeassistant.const import ENERGY_WATT_HOUR
 from homeassistant.const import FREQUENCY_HERTZ
@@ -18,6 +17,7 @@ from homeassistant.const import IRRADIATION_WATTS_PER_SQUARE_METER
 from homeassistant.const import LENGTH_METERS
 from homeassistant.const import LENGTH_MILLIMETERS
 from homeassistant.const import PERCENTAGE
+from homeassistant.const import POWER_VOLT_AMPERE
 from homeassistant.const import POWER_WATT
 from homeassistant.const import PRESSURE_HPA
 from homeassistant.const import SPEED_METERS_PER_SECOND
