@@ -10,6 +10,7 @@ from homeassistant.const import DEVICE_CLASS_POWER
 from homeassistant.const import DEVICE_CLASS_TEMPERATURE
 from homeassistant.const import DEVICE_CLASS_VOLTAGE
 from homeassistant.const import ELECTRIC_CURRENT_AMPERE
+from homeassistant.const import ELECTRIC_POTENTIAL_VOLT
 from homeassistant.const import ENERGY_KILO_WATT_HOUR
 from homeassistant.const import ENERGY_WATT_HOUR
 from homeassistant.const import FREQUENCY_HERTZ
@@ -24,7 +25,6 @@ from homeassistant.const import SPEED_METERS_PER_SECOND
 from homeassistant.const import TEMP_CELSIUS
 from homeassistant.const import TIME_MILLISECONDS
 from homeassistant.const import TIME_SECONDS
-from homeassistant.const import VOLT
 
 from . import get_sunspec_unique_id
 from .const import CONF_PREFIX
@@ -47,10 +47,10 @@ HA_META = {
     "HPa": [PRESSURE_HPA, ICON_DEFAULT, DEVICE_CLASS_TEMPERATURE],
     "Hz": [FREQUENCY_HERTZ, ICON_FREQ, None],
     "Mbps": [DATA_RATE_MEGABITS_PER_SECOND, ICON_DEFAULT, None],
-    "V": [VOLT, ICON_VOLT, DEVICE_CLASS_VOLTAGE],
+    "V": [ELECTRIC_POTENTIAL_VOLT, ICON_VOLT, DEVICE_CLASS_VOLTAGE],
     "VA": [POWER_VOLT_AMPERE, ICON_POWER, DEVICE_CLASS_POWER],
     "W": [POWER_WATT, ICON_POWER, DEVICE_CLASS_POWER],
-    "W/m2": [IRRADIATION_WATTS_PER_SQUARE_METER, ICON_DEFAULT, None],
+    "W/m2": [IRRADIATION_WATTS_PER_SQUARE_METER, ICON_DEFAULT, None],   
     "Wh": [ENERGY_WATT_HOUR, ICON_ENERGY, DEVICE_CLASS_ENERGY],
     "WH": [ENERGY_WATT_HOUR, ICON_ENERGY, DEVICE_CLASS_ENERGY],
     "bps": [DATA_RATE_BITS_PER_SECOND, ICON_DEFAULT, None],
