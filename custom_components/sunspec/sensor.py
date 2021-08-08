@@ -1,14 +1,15 @@
 """Sensor platform for SunSpec."""
 import logging
 
+from homeassistant.components.sensor import DEVICE_CLASS_CURRENT
+from homeassistant.components.sensor import DEVICE_CLASS_ENERGY
+from homeassistant.components.sensor import DEVICE_CLASS_TEMPERATURE
+from homeassistant.components.sensor import DEVICE_CLASS_VOLTAGE
+from homeassistant.components.sensor import STATE_CLASS_MEASUREMENT
 from homeassistant.const import DATA_RATE_BITS_PER_SECOND
 from homeassistant.const import DATA_RATE_MEGABITS_PER_SECOND
 from homeassistant.const import DEGREE
-from homeassistant.const import DEVICE_CLASS_CURRENT
-from homeassistant.const import DEVICE_CLASS_ENERGY
 from homeassistant.const import DEVICE_CLASS_POWER
-from homeassistant.const import DEVICE_CLASS_TEMPERATURE
-from homeassistant.const import DEVICE_CLASS_VOLTAGE
 from homeassistant.const import ELECTRIC_CURRENT_AMPERE
 from homeassistant.const import ELECTRIC_POTENTIAL_VOLT
 from homeassistant.const import ENERGY_KILO_WATT_HOUR
@@ -127,12 +128,14 @@ class SunSpecSensor(SunSpecEntity):
 
         self._name = f"{name.capitalize()} {desc}"
         _LOGGER.debug(
-            "Createed sensor for %s in model %s using prefix %s: %s uid %s",
+            "Createed sensor for %s in model %s using prefix %s: %s uid %s, device class %s unit %s",
             self.key,
             self.model_id,
             data["prefix"],
             self._name,
             self._uniqe_id,
+            self.use_device_class,
+            self.unit,
         )
 
     # def async_will_remove_from_hass(self):
@@ -185,12 +188,24 @@ class SunSpecSensor(SunSpecEntity):
         """Return de device class of the sensor."""
         return self.use_device_class
 
+    # @property
+    # def state_class(self):
+    #     """Return de device class of the sensor."""
+    #     return STATE_CLASS_MEASUREMENT
+
+    # @property
+    # def last_reset(self):
+    #     """Return de device class of the sensor."""
+    #     return 0
+
     @property
     def device_state_attributes(self):
         """Return the state attributes."""
         attrs = {
             "integration": DOMAIN,
             "sunspec_key": self.key,
+            "state_class": STATE_CLASS_MEASUREMENT,
+            "last_reset": 0,
         }
         label = self._meta.get("label", None)
         if label is not None:

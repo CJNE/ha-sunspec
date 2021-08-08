@@ -3,7 +3,7 @@
 NAME = "SunSpec"
 DOMAIN = "sunspec"
 DOMAIN_DATA = f"{DOMAIN}_data"
-VERSION = "0.0.4"
+VERSION = "0.0.7"
 
 ATTRIBUTION = "Data provided by SunSpec alliance - https://sunspec.org"
 ISSUE_URL = "https://github.com/cjne/ha-sunspec/issues"
