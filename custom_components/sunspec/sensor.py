@@ -26,11 +26,13 @@ from homeassistant.const import SPEED_METERS_PER_SECOND
 from homeassistant.const import TEMP_CELSIUS
 from homeassistant.const import TIME_MILLISECONDS
 from homeassistant.const import TIME_SECONDS
+from homeassistant.util import dt
 
 from . import get_sunspec_unique_id
 from .const import CONF_PREFIX
 from .const import DOMAIN
 from .entity import SunSpecEntity
+
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
@@ -205,7 +207,7 @@ class SunSpecSensor(SunSpecEntity):
             "integration": DOMAIN,
             "sunspec_key": self.key,
             "state_class": STATE_CLASS_MEASUREMENT,
-            "last_reset": 0,
+            "last_reset": dt.utc_from_timestamp(0),
         }
         label = self._meta.get("label", None)
         if label is not None:
