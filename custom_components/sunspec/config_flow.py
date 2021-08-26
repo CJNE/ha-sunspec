@@ -65,8 +65,11 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             self.init_info[CONF_SCAN_INTERVAL] = user_input[CONF_SCAN_INTERVAL]
             host = self.init_info[CONF_HOST]
             port = self.init_info[CONF_PORT]
+            slave_id = self.init_info[CONF_SLAVE_ID]
             _LOGGER.debug("Creating entry with data %s", self.init_info)
-            return self.async_create_entry(title=f"{host}:{port}", data=self.init_info)
+            return self.async_create_entry(
+                title=f"{host}:{port}:{slave_id}", data=self.init_info
+            )
 
         return await self._show_settings_form(user_input)
 
@@ -118,7 +121,9 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             _LOGGER.info(self._device_info)
             return True
         except Exception as e:  # pylint: disable=broad-except
-            _LOGGER.error("Failed to connect to host %s:%s - %s", host, port, e)
+            _LOGGER.error(
+                "Failed to connect to host %s:%s slave %s - %s", host, port, slave_id, e
+            )
             pass
         return False
 
