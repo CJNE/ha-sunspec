@@ -5,7 +5,7 @@ import time
 import sunspec2.modbus.client as modbus_client
 from homeassistant.core import HomeAssistant
 
-TIMEOUT = 30
+TIMEOUT = 60
 
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
@@ -106,13 +106,20 @@ class SunSpecApiClient:
         client.connect()
 
     def modbus_connect(self):
-        _LOGGER.debug("Client connect")
+        _LOGGER.debug(
+            f"Client connect to IP {self._host} port {self._port} slave id {self._slave_id} using timeout {TIMEOUT}"
+        )
         client = modbus_client.SunSpecModbusClientDeviceTCP(
             slave_id=self._slave_id,
             ipaddr=self._host,
             ipport=self._port,
             timeout=TIMEOUT,
         )
+        client.connect()
+        if not client.is_connected():
+            raise Exception(
+                f"Failed to connect to {self._host}:{self._port} slave id {self._slave_id}"
+            )
         _LOGGER.debug("Client connected, perform initial scan")
         client.scan()
         return client
