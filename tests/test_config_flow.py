@@ -60,7 +60,7 @@ async def test_successful_config_flow(
     )
 
     assert result["type"] == data_entry_flow.RESULT_TYPE_CREATE_ENTRY
-    assert result["title"] == "test_host:123"
+    assert result["title"] == "test_host:123:1"
     assert result["data"] == MOCK_CONFIG
     assert result["result"]
 

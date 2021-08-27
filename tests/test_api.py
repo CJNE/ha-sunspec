@@ -1,4 +1,5 @@
 """Tests for SunSpec api."""
+import pytest
 from custom_components.sunspec.api import (
     SunSpecApiClient,
 )
@@ -51,7 +52,27 @@ async def test_modbus_connect(hass, sunspec_modbus_client_mock):
     # To test the api submodule, we first create an instance of our API client
     api = SunSpecApiClient(host="test", port=123, slave_id=1, hass=hass)
     client = api.get_client()
-    print(client)
     client.scan.assert_called_once()
 
     SunSpecApiClient.CLIENT_CACHE = {}
+
+
+async def test_modbus_connect_fail(hass, mocker):
+
+    mocker.patch(
+        # api_call is from slow.py but imported to main.py
+        "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.connect",
+        return_value={},
+    )
+    mocker.patch(
+        # api_call is from slow.py but imported to main.py
+        "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.is_connected",
+        return_value=False,
+    )
+    """Test API calls."""
+
+    # To test the api submodule, we first create an instance of our API client
+    api = SunSpecApiClient(host="test", port=123, slave_id=1, hass=hass)
+
+    with pytest.raises(Exception):
+        api.modbus_connect()

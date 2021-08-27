@@ -128,7 +128,7 @@ class SunSpecApiClient:
         client = self.get_client()
         models = client.models[model_id]
         for model in models:
-            model.read()
             time.sleep(0.6)
+            model.read()
 
         return SunSpecModelWrapper(models)
