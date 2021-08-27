@@ -121,7 +121,7 @@ class SunSpecApiClient:
                 f"Failed to connect to {self._host}:{self._port} slave id {self._slave_id}"
             )
         _LOGGER.debug("Client connected, perform initial scan")
-        client.scan()
+        client.scan(connect=False)
         return client
 
     def read_model(self, model_id) -> dict:
