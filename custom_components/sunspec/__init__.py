@@ -129,5 +129,6 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
             self.api.close()
             return data
         except Exception as exception:
-            _LOGGER.warning("Update Sunspec data failed")
+            _LOGGER.warning(exception)
+            self.api.reconnect()
             raise UpdateFailed() from exception
