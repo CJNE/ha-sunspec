@@ -1,0 +1,42 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "SunSpec Modbus TCP ansulutning",
+        "description": "Om du behover hjälp gå till https://github.com/cjne/ha-sunspec",
+        "data": {
+          "host": "Värdnamn/IP",
+          "port": "Port",
+          "slave_id": "Modbus slav-id"
+        }
+      },
+      "settings": {
+        "title": "Sensor alternativ",
+        "description": "Alternativt prefix för sensornamn och val av SunSpec modeller (dataregister) som du vill använda. Kan ändras senare i komponentkonfigurationen.",
+        "data": {
+          "models_enabled": "Använd modeller",
+          "prefix": "Sensors prefix",
+          "scan_interval": "Updateringsinervall (sekunder)"
+        }
+      }
+    },
+    "error": {
+      "connection": "Kunde inte ansluta, kontrollera värdnamn och port"
+    },
+    "abort": {
+      "single_instance_allowed": "Endast en instans är tillåten"
+    }
+  },
+  "options": {
+    "step": {
+      "model_options": {
+        "title": "Sensor alternativ",
+        "description": "Välj de SunSpec modeller (dataregister) du vill skapa använda.",
+        "data": {
+          "models_enabled": "Använd modeller",
+          "scan_interval": "Updateringsinervall (sekunder)"
+        }
+      }
+    }
+  }
+}
