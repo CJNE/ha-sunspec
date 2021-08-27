@@ -100,11 +100,6 @@ class SunSpecApiClient:
         client = self.get_client()
         client.close()
 
-    def reconnect(self):
-        _LOGGER.debug("Client reconnecting")
-        client = self.get_client()
-        client.connect()
-
     def modbus_connect(self):
         _LOGGER.debug(
             f"Client connect to IP {self._host} port {self._port} slave id {self._slave_id} using timeout {TIMEOUT}"
