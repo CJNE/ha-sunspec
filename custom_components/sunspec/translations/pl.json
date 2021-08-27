@@ -1,0 +1,43 @@
+{
+    "config": {
+      "step": {
+        "user": {
+          "title": "Połączenie z SunSpec Modbus TCP",
+          "description": "Jeśli potrzebujesz pomocy w konfiguracji, zajrzyj tu: https://github.com/cjne/ha-sunspec",
+          "data": {
+            "host": "Nazwa hosta/Adres IP",
+            "port": "Port",
+            "slave_id": "Identyfikator urządzenia"
+          }
+        },
+        "settings": {
+          "title": "Opcje sensorów",
+          "description": "Wpisz opcjonalny przedrostek dla nazw sensorów oraz wybierz dodatkowe modele SunSpec (rejestry danych) dla których chcesz utworzyć sensory. Można to zmienić także później w konfiguracji komponentu.",
+          "data": {
+            "models_enabled": "Odczytuj modele",
+            "prefix": "Przedrostek dla sensorów",
+            "scan_interval": "Częstotliwość pobierania danych (sekundy)"
+          }
+        }
+      },
+      "error": {
+        "connection": "Wystąpiłbłąd w trakcie połączenia, sprawdż nazwę hosta i/lub port"
+      },
+      "abort": {
+        "single_instance_allowed": "Dozwolona jest tylko jedna instancja."
+      }
+    },
+    "options": {
+      "step": {
+        "model_options": {
+          "title": "Opcje sensorów",
+          "description": "Wybierz dla których modeli SunSpec (rejestry danych) chcesz utworzyć sensory.",
+          "data": {
+            "models_enabled": "Odczytuj modele",
+            "scan_interval": "Częstotliwość pobierania danych (sekundy)"
+          }
+        }
+      }
+    }
+  }
+  
