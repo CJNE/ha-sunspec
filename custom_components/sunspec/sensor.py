@@ -96,7 +96,9 @@ class SunSpecSensor(SunSpecEntity):
     """sunspec Sensor class."""
 
     def __init__(self, coordinator, config_entry, data):
-        super().__init__(coordinator, config_entry, data["device_info"])
+        super().__init__(
+            coordinator, config_entry, data["device_info"], data["model"].getGroupMeta()
+        )
         self.model_id = data["model_id"]
         self.model_index = data["model_index"]
         self.model_wrapper = data["model"]
