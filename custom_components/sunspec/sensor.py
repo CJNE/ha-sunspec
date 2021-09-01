@@ -6,6 +6,7 @@ from homeassistant.components.sensor import DEVICE_CLASS_ENERGY
 from homeassistant.components.sensor import DEVICE_CLASS_TEMPERATURE
 from homeassistant.components.sensor import DEVICE_CLASS_VOLTAGE
 from homeassistant.components.sensor import STATE_CLASS_MEASUREMENT
+from homeassistant.components.sensor import STATE_CLASS_TOTAL_INCREASING
 from homeassistant.const import DATA_RATE_BITS_PER_SECOND
 from homeassistant.const import DATA_RATE_MEGABITS_PER_SECOND
 from homeassistant.const import DEGREE
@@ -26,7 +27,6 @@ from homeassistant.const import SPEED_METERS_PER_SECOND
 from homeassistant.const import TEMP_CELSIUS
 from homeassistant.const import TIME_MILLISECONDS
 from homeassistant.const import TIME_SECONDS
-from homeassistant.util import dt
 
 from . import get_sunspec_unique_id
 from .const import CONF_PREFIX
@@ -207,8 +207,9 @@ class SunSpecSensor(SunSpecEntity):
             "integration": DOMAIN,
             "sunspec_key": self.key,
             "state_class": STATE_CLASS_MEASUREMENT,
-            "last_reset": dt.utc_from_timestamp(0),
         }
+        if self.device_class == DEVICE_CLASS_ENERGY:
+            attrs["state_class"] = STATE_CLASS_TOTAL_INCREASING
         label = self._meta.get("label", None)
         if label is not None:
             attrs["label"] = label
