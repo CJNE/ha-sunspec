@@ -159,6 +159,12 @@ class SunSpecSensor(SunSpecEntity):
     def state(self):
         """Return the state of the sensor."""
         val = self.coordinator.data[self.model_id].getValue(self.key, self.model_index)
+        # If this is an energy sensor a value of 0 woulld mess up long term stats because of how total_increasing works
+        if self.use_device_class == DEVICE_CLASS_ENERGY and val == 0:
+            _LOGGER.debug(
+                "Returning None instead of 0 for {self.name) to avoid resetting total_increasing counter"
+            )
+            return None
         vtype = self._meta["type"]
         if vtype in ("enum16", "bitfield32"):
             symbols = self._meta.get("symbols", None)
@@ -167,13 +173,13 @@ class SunSpecSensor(SunSpecEntity):
             if vtype == "enum16":
                 symbol = list(filter(lambda s: s["value"] == val, symbols))
                 if len(symbol) == 1:
-                    return symbol[0]["name"]
+                    return symbol[0]["name"][:255]
             else:
                 symbols = list(
                     filter(lambda s: (val >> int(s["value"])) & 1 == 1, symbols)
                 )
                 if len(symbols) > 0:
-                    return ",".join(map(lambda s: s["name"], symbols))
+                    return ",".join(map(lambda s: s["name"], symbols))[:255]
                 return ""
         return val
 
