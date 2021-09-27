@@ -80,13 +80,14 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def _show_config_form(self, user_input):  # pylint: disable=unused-argument
         """Show the configuration form to edit connection data."""
+        defaults = user_input or {CONF_HOST: "", CONF_PORT: 502, CONF_SLAVE_ID: 1}
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_HOST): str,
-                    vol.Required(CONF_PORT, default=502): int,
-                    vol.Required(CONF_SLAVE_ID, default=1): int,
+                    vol.Required(CONF_HOST, default=defaults[CONF_HOST]): str,
+                    vol.Required(CONF_PORT, default=defaults[CONF_PORT]): int,
+                    vol.Required(CONF_SLAVE_ID, default=defaults[CONF_SLAVE_ID]): int,
                 }
             ),
             errors=self._errors,
