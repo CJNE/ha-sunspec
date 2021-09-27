@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 import pytest
 import sunspec2.file.client as modbus_client
+from custom_components.sunspec.api import ConnectionTimeoutError
 
 pytest_plugins = "pytest_homeassistant_custom_component"
 
@@ -87,5 +88,17 @@ def error_get_data_fixture():
     with patch(
         "custom_components.sunspec.SunSpecApiClient.async_get_data",
         side_effect=Exception,
+    ):
+        yield
+
+
+# In this fixture, we are forcing calls to async_get_data to raise an Exception. This is useful
+# for exception handling.
+@pytest.fixture
+def timeout_error_on_get_data():
+    """Simulate timeout error when retrieving data from API."""
+    with patch(
+        "custom_components.sunspec.SunSpecApiClient.async_get_data",
+        side_effect=ConnectionTimeoutError,
     ):
         yield

@@ -4,11 +4,21 @@ import time
 
 import sunspec2.modbus.client as modbus_client
 from homeassistant.core import HomeAssistant
+from sunspec2.modbus.client import SunSpecModbusClientException
+from sunspec2.modbus.client import SunSpecModbusClientTimeout
 
 TIMEOUT = 60
 
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
+
+
+class ConnectionTimeoutError(Exception):
+    pass
+
+
+class ConnectionError(Exception):
+    pass
 
 
 class SunSpecModelWrapper:
@@ -83,7 +93,12 @@ class SunSpecApiClient:
         return self._hass.async_add_executor_job(self.get_client)
 
     async def async_get_data(self, model_id) -> SunSpecModelWrapper:
-        return await self.read(model_id)
+        try:
+            return await self.read(model_id)
+        except SunSpecModbusClientTimeout as timeout_error:
+            raise ConnectionTimeoutError() from timeout_error
+        except SunSpecModbusClientException as connect_error:
+            raise ConnectionError() from connect_error
 
     async def read(self, model_id) -> SunSpecModelWrapper:
         return await self._hass.async_add_executor_job(self.read_model, model_id)

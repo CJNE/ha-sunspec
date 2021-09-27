@@ -15,6 +15,7 @@ from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
+from .api import ConnectionTimeoutError
 from .api import SunSpecApiClient
 from .const import CONF_ENABLED_MODELS
 from .const import CONF_HOST
@@ -128,6 +129,10 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
                 data[model_id] = await self.api.async_get_data(model_id)
             self.api.close()
             return data
+        except ConnectionTimeoutError as exception:
+            _LOGGER.warning("SunSpec modbus timeout")
+            self.api.reconnect()
+            raise UpdateFailed() from exception
         except Exception as exception:
             _LOGGER.warning(exception)
             self.api.reconnect()

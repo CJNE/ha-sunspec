@@ -1,8 +1,10 @@
 """Tests for SunSpec api."""
 import pytest
-from custom_components.sunspec.api import (
-    SunSpecApiClient,
-)
+from custom_components.sunspec.api import ConnectionError
+from custom_components.sunspec.api import ConnectionTimeoutError
+from custom_components.sunspec.api import SunSpecApiClient
+from sunspec2.modbus.client import SunSpecModbusClientException
+from sunspec2.modbus.client import SunSpecModbusClientTimeout
 
 
 async def test_api(hass, sunspec_client_mock):
@@ -76,3 +78,25 @@ async def test_modbus_connect_fail(hass, mocker):
 
     with pytest.raises(Exception):
         api.modbus_connect()
+
+
+async def test_read_model_timeout(hass, mocker):
+    mocker.patch(
+        "custom_components.sunspec.api.SunSpecApiClient.read_model",
+        side_effect=SunSpecModbusClientTimeout,
+    )
+    api = SunSpecApiClient(host="test", port=123, slave_id=1, hass=hass)
+
+    with pytest.raises(ConnectionTimeoutError):
+        await api.async_get_data(1)
+
+
+async def test_read_model_error(hass, mocker):
+    mocker.patch(
+        "custom_components.sunspec.api.SunSpecApiClient.read_model",
+        side_effect=SunSpecModbusClientException,
+    )
+    api = SunSpecApiClient(host="test", port=123, slave_id=1, hass=hass)
+
+    with pytest.raises(ConnectionError):
+        await api.async_get_data(1)
