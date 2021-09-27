@@ -7,6 +7,8 @@ By default only the most common sensors are created, there is an optional config
 
 Currenlty supports Modbus TCP connections. Modbus serial connection is planned.
 
+Works out of the box with the energy dashboard.
+
 [![GitHub Release][releases-shield]][releases]
 [![GitHub Activity][commits-shield]][commits]
 [![License][license-shield]](LICENSE)
@@ -16,6 +18,7 @@ Currenlty supports Modbus TCP connections. Modbus serial connection is planned.
 
 [![hacs][hacsbadge]][hacs]
 [![Project Maintenance][maintenance-shield]][user_profile]
+[![BuyMeCoffee][buymecoffeebadge]][buymecoffee]
 
 [![Discord][discord-shield]][discord]
 [![Community Forum][forum-shield]][forum]
@@ -28,7 +31,12 @@ Currenlty supports Modbus TCP connections. Modbus serial connection is planned.
 
 ![logo][logoimg]
 
-## Installation
+## HACS Installation
+
+1. Add and search for sunspec in HACS
+2. Install
+
+## Manual Installation
 
 1. Using the tool of choice open the directory (folder) for your HA configuration (where you find `configuration.yaml`).
 2. If you do not have a `custom_components` directory (folder) there, you need to create it.
@@ -70,6 +78,8 @@ Code template was mainly taken from [@Ludeeus](https://github.com/ludeeus)'s [in
 [integration_blueprint]: https://github.com/custom-components/integration_blueprint
 [black]: https://github.com/psf/black
 [black-shield]: https://img.shields.io/badge/code%20style-black-000000.svg?style=for-the-badge
+[buymecoffee]: https://www.buymeacoffee.com/cjne.coffee
+[buymecoffeebadge]: https://img.shields.io/badge/buy%20me%20a%20coffee-donate-yellow.svg?style=for-the-badge
 [commits-shield]: https://img.shields.io/github/commit-activity/y/cjne/ha-sunspec.svg?style=for-the-badge
 [commits]: https://github.com/cjne/ha-sunspec/commits/main
 [hacs]: https://hacs.xyz
