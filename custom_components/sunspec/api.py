@@ -6,6 +6,7 @@ import sunspec2.modbus.client as modbus_client
 from homeassistant.core import HomeAssistant
 from sunspec2.modbus.client import SunSpecModbusClientException
 from sunspec2.modbus.client import SunSpecModbusClientTimeout
+from sunspec2.modbus.modbus import ModbusClientError
 
 TIMEOUT = 60
 
@@ -100,7 +101,7 @@ class SunSpecApiClient:
             return await self.read(model_id)
         except SunSpecModbusClientTimeout as timeout_error:
             raise ConnectionTimeoutError() from timeout_error
-        except SunSpecModbusClientException as connect_error:
+        except (SunSpecModbusClientException, ModbusClientError) as connect_error:
             raise ConnectionError() from connect_error
 
     async def read(self, model_id) -> SunSpecModelWrapper:
