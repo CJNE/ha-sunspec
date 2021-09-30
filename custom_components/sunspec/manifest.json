@@ -1,7 +1,7 @@
 {
   "domain": "sunspec",
   "name": "SunSpec",
-  "version": "0.0.14",
+  "version": "0.0.15b1",
   "documentation": "https://github.com/cjne/ha-sunspec",
   "issue_tracker": "https://github.com/cjne/ha-sunspec/issues",
   "dependencies": [],
