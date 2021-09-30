@@ -13,6 +13,17 @@ from .const import MOCK_CONFIG_MM
 from .const import MOCK_CONFIG_PREFIX
 
 
+async def test_sensor_overflow_error(
+    hass: HomeAssistant, sunspec_client_mock, overflow_error_dca
+) -> None:
+    """Verify device information includes expected details."""
+
+    await setup_mock_sunspec_config_entry(hass)
+
+    entity_state = hass.states.get(TEST_INVERTER_SENSOR_DC_ENTITY_ID)
+    assert entity_state
+
+
 async def test_sensor_dc(hass: HomeAssistant, sunspec_client_mock) -> None:
     """Verify device information includes expected details."""
 

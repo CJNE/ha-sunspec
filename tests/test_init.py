@@ -10,6 +10,7 @@ from custom_components.sunspec.const import (
 from homeassistant.exceptions import ConfigEntryNotReady
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from . import setup_mock_sunspec_config_entry
 from .const import MOCK_CONFIG
 
 
@@ -66,3 +67,7 @@ async def test_fetch_data_timeout(hass, timeout_error_on_get_data):
     # an error.
     with pytest.raises(ConfigEntryNotReady):
         assert await async_setup_entry(hass, config_entry)
+
+
+async def test_client_reconnect(hass, sunspec_client_mock_not_connected) -> None:
+    await setup_mock_sunspec_config_entry(hass, MOCK_CONFIG)

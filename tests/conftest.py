@@ -10,6 +10,22 @@ from custom_components.sunspec.api import ConnectionTimeoutError
 pytest_plugins = "pytest_homeassistant_custom_component"
 
 
+class MockFileClientDeviceNotConnected(modbus_client.FileClientDevice):
+    def is_connected(self):
+        return True
+
+    def connect(self):
+        return True
+
+
+class MockFileClientDevice(modbus_client.FileClientDevice):
+    def is_connected(self):
+        return False
+
+    def connect(self):
+        return True
+
+
 # This fixture is used to prevent HomeAssistant from attempting to create and dismiss persistent
 # notifications. These calls would fail without this fixture since the persistent_notification
 # integration is never loaded during a test.
@@ -47,10 +63,21 @@ def bypass_get_data_fixture():
         yield
 
 
-@pytest.fixture(name="sunspec_client_mock")
+@pytest.fixture
 def sunspec_client_mock():
     """Skip calls to get data from API."""
-    client = modbus_client.FileClientDevice("./tests/test_data/inverter.json")
+    client = MockFileClientDevice("./tests/test_data/inverter.json")
+    client.scan()
+    with patch(
+        "custom_components.sunspec.SunSpecApiClient.modbus_connect", return_value=client
+    ):
+        yield
+
+
+@pytest.fixture
+def sunspec_client_mock_not_connected():
+    """Skip calls to get data from API."""
+    client = MockFileClientDeviceNotConnected("./tests/test_data/inverter.json")
     client.scan()
     with patch(
         "custom_components.sunspec.SunSpecApiClient.modbus_connect", return_value=client
@@ -100,5 +127,21 @@ def timeout_error_on_get_data():
     with patch(
         "custom_components.sunspec.SunSpecApiClient.async_get_data",
         side_effect=ConnectionTimeoutError,
+    ):
+        yield
+
+
+@pytest.fixture
+def overflow_error_dca():
+    """Simulate overflow error for getValue from API."""
+
+    def my_side_effect(*args, **kwargs):
+        if args[0] == "DCA":
+            raise OverflowError()
+        return 1
+
+    with patch(
+        "custom_components.sunspec.api.SunSpecModelWrapper.getValue",
+        side_effect=my_side_effect,
     ):
         yield
