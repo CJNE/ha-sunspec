@@ -158,7 +158,15 @@ class SunSpecSensor(SunSpecEntity):
     @property
     def state(self):
         """Return the state of the sensor."""
-        val = self.coordinator.data[self.model_id].getValue(self.key, self.model_index)
+        try:
+            val = self.coordinator.data[self.model_id].getValue(
+                self.key, self.model_index
+            )
+        except OverflowError:
+            _LOGGER.warning(
+                "Math overflow error when retreiving calculated value for %s", self.key
+            )
+            return None
         # If this is an energy sensor a value of 0 woulld mess up long term stats because of how total_increasing works
         if self.use_device_class == DEVICE_CLASS_ENERGY and val == 0:
             _LOGGER.debug(

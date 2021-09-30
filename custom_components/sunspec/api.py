@@ -82,12 +82,15 @@ class SunSpecApiClient:
         self._slave_id = slave_id
         self._client_key = f"{host}:{port}:{slave_id}"
 
-    def get_client(self):
-        cached = SunSpecApiClient.CLIENT_CACHE.get(self._client_key, None)
-        if cached is None:
-            cached = self.modbus_connect()
-            SunSpecApiClient.CLIENT_CACHE[self._client_key] = cached
-        return cached
+    def get_client(self, reconnect=True):
+        client = SunSpecApiClient.CLIENT_CACHE.get(self._client_key, None)
+        if client is None:
+            client = self.modbus_connect()
+            SunSpecApiClient.CLIENT_CACHE[self._client_key] = client
+        if not client.is_connected() and reconnect:
+            _LOGGER.debug("Get client reconnecting")
+            client.connect()
+        return client
 
     def async_get_client(self):
         return self._hass.async_add_executor_job(self.get_client)
@@ -112,12 +115,12 @@ class SunSpecApiClient:
         return model_ids
 
     def close(self):
-        client = self.get_client()
+        client = self.get_client(False)
         client.close()
 
     def reconnect(self):
         _LOGGER.debug("Client reconnecting")
-        client = self.get_client()
+        client = self.get_client(False)
         client.connect()
 
     def modbus_connect(self):

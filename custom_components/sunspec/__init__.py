@@ -131,9 +131,9 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
             return data
         except ConnectionTimeoutError as exception:
             _LOGGER.warning("SunSpec modbus timeout")
-            self.api.reconnect()
+            self.api.close()
             raise UpdateFailed() from exception
         except Exception as exception:
             _LOGGER.warning(exception)
-            self.api.reconnect()
+            self.api.close()
             raise UpdateFailed() from exception
