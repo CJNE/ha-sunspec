@@ -5,6 +5,7 @@ from homeassistant.components.sensor import DEVICE_CLASS_CURRENT
 from homeassistant.components.sensor import DEVICE_CLASS_ENERGY
 from homeassistant.components.sensor import DEVICE_CLASS_TEMPERATURE
 from homeassistant.components.sensor import DEVICE_CLASS_VOLTAGE
+from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor import STATE_CLASS_MEASUREMENT
 from homeassistant.components.sensor import STATE_CLASS_TOTAL_INCREASING
 from homeassistant.const import DATA_RATE_BITS_PER_SECOND
@@ -92,7 +93,7 @@ async def async_setup_entry(hass, entry, async_add_devices):
     async_add_devices(sensors)
 
 
-class SunSpecSensor(SunSpecEntity):
+class SunSpecSensor(SunSpecEntity, SensorEntity):
     """sunspec Sensor class."""
 
     def __init__(self, coordinator, config_entry, data):
@@ -206,15 +207,14 @@ class SunSpecSensor(SunSpecEntity):
         """Return de device class of the sensor."""
         return self.use_device_class
 
-    # @property
-    # def state_class(self):
-    #     """Return de device class of the sensor."""
-    #     return STATE_CLASS_MEASUREMENT
-
-    # @property
-    # def last_reset(self):
-    #     """Return de device class of the sensor."""
-    #     return 0
+    @property
+    def state_class(self):
+        """Return de device class of the sensor."""
+        if self.unit == "":
+            return None
+        if self.device_class == DEVICE_CLASS_ENERGY:
+            return STATE_CLASS_TOTAL_INCREASING
+        return STATE_CLASS_MEASUREMENT
 
     @property
     def device_state_attributes(self):
@@ -222,10 +222,7 @@ class SunSpecSensor(SunSpecEntity):
         attrs = {
             "integration": DOMAIN,
             "sunspec_key": self.key,
-            "state_class": STATE_CLASS_MEASUREMENT,
         }
-        if self.device_class == DEVICE_CLASS_ENERGY:
-            attrs["state_class"] = STATE_CLASS_TOTAL_INCREASING
         label = self._meta.get("label", None)
         if label is not None:
             attrs["label"] = label
