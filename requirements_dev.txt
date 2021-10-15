@@ -1,2 +1,2 @@
 homeassistant
-pysunspec2==1.0.4
+pysunspec2==1.0.5
