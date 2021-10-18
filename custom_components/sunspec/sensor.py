@@ -124,7 +124,7 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
         if len(key_parts) > 1:
             name = f"{name} {key_parts[0]} {key_parts[1]}"
 
-        desc = self._meta.get("desc", self._meta.get("label", self.key))
+        desc = self._meta.get("label", self.key)
         if self.unit == ELECTRIC_CURRENT_AMPERE and "DC" in desc:
             self.use_icon = ICON_DC_AMPS
 

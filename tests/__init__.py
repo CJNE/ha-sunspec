@@ -20,14 +20,10 @@ from .const import MOCK_CONFIG
 
 TEST_CONFIG_ENTRY_ID = "77889900aa"
 TEST_SERIAL_NO = "abc123"
-TEST_INVERTER_SENSOR_STATE_ENTITY_ID = (
-    "sensor.inverter_enumerated_value_operating_state"
-)
-TEST_INVERTER_SENSOR_POWER_ENTITY_ID = "sensor.inverter_ac_power"
-TEST_INVERTER_MM_SENSOR_STATE_ENTITY_ID = (
-    "sensor.dermeasureac_1_operating_state_of_the_der"
-)
-TEST_INVERTER_MM_SENSOR_POWER_ENTITY_ID = "sensor.dermeasureac_1_total_active_power"
+TEST_INVERTER_SENSOR_STATE_ENTITY_ID = "sensor.inverter_operating_state"
+TEST_INVERTER_SENSOR_POWER_ENTITY_ID = "sensor.inverter_watts"
+TEST_INVERTER_MM_SENSOR_STATE_ENTITY_ID = "sensor.dermeasureac_1_operating_state"
+TEST_INVERTER_MM_SENSOR_POWER_ENTITY_ID = "sensor.dermeasureac_1_active_power"
 TEST_INVERTER_RG_SENSOR_INCLX_ENTITY_ID = (
     "sensor.inclinometer_incl_2_x_axis_inclination"
 )
