@@ -8,5 +8,5 @@
   "config_flow": true,
   "codeowners": ["@cjne"],
   "iot_class": "local_polling",
-  "requirements": ["pysunspec2==1.0.4"]
+  "requirements": ["pysunspec2==1.0.5"]
 }
