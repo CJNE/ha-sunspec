@@ -6,7 +6,6 @@ import sunspec2.modbus.client as modbus_client
 from homeassistant.core import HomeAssistant
 from sunspec2.modbus.client import SunSpecModbusClientException
 from sunspec2.modbus.client import SunSpecModbusClientTimeout
-from sunspec2.modbus.modbus import ModbusClientError
 
 TIMEOUT = 60
 
@@ -83,15 +82,12 @@ class SunSpecApiClient:
         self._slave_id = slave_id
         self._client_key = f"{host}:{port}:{slave_id}"
 
-    def get_client(self, reconnect=True):
-        client = SunSpecApiClient.CLIENT_CACHE.get(self._client_key, None)
-        if client is None:
-            client = self.modbus_connect()
-            SunSpecApiClient.CLIENT_CACHE[self._client_key] = client
-        if not client.is_connected() and reconnect:
-            _LOGGER.debug("Get client reconnecting")
-            client.connect()
-        return client
+    def get_client(self):
+        cached = SunSpecApiClient.CLIENT_CACHE.get(self._client_key, None)
+        if cached is None:
+            cached = self.modbus_connect()
+            SunSpecApiClient.CLIENT_CACHE[self._client_key] = cached
+        return cached
 
     def async_get_client(self):
         return self._hass.async_add_executor_job(self.get_client)
@@ -101,7 +97,7 @@ class SunSpecApiClient:
             return await self.read(model_id)
         except SunSpecModbusClientTimeout as timeout_error:
             raise ConnectionTimeoutError() from timeout_error
-        except (SunSpecModbusClientException, ModbusClientError) as connect_error:
+        except SunSpecModbusClientException as connect_error:
             raise ConnectionError() from connect_error
 
     async def read(self, model_id) -> SunSpecModelWrapper:
@@ -116,8 +112,13 @@ class SunSpecApiClient:
         return model_ids
 
     def close(self):
-        client = self.get_client(False)
+        client = self.get_client()
         client.close()
+
+    def reconnect(self):
+        _LOGGER.debug("Client reconnecting")
+        client = self.get_client()
+        client.connect()
 
     def modbus_connect(self):
         _LOGGER.debug(
