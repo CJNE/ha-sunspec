@@ -1,6 +1,6 @@
 # SunSpec
 
-This custom component for [home assistant][https://home-assistant.io/] will let you monitor any SunSpec Modbus compliant device, most commonly a solar inverter or energy meter. A list of compliant devices and manufacturers can be found on the [sunspec website][https://sunspec.org/sunspec-modbus-certified-products/].
+This custom component for [home assistant](https://home-assistant.io/) will let you monitor any SunSpec Modbus compliant device, most commonly a solar inverter or energy meter. A list of compliant devices and manufacturers can be found on the [sunspec website](https://sunspec.org/sunspec-modbus-certified-products/).
 
 It will auto discover and create sensors depending on the available data of the device.
 By default only the most common sensors are created, there is an optional configuration that lets you control exactly what data to use.
