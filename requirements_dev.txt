@@ -1,2 +1,4 @@
 homeassistant
-git+https://github.com/thecem/pysunspec2@master#pysunspec2==1.0.5
+pysunspec2==1.0.6
+flake8
+reorder-python-imports
