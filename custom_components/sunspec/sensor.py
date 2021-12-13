@@ -217,7 +217,7 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
         return STATE_CLASS_MEASUREMENT
 
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         """Return the state attributes."""
         attrs = {
             "integration": DOMAIN,
