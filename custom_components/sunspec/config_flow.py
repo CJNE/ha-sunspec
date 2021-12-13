@@ -96,7 +96,8 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     async def _show_settings_form(self, user_input):  # pylint: disable=unused-argument
         """Show the configuration form to edit settings data."""
         models = set(await self.client.async_get_models())
-        model_filter = {str(model): str(model) for model in sorted(models)}
+        model_filter = {str(model) for model in sorted(models)}
+        default_enabled = {str(model) for model in DEFAULT_MODELS if model in models}
         return self.async_show_form(
             step_id="settings",
             data_schema=vol.Schema(
@@ -107,7 +108,7 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     ): int,
                     vol.Optional(
                         CONF_ENABLED_MODELS,
-                        default=DEFAULT_MODELS,
+                        default=default_enabled,
                     ): cv.multi_select(model_filter),
                 }
             ),
