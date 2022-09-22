@@ -1,8 +1,6 @@
 {
   "name": "SunSpec",
   "hacs": "1.6.0",
-  "domains": ["sensor"],
-  "iot_class": "Local Polling",
   "render_readme": true,
   "homeassistant": "2021.9.1"
 }
