@@ -1,4 +1,4 @@
 homeassistant
-pysunspec2==1.0.7
+pysunspec2==1.0.8
 flake8
 reorder-python-imports
