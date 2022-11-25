@@ -7,6 +7,7 @@ from . import TEST_INVERTER_MM_SENSOR_POWER_ENTITY_ID
 from . import TEST_INVERTER_MM_SENSOR_STATE_ENTITY_ID
 from . import TEST_INVERTER_PREFIX_SENSOR_DC_ENTITY_ID
 from . import TEST_INVERTER_SENSOR_DC_ENTITY_ID
+from . import TEST_INVERTER_SENSOR_ENERGY_ENTITY_ID
 from . import TEST_INVERTER_SENSOR_POWER_ENTITY_ID
 from . import TEST_INVERTER_SENSOR_STATE_ENTITY_ID
 from .const import MOCK_CONFIG_MM
@@ -61,6 +62,16 @@ async def test_sensor_power(hass: HomeAssistant, sunspec_client_mock) -> None:
     entity_state = hass.states.get(TEST_INVERTER_SENSOR_POWER_ENTITY_ID)
     assert entity_state
     assert entity_state.state == "800"
+
+
+async def test_sensor_energy(hass: HomeAssistant, sunspec_client_mock) -> None:
+    """Verify device information includes expected details."""
+
+    await setup_mock_sunspec_config_entry(hass)
+
+    entity_state = hass.states.get(TEST_INVERTER_SENSOR_ENERGY_ENTITY_ID)
+    assert entity_state
+    assert entity_state.state == "100000"
 
 
 async def test_sensor_state_mm(hass: HomeAssistant, sunspec_client_mock) -> None:

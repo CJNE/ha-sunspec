@@ -111,6 +111,10 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
         self.unit = ha_meta[0]
         self.use_icon = ha_meta[1]
         self.use_device_class = ha_meta[2]
+        # Used if this is an energy sensor and the read value is 0
+        # Updated wheneve the value read is not 0
+        self.lastKnown = None
+        self._assumed_state = False
 
         self._uniqe_id = get_sunspec_unique_id(
             config_entry.entry_id, self.key, self.model_id, self.model_index
@@ -157,7 +161,11 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
         return self._uniqe_id
 
     @property
-    def state(self):
+    def assumed_state(self):
+        return self._assumed_state
+
+    @property
+    def native_value(self):
         """Return the state of the sensor."""
         try:
             val = self.coordinator.data[self.model_id].getValue(
@@ -169,11 +177,15 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
             )
             return None
         # If this is an energy sensor a value of 0 woulld mess up long term stats because of how total_increasing works
-        if self.use_device_class == DEVICE_CLASS_ENERGY and val == 0:
-            _LOGGER.debug(
-                "Returning None instead of 0 for {self.name) to avoid resetting total_increasing counter"
-            )
-            return None
+        if self.use_device_class == DEVICE_CLASS_ENERGY:
+            if val == 0:
+                _LOGGER.debug(
+                    "Returning last known value instead of 0 for {self.name) to avoid resetting total_increasing counter"
+                )
+                self._assumed_state = True
+                return self.lastKnown
+            self.lastKnown = val
+            self._assumed_state = False
         vtype = self._meta["type"]
         if vtype in ("enum16", "bitfield32"):
             symbols = self._meta.get("symbols", None)
@@ -193,7 +205,7 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
         return val
 
     @property
-    def unit_of_measurement(self):
+    def native_unit_of_measurement(self):
         """Return the unit of measurement."""
         return self.unit
 
