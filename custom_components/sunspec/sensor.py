@@ -76,7 +76,7 @@ async def async_setup_entry(hass, entry, async_add_devices):
     coordinator = hass.data[DOMAIN][entry.entry_id]
     sensors = []
     device_info = await coordinator.api.async_get_device_info()
-    prefix = entry.data.get(CONF_PREFIX, "")
+    prefix = entry.options.get(CONF_PREFIX, entry.data.get(CONF_PREFIX, ""))
     for model_id in coordinator.data.keys():
         model_wrapper = coordinator.data[model_id]
         for key in model_wrapper.getKeys():

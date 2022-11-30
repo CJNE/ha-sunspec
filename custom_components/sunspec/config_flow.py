@@ -117,6 +117,7 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def _test_connection(self, host, port, slave_id):
         """Return true if credentials is valid."""
+        _LOGGER.debug(f"Test connection to {host}:{port} slave id {slave_id}")
         try:
             self.client = SunSpecApiClient(host, port, slave_id, self.hass)
             self._device_info = await self.client.async_get_device_info()
@@ -133,16 +134,46 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
     """Config flow options handler for sunspec."""
 
+    VERSION = 1
+
     def __init__(self, config_entry):
         """Initialize HACS options flow."""
         self.config_entry = config_entry
+        self.settings = {}
         self.options = dict(config_entry.options)
         self.coordinator = None
 
     async def async_step_init(self, user_input=None):  # pylint: disable=unused-argument
         """Manage the options."""
         self.coordinator = self.hass.data[DOMAIN][self.config_entry.entry_id]
-        return await self.async_step_model_options()
+        return await self.async_step_host_options()
+
+    async def async_step_host_options(self, user_input=None):
+        """Handle a flow initialized by the user."""
+        if user_input is not None:
+            self.settings.update(user_input)
+            _LOGGER.debug("Sunspec host setttins: %s", user_input)
+            return await self.async_step_model_options()
+
+        return await self.show_settings_form()
+
+    async def show_settings_form(self, data=None, errors=None):
+        settings = data or self.config_entry.data
+        host = settings.get(CONF_HOST)
+        port = settings.get(CONF_PORT)
+        slave_id = settings.get(CONF_SLAVE_ID)
+
+        return self.async_show_form(
+            step_id="host_options",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_HOST, default=host): str,
+                    vol.Required(CONF_PORT, default=port): int,
+                    vol.Required(CONF_SLAVE_ID, default=slave_id): int,
+                }
+            ),
+            errors=errors,
+        )
 
     async def async_step_model_options(self, user_input=None):
         """Handle a flow initialized by the user."""
@@ -150,24 +181,59 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
             self.options.update(user_input)
             return await self._update_options()
 
+        prefix = self.config_entry.options.get(
+            CONF_PREFIX, self.config_entry.data.get(CONF_PREFIX)
+        )
         scan_interval = self.config_entry.options.get(
             CONF_SCAN_INTERVAL, self.config_entry.data.get(CONF_SCAN_INTERVAL)
         )
-        models = set(await self.coordinator.api.async_get_models())
-        model_filter = {model for model in sorted(models)}
-        return self.async_show_form(
-            step_id="model_options",
-            data_schema=vol.Schema(
-                {
-                    vol.Optional(CONF_SCAN_INTERVAL, default=scan_interval): int,
-                    vol.Optional(
-                        CONF_ENABLED_MODELS,
-                        default=self.coordinator.option_model_filter,
-                    ): cv.multi_select(model_filter),
-                }
-            ),
-        )
+        try:
+            models = set(await self.coordinator.api.async_get_models(self.settings))
+            model_filter = {model for model in sorted(models)}
+            default_enabled = {model for model in DEFAULT_MODELS if model in models}
+            default_models = self.config_entry.options.get(
+                CONF_ENABLED_MODELS, default_enabled
+            )
+
+            default_models = {model for model in default_models if model in models}
+
+            return self.async_show_form(
+                step_id="model_options",
+                data_schema=vol.Schema(
+                    {
+                        vol.Optional(CONF_PREFIX, default=prefix): str,
+                        vol.Optional(CONF_SCAN_INTERVAL, default=scan_interval): int,
+                        vol.Optional(
+                            CONF_ENABLED_MODELS,
+                            default=default_models,
+                        ): cv.multi_select(model_filter),
+                    }
+                ),
+            )
+        except Exception as e:  # pylint: disable=broad-except
+            _LOGGER.error(
+                "Failed to connect to host %s:%s slave %s - %s",
+                self.settings[CONF_HOST],
+                self.settings[CONF_PORT],
+                self.settings[CONF_SLAVE_ID],
+                e,
+            )
+            return await self.show_settings_form(
+                data=self.settings, errors={"base": "connection"}
+            )
 
     async def _update_options(self):
         """Update config entry options."""
+        # self.settings[CONF_PORT] = 503
+        self.settings[CONF_ENABLED_MODELS] = [160, 103]
+        title = f"{self.settings[CONF_HOST]}:{self.settings[CONF_PORT]}:{self.settings[CONF_SLAVE_ID]}"
+        _LOGGER.debug(
+            "Saving config entry with title %s, data: %s options %s",
+            title,
+            self.settings,
+            self.options,
+        )
+        self.hass.config_entries.async_update_entry(
+            self.config_entry, data=self.settings, title=title
+        )
         return self.async_create_entry(title="", data=self.options)

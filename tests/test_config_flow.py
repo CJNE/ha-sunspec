@@ -107,9 +107,17 @@ async def test_options_flow(hass, sunspec_client_mock):
 
     # Verify that the first options step is a user form
     assert result["type"] == data_entry_flow.RESULT_TYPE_FORM
-    assert result["step_id"] == "model_options"
+    assert result["step_id"] == "host_options"
 
     # Enter some fake data into the form
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input=MOCK_CONFIG_STEP_1
+    )
+
+    # Verify that the second options step is a user form
+    assert result["type"] == data_entry_flow.RESULT_TYPE_FORM
+    assert result["step_id"] == "model_options"
+
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], user_input={CONF_ENABLED_MODELS: [], CONF_SCAN_INTERVAL: 10}
     )
@@ -120,3 +128,33 @@ async def test_options_flow(hass, sunspec_client_mock):
 
     # Verify that the options were updated
     # assert entry.options == {BINARY_SENSOR: True, SENSOR: False, SWITCH: True}
+
+
+# Test faild connection in options flow
+async def test_options_flow_connect_error(hass, sunspec_client_mock_connect_error):
+    """Test an options flow."""
+    # Create a new MockConfigEntry and add to HASS (we're bypassing config
+    # flow entirely)
+    entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG, entry_id="test")
+    entry.add_to_hass(hass)
+
+    coordinator = MockSunSpecDataUpdateCoordinator(hass, [1, 2])
+    # api = SunSpecApiClient(host="test", port=123, slave_id=1, hass=hass)
+    hass.data[DOMAIN] = {entry.entry_id: coordinator}
+
+    # Initialize an options flow
+    # await hass.config_entries.async_setup(entry.entry_id)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+
+    # Verify that the first options step is a user form
+    assert result["type"] == data_entry_flow.RESULT_TYPE_FORM
+    assert result["step_id"] == "host_options"
+
+    # Enter some fake data into the form
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input=MOCK_CONFIG_STEP_1
+    )
+
+    # Verify that we return to host settings
+    assert result["type"] == data_entry_flow.RESULT_TYPE_FORM
+    assert result["step_id"] == "host_options"

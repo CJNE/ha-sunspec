@@ -11,7 +11,6 @@ from datetime import timedelta
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import Config
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
@@ -48,18 +47,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     client = SunSpecApiClient(host, port, slave_id, hass)
 
+    _LOGGER.debug("Setup conifg entry for SunSpec")
     coordinator = SunSpecDataUpdateCoordinator(hass, client=client, entry=entry)
-    await coordinator.async_refresh()
-
-    if not coordinator.last_update_success:
-        raise ConfigEntryNotReady
-
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
-    for platform in PLATFORMS:
-        hass.async_add_job(
-            hass.config_entries.async_forward_entry_setup(entry, platform)
-        )
+    await coordinator.async_config_entry_first_refresh()
+    #    # await coordinator.async_refresh()
+    #    await coordinator._async_update_data()
+    #     for platform in PLATFORMS:
+    #         hass.async_add_job(
+    #             hass.config_entries.async_forward_entry_setup(entry, platform)
+    #         )
+    #     coordinator.entities_added = True
 
     return True
 
@@ -102,7 +101,12 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
     def __init__(self, hass: HomeAssistant, client: SunSpecApiClient, entry) -> None:
         """Initialize."""
         self.api = client
+        self.entities_added = False
+        self.hass = hass
+        self.entry = entry
 
+        _LOGGER.debug("Data: %s", entry.data)
+        _LOGGER.debug("Options: %s", entry.options)
         models = entry.options.get(
             CONF_ENABLED_MODELS, entry.data.get(CONF_ENABLED_MODELS, DEFAULT_MODELS)
         )
@@ -115,18 +119,36 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
         self.option_model_filter = set(map(lambda m: int(m), models))
         self.unsub = entry.add_update_listener(async_reload_entry)
         _LOGGER.debug(
-            "Setup entry with models %s, scan interval %s", models, scan_interval
+            "Setup entry with models %s, scan interval %s. IP: %s Port: %s ID: %s",
+            self.option_model_filter,
+            scan_interval,
+            entry.data.get(CONF_HOST),
+            entry.data.get(CONF_PORT),
+            entry.data.get(CONF_SLAVE_ID),
         )
         super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=scan_interval)
 
     async def _async_update_data(self):
         """Update data via library."""
+        _LOGGER.debug("SunSpec Update data coordinator update")
         data = {}
-        model_ids = self.option_model_filter & set(await self.api.async_get_models())
         try:
+            model_ids = self.option_model_filter & set(
+                await self.api.async_get_models()
+            )
+            _LOGGER.debug("SunSpec Update data got models %s", model_ids)
+
             for model_id in model_ids:
                 data[model_id] = await self.api.async_get_data(model_id)
             self.api.close()
+            if not self.entities_added:
+                for platform in PLATFORMS:
+                    self.hass.async_add_job(
+                        self.hass.config_entries.async_forward_entry_setup(
+                            self.entry, platform
+                        )
+                    )
+                self.entities_added = True
             return data
         except Exception as exception:
             _LOGGER.warning(exception)

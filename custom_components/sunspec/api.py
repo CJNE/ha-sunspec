@@ -1,11 +1,13 @@
 """Sample API Client."""
 import logging
 import time
+from types import SimpleNamespace
 
 import sunspec2.modbus.client as modbus_client
 from homeassistant.core import HomeAssistant
 from sunspec2.modbus.client import SunSpecModbusClientException
 from sunspec2.modbus.client import SunSpecModbusClientTimeout
+from sunspec2.modbus.modbus import ModbusClientError
 
 TIMEOUT = 60
 
@@ -82,22 +84,26 @@ class SunSpecApiClient:
         self._slave_id = slave_id
         self._client_key = f"{host}:{port}:{slave_id}"
 
-    def get_client(self):
+    def get_client(self, config=None):
         cached = SunSpecApiClient.CLIENT_CACHE.get(self._client_key, None)
-        if cached is None:
-            cached = self.modbus_connect()
+        if cached is None or config is not None:
+            _LOGGER.debug("Not using cached connection")
+            cached = self.modbus_connect(config)
             SunSpecApiClient.CLIENT_CACHE[self._client_key] = cached
         return cached
 
-    def async_get_client(self):
-        return self._hass.async_add_executor_job(self.get_client)
+    def async_get_client(self, config=None):
+        return self._hass.async_add_executor_job(self.get_client, config)
 
     async def async_get_data(self, model_id) -> SunSpecModelWrapper:
         try:
+            _LOGGER.debug("Get data for model %s", model_id)
             return await self.read(model_id)
         except SunSpecModbusClientTimeout as timeout_error:
+            _LOGGER.warning("Async get data timeout")
             raise ConnectionTimeoutError() from timeout_error
         except SunSpecModbusClientException as connect_error:
+            _LOGGER.warning("Async get data connect_error")
             raise ConnectionError() from connect_error
 
     async def read(self, model_id) -> SunSpecModelWrapper:
@@ -106,8 +112,9 @@ class SunSpecApiClient:
     async def async_get_device_info(self) -> SunSpecModelWrapper:
         return await self.read(1)
 
-    async def async_get_models(self) -> list:
-        client = await self.async_get_client()
+    async def async_get_models(self, config=None) -> list:
+        _LOGGER.debug("Fetching models")
+        client = await self.async_get_client(config)
         model_ids = sorted(list(filter(lambda m: type(m) is int, client.models.keys())))
         return model_ids
 
@@ -120,24 +127,35 @@ class SunSpecApiClient:
         client = self.get_client()
         client.connect()
 
-    def modbus_connect(self):
+    def modbus_connect(self, config=None):
+        use_config = SimpleNamespace(
+            **(
+                config
+                or {"host": self._host, "port": self._port, "slave_id": self._slave_id}
+            )
+        )
         _LOGGER.debug(
-            f"Client connect to IP {self._host} port {self._port} slave id {self._slave_id} using timeout {TIMEOUT}"
+            f"Client connect to IP {use_config.host} port {use_config.port} slave id {use_config.slave_id} using timeout {TIMEOUT}"
         )
         client = modbus_client.SunSpecModbusClientDeviceTCP(
-            slave_id=self._slave_id,
-            ipaddr=self._host,
-            ipport=self._port,
+            slave_id=use_config.slave_id,
+            ipaddr=use_config.host,
+            ipport=use_config.port,
             timeout=TIMEOUT,
         )
-        client.connect()
-        if not client.is_connected():
-            raise Exception(
-                f"Failed to connect to {self._host}:{self._port} slave id {self._slave_id}"
+        try:
+            client.connect()
+            if not client.is_connected():
+                raise ConnectionError(
+                    f"Failed to connect to {self._host}:{self._port} slave id {self._slave_id}"
+                )
+            _LOGGER.debug("Client connected, perform initial scan")
+            client.scan(connect=False)
+            return client
+        except ModbusClientError:
+            raise ConnectionError(
+                f"Failed to connect to {use_config.host}:{use_config.port} slave id {use_config.slave_id}"
             )
-        _LOGGER.debug("Client connected, perform initial scan")
-        client.scan(connect=False)
-        return client
 
     def read_model(self, model_id) -> dict:
         client = self.get_client()

@@ -1,4 +1,5 @@
 """Global fixtures for SunSpec integration."""
+import logging
 from typing import Any
 from unittest.mock import Mock
 from unittest.mock import patch
@@ -9,11 +10,12 @@ from custom_components.sunspec.api import ConnectionError
 from custom_components.sunspec.api import ConnectionTimeoutError
 
 pytest_plugins = "pytest_homeassistant_custom_component"
+_LOGGER: logging.Logger = logging.getLogger(__package__)
 
 
 class MockFileClientDeviceNotConnected(modbus_client.FileClientDevice):
     def is_connected(self):
-        return True
+        return False
 
     def connect(self):
         return True
@@ -21,7 +23,7 @@ class MockFileClientDeviceNotConnected(modbus_client.FileClientDevice):
 
 class MockFileClientDevice(modbus_client.FileClientDevice):
     def is_connected(self):
-        return False
+        return True
 
     def connect(self):
         return True
@@ -75,6 +77,21 @@ def sunspec_client_mock():
         yield
 
 
+# In this fixture, we are forcing calls to async_get_data to raise an Exception. This is useful
+# for exception handling.
+@pytest.fixture
+def sunspec_client_mock_connect_error():
+    """Simulate connection error when retrieving data from API."""
+    client = MockFileClientDevice("./tests/test_data/inverter.json")
+    with patch(
+        "custom_components.sunspec.SunSpecApiClient.modbus_connect", return_value=client
+    ), patch(
+        "custom_components.sunspec.SunSpecApiClient.async_get_models",
+        side_effect=ConnectionError,
+    ):
+        yield
+
+
 @pytest.fixture
 def sunspec_client_mock_not_connected():
     """Skip calls to get data from API."""
@@ -110,12 +127,16 @@ def error_get_device_info_fixture():
 
 # In this fixture, we are forcing calls to async_get_data to raise an Exception. This is useful
 # for exception handling.
-@pytest.fixture(name="error_on_get_data")
-def error_get_data_fixture():
+@pytest.fixture
+def error_on_get_data():
     """Simulate error when retrieving data from API."""
+    client = MockFileClientDevice("./tests/test_data/inverter.json")
+    client.scan()
     with patch(
+        "custom_components.sunspec.SunSpecApiClient.modbus_connect", return_value=client
+    ), patch(
         "custom_components.sunspec.SunSpecApiClient.async_get_data",
-        side_effect=Exception,
+        side_effect=ConnectionError,
     ):
         yield
 
@@ -125,7 +146,11 @@ def error_get_data_fixture():
 @pytest.fixture
 def timeout_error_on_get_data():
     """Simulate timeout error when retrieving data from API."""
+    client = MockFileClientDevice("./tests/test_data/inverter.json")
+    client.scan()
     with patch(
+        "custom_components.sunspec.SunSpecApiClient.get_client", return_value=client
+    ), patch(
         "custom_components.sunspec.SunSpecApiClient.async_get_data",
         side_effect=ConnectionTimeoutError,
     ):
@@ -137,7 +162,10 @@ def timeout_error_on_get_data():
 @pytest.fixture
 def connect_error_on_get_data():
     """Simulate connection error when retrieving data from API."""
+    client = MockFileClientDevice("./tests/test_data/inverter.json")
     with patch(
+        "custom_components.sunspec.SunSpecApiClient.modbus_connect", return_value=client
+    ), patch(
         "custom_components.sunspec.SunSpecApiClient.async_get_data",
         side_effect=ConnectionError,
     ):

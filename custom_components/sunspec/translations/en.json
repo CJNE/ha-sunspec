@@ -29,14 +29,29 @@
   },
   "options": {
     "step": {
+      "host_options": {
+        "title": "SunSpec Modbus TCP connection",
+        "description": "If you need help with the configuration have a look here: https://github.com/cjne/ha-sunspec",
+        "data": {
+          "host": "Hostname/IP",
+          "port": "Port",
+          "slave_id": "Slave ID"
+        }
+      },
       "model_options": {
-        "title": "Sensor options",
+        "title": "Device Options",
         "description": "Select what SunSpec models (data registers) you would like to create sensors for.",
         "data": {
+          "host": "Hostname/IP",
+          "port": "Port",
+          "slave_id": "Slave ID",
           "models_enabled": "Read models",
           "scan_interval": "Scan interval (seconds)"
         }
       }
+    },
+    "error": {
+      "connection": "Failed to connect, check hostname and port"
     }
   }
 }

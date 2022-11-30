@@ -11,7 +11,7 @@
         }
       },
       "settings": {
-        "title": "Sensor alternativ",
+        "title": "Sensoralternativ",
         "description": "Alternativt prefix för sensornamn och val av SunSpec modeller (dataregister) som du vill använda. Kan ändras senare i komponentkonfigurationen.",
         "data": {
           "models_enabled": "Använd modeller",
@@ -30,9 +30,12 @@
   "options": {
     "step": {
       "model_options": {
-        "title": "Sensor alternativ",
+        "title": "Enhetsinställningar",
         "description": "Välj de SunSpec modeller (dataregister) du vill skapa använda.",
         "data": {
+          "host": "Värdnamn/IP",
+          "port": "Port",
+          "slave_id": "Modbus slav-id",
           "models_enabled": "Använd modeller",
           "scan_interval": "Updateringsinervall (sekunder)"
         }
