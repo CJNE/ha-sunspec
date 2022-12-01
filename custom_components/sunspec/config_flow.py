@@ -225,7 +225,7 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
     async def _update_options(self):
         """Update config entry options."""
         # self.settings[CONF_PORT] = 503
-        self.settings[CONF_ENABLED_MODELS] = [160, 103]
+        # self.settings[CONF_ENABLED_MODELS] = [160, 103]
         title = f"{self.settings[CONF_HOST]}:{self.settings[CONF_PORT]}:{self.settings[CONF_SLAVE_ID]}"
         _LOGGER.debug(
             "Saving config entry with title %s, data: %s options %s",
