@@ -6,10 +6,10 @@ from homeassistant.components.sensor import DEVICE_CLASS_ENERGY
 from homeassistant.components.sensor import DEVICE_CLASS_TEMPERATURE
 from homeassistant.components.sensor import DEVICE_CLASS_VOLTAGE
 from homeassistant.components.sensor import RestoreSensor
+from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor import STATE_CLASS_MEASUREMENT
 from homeassistant.components.sensor import STATE_CLASS_TOTAL_INCREASING
-from homeassistant.components.sensor.const import SensorDeviceClass
 from homeassistant.const import DATA_RATE_BITS_PER_SECOND
 from homeassistant.const import DATA_RATE_MEGABITS_PER_SECOND
 from homeassistant.const import DEGREE
