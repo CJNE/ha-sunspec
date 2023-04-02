@@ -5,9 +5,11 @@ from homeassistant.components.sensor import DEVICE_CLASS_CURRENT
 from homeassistant.components.sensor import DEVICE_CLASS_ENERGY
 from homeassistant.components.sensor import DEVICE_CLASS_TEMPERATURE
 from homeassistant.components.sensor import DEVICE_CLASS_VOLTAGE
+from homeassistant.components.sensor import RestoreSensor
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor import STATE_CLASS_MEASUREMENT
 from homeassistant.components.sensor import STATE_CLASS_TOTAL_INCREASING
+from homeassistant.components.sensor.const import SensorDeviceClass
 from homeassistant.const import DATA_RATE_BITS_PER_SECOND
 from homeassistant.const import DATA_RATE_MEGABITS_PER_SECOND
 from homeassistant.const import DEGREE
@@ -53,6 +55,7 @@ HA_META = {
     "Mbps": [DATA_RATE_MEGABITS_PER_SECOND, ICON_DEFAULT, None],
     "V": [ELECTRIC_POTENTIAL_VOLT, ICON_VOLT, DEVICE_CLASS_VOLTAGE],
     "VA": [POWER_VOLT_AMPERE, ICON_POWER, None],
+    "VAr": [POWER_VOLT_AMPERE, ICON_POWER, None],
     "W": [POWER_WATT, ICON_POWER, DEVICE_CLASS_POWER],
     "W/m2": [IRRADIATION_WATTS_PER_SQUARE_METER, ICON_DEFAULT, None],
     "Wh": [ENERGY_WATT_HOUR, ICON_ENERGY, DEVICE_CLASS_ENERGY],
@@ -68,6 +71,8 @@ HA_META = {
     "mm": [LENGTH_MILLIMETERS, ICON_DEFAULT, None],
     "%": [PERCENTAGE, ICON_DEFAULT, None],
     "Secs": [TIME_SECONDS, ICON_DEFAULT, None],
+    "enum16": [None, ICON_DEFAULT, SensorDeviceClass.ENUM],
+    "bitfield32": [None, ICON_DEFAULT, SensorDeviceClass.ENUM],
 }
 
 
@@ -89,7 +94,20 @@ async def async_setup_entry(hass, entry, async_add_devices):
                     "model": model_wrapper,
                     "prefix": prefix,
                 }
-                sensors.append(SunSpecSensor(coordinator, entry, data))
+
+                meta = model_wrapper.getMeta(key)
+                sunspec_unit = meta.get("units", "")
+                ha_meta = HA_META.get(sunspec_unit, [sunspec_unit, None, None])
+                device_class = ha_meta[2]
+                if sunspec_unit == "":
+                    _LOGGER.debug("No unit for")
+                    _LOGGER.debug(meta)
+                if device_class == DEVICE_CLASS_ENERGY:
+                    _LOGGER.debug("Adding energy sensor")
+                    sensors.append(SunSpecEnergySensor(coordinator, entry, data))
+                else:
+                    sensors.append(SunSpecSensor(coordinator, entry, data))
+
     async_add_devices(sensors)
 
 
@@ -106,7 +124,7 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
         self.key = data["key"]
         self._meta = self.model_wrapper.getMeta(self.key)
         self._group_meta = self.model_wrapper.getGroupMeta()
-        sunspec_unit = self._meta.get("units", "")
+        sunspec_unit = self._meta.get("units", self._meta.get("type", ""))
         ha_meta = HA_META.get(sunspec_unit, [sunspec_unit, ICON_DEFAULT, None])
         self.unit = ha_meta[0]
         self.use_icon = ha_meta[1]
@@ -176,16 +194,6 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
                 "Math overflow error when retreiving calculated value for %s", self.key
             )
             return None
-        # If this is an energy sensor a value of 0 woulld mess up long term stats because of how total_increasing works
-        if self.use_device_class == DEVICE_CLASS_ENERGY:
-            if val == 0:
-                _LOGGER.debug(
-                    "Returning last known value instead of 0 for {self.name) to avoid resetting total_increasing counter"
-                )
-                self._assumed_state = True
-                return self.lastKnown
-            self.lastKnown = val
-            self._assumed_state = False
         vtype = self._meta["type"]
         if vtype in ("enum16", "bitfield32"):
             symbols = self._meta.get("symbols", None)
@@ -207,6 +215,9 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
     @property
     def native_unit_of_measurement(self):
         """Return the unit of measurement."""
+        # if self.unit == "":
+        #     _LOGGER.debug(f"UNIT IS NONT FOR {self.name}")
+        #    return None
         return self.unit
 
     @property
@@ -222,7 +233,7 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
     @property
     def state_class(self):
         """Return de device class of the sensor."""
-        if self.unit == "":
+        if self.unit == "" or self.unit is None:
             return None
         if self.device_class == DEVICE_CLASS_ENERGY:
             return STATE_CLASS_TOTAL_INCREASING
@@ -245,3 +256,36 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
                 self.key, self.model_index
             )
         return attrs
+
+
+class SunSpecEnergySensor(SunSpecSensor, RestoreSensor):
+    def __init__(self, coordinator, config_entry, data):
+        super().__init__(coordinator, config_entry, data)
+        self.last_known_value = None
+
+    @property
+    def native_value(self):
+        val = super().native_value
+        # For an energy sensor a value of 0 woulld mess up long term stats because of how total_increasing works
+        if val == 0:
+            _LOGGER.debug(
+                "Returning last known value instead of 0 for {self.name) to avoid resetting total_increasing counter"
+            )
+            self._assumed_state = True
+            return self.lastKnown
+        self.lastKnown = val
+        self._assumed_state = False
+        return val
+
+    async def async_added_to_hass(self) -> None:
+        """Call when entity about to be added to hass."""
+        await super().async_added_to_hass()
+        _LOGGER.debug(f"{self.name} Fetch last known state")
+        state = await self.async_get_last_sensor_data()
+        if state:
+            _LOGGER.debug(
+                f"{self.name} Got last known value from state: {state.native_value}"
+            )
+            self.last_known_value = state.native_value
+        else:
+            _LOGGER.debug(f"{self.name} No previous state was found")
