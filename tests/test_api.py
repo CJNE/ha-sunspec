@@ -61,7 +61,6 @@ async def test_modbus_connect(hass, sunspec_modbus_client_mock):
 
 
 async def test_modbus_connect_fail(hass, mocker):
-
     mocker.patch(
         # api_call is from slow.py but imported to main.py
         "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.connect",
@@ -82,7 +81,6 @@ async def test_modbus_connect_fail(hass, mocker):
 
 
 async def test_modbus_connect_exception(hass, mocker):
-
     mocker.patch(
         # api_call is from slow.py but imported to main.py
         "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.connect",
