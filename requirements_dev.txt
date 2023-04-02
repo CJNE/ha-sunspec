@@ -1,4 +1,6 @@
+pre-commit==3.2.0
+black==23.1.0
+flake8==6.0.0
+reorder-python-imports==3.9.0
 homeassistant
 pysunspec2==1.0.8
-flake8
-reorder-python-imports
