@@ -69,6 +69,7 @@ class SunSpecModelWrapper:
         )
 
 
+# pragma: not covered
 def progress(msg):
     _LOGGER.debug(msg)
     return True
