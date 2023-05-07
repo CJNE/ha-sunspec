@@ -5,6 +5,9 @@ from homeassistant.components.sensor import DEVICE_CLASS_CURRENT
 from homeassistant.components.sensor import DEVICE_CLASS_ENERGY
 from homeassistant.components.sensor import DEVICE_CLASS_TEMPERATURE
 from homeassistant.components.sensor import DEVICE_CLASS_VOLTAGE
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+)
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor import STATE_CLASS_MEASUREMENT
 from homeassistant.components.sensor import STATE_CLASS_TOTAL_INCREASING
@@ -106,11 +109,13 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
         self.key = data["key"]
         self._meta = self.model_wrapper.getMeta(self.key)
         self._group_meta = self.model_wrapper.getGroupMeta()
+        self._point_meta = self.model_wrapper.getPoint(self.key).pdef
         sunspec_unit = self._meta.get("units", "")
         ha_meta = HA_META.get(sunspec_unit, [sunspec_unit, ICON_DEFAULT, None])
         self.unit = ha_meta[0]
         self.use_icon = ha_meta[1]
         self.use_device_class = ha_meta[2]
+        self._options = []
         # Used if this is an energy sensor and the read value is 0
         # Updated wheneve the value read is not 0
         self.lastKnown = None
@@ -119,6 +124,16 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
         self._uniqe_id = get_sunspec_unique_id(
             config_entry.entry_id, self.key, self.model_id, self.model_index
         )
+
+        vtype = self._meta["type"]
+        if vtype in ("enum16", "bitfield32"):
+            self._options = self._point_meta.get("symbols", None)
+            if self._options is None:
+                self.use_device_class = None
+            else:
+                self.use_device_class = SensorDeviceClass.ENUM
+                self._options = [item["name"] for item in self._options]
+                self._options.append("")
 
         self._device_id = config_entry.entry_id
         name = self._group_meta.get("name", str(self.model_id))
@@ -137,7 +152,7 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
 
         self._name = f"{name.capitalize()} {desc}"
         _LOGGER.debug(
-            "Createed sensor for %s in model %s using prefix %s: %s uid %s, device class %s unit %s",
+            "Created sensor for %s in model %s using prefix %s: %s uid %s, device class %s unit %s",
             self.key,
             self.model_id,
             data["prefix"],
@@ -149,6 +164,12 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
 
     # def async_will_remove_from_hass(self):
     #    _LOGGER.debug(f"Will remove sensor {self._uniqe_id}")
+
+    @property
+    def options(self):
+        if self.device_class != SensorDeviceClass.ENUM:
+            return None
+        return self._options
 
     @property
     def name(self):
