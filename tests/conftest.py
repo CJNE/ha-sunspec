@@ -25,6 +25,13 @@ class MockFileClientDevice(modbus_client.FileClientDevice):
     def is_connected(self):
         return True
 
+    def scan(self, progress=None):
+        print(progress)
+        if progress is not None:
+            if not progress("Mock scan"):
+                return
+        return super().scan()
+
     def connect(self):
         return True
 

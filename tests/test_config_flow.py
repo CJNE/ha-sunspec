@@ -21,7 +21,10 @@ from .const import MOCK_SETTINGS
 @pytest.fixture(autouse=True)
 def bypass_setup_fixture():
     """Prevent setup."""
-    with patch("custom_components.sunspec.async_setup", return_value=True,), patch(
+    with patch(
+        "custom_components.sunspec.async_setup",
+        return_value=True,
+    ), patch(
         "custom_components.sunspec.async_setup_entry",
         return_value=True,
     ):

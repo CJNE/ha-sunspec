@@ -9,7 +9,7 @@ from sunspec2.modbus.client import SunSpecModbusClientException
 from sunspec2.modbus.client import SunSpecModbusClientTimeout
 from sunspec2.modbus.modbus import ModbusClientError
 
-TIMEOUT = 60
+TIMEOUT = 120
 
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
@@ -67,6 +67,12 @@ class SunSpecModelWrapper:
             .groups[point_path[0]][int(point_path[1])]
             .points[point_path[2]]
         )
+
+
+# pragma: not covered
+def progress(msg):
+    _LOGGER.debug(msg)
+    return True
 
 
 class SunSpecApiClient:
@@ -150,7 +156,9 @@ class SunSpecApiClient:
                     f"Failed to connect to {self._host}:{self._port} slave id {self._slave_id}"
                 )
             _LOGGER.debug("Client connected, perform initial scan")
-            client.scan(connect=False)
+            client.scan(
+                connect=False, progress=progress, full_model_read=False, delay=0.5
+            )
             return client
         except ModbusClientError:
             raise ConnectionError(
