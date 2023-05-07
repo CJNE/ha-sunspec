@@ -1,11 +1,6 @@
 {
   "domain": "sunspec",
   "name": "SunSpec",
-  "version": "0.0.23",
-  "documentation": "https://github.com/cjne/ha-sunspec",
-  "issue_tracker": "https://github.com/cjne/ha-sunspec/issues",
-  "dependencies": [],
-  "config_flow": true,
   "codeowners": ["@cjne"],
   "config_flow": true,
   "dependencies": [],
@@ -13,5 +8,5 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/cjne/ha-sunspec/issues",
   "requirements": ["pysunspec2==1.0.8"],
-  "version": "0.0.22"
+  "version": "0.0.23"
 }
