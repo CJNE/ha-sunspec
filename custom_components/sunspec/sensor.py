@@ -99,9 +99,6 @@ async def async_setup_entry(hass, entry, async_add_devices):
                 sunspec_unit = meta.get("units", "")
                 ha_meta = HA_META.get(sunspec_unit, [sunspec_unit, None, None])
                 device_class = ha_meta[2]
-                if sunspec_unit == "":
-                    _LOGGER.debug("No unit for")
-                    _LOGGER.debug(meta)
                 if device_class == DEVICE_CLASS_ENERGY:
                     _LOGGER.debug("Adding energy sensor")
                     sensors.append(SunSpecEnergySensor(coordinator, entry, data))
@@ -176,6 +173,8 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
             self.use_device_class,
             self.unit,
         )
+        if self.device_class == SensorDeviceClass.ENUM:
+            _LOGGER.debug("Valid options for ENUM: %s", self._options)
 
     # def async_will_remove_from_hass(self):
     #    _LOGGER.debug(f"Will remove sensor {self._uniqe_id}")
@@ -214,7 +213,7 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
             return None
         vtype = self._meta["type"]
         if vtype in ("enum16", "bitfield32"):
-            symbols = self._meta.get("symbols", None)
+            symbols = self._point_meta.get("symbols", None)
             if symbols is None:
                 return val
             if vtype == "enum16":
