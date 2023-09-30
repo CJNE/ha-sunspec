@@ -99,9 +99,6 @@ async def async_setup_entry(hass, entry, async_add_devices):
                 sunspec_unit = meta.get("units", "")
                 ha_meta = HA_META.get(sunspec_unit, [sunspec_unit, None, None])
                 device_class = ha_meta[2]
-                if sunspec_unit == "":
-                    _LOGGER.debug("No unit for")
-                    _LOGGER.debug(meta)
                 if device_class == DEVICE_CLASS_ENERGY:
                     _LOGGER.debug("Adding energy sensor")
                     sensors.append(SunSpecEnergySensor(coordinator, entry, data))
@@ -124,11 +121,13 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
         self.key = data["key"]
         self._meta = self.model_wrapper.getMeta(self.key)
         self._group_meta = self.model_wrapper.getGroupMeta()
+        self._point_meta = self.model_wrapper.getPoint(self.key).pdef
         sunspec_unit = self._meta.get("units", self._meta.get("type", ""))
         ha_meta = HA_META.get(sunspec_unit, [sunspec_unit, ICON_DEFAULT, None])
         self.unit = ha_meta[0]
         self.use_icon = ha_meta[1]
         self.use_device_class = ha_meta[2]
+        self._options = []
         # Used if this is an energy sensor and the read value is 0
         # Updated wheneve the value read is not 0
         self.lastKnown = None
@@ -137,6 +136,16 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
         self._uniqe_id = get_sunspec_unique_id(
             config_entry.entry_id, self.key, self.model_id, self.model_index
         )
+
+        vtype = self._meta["type"]
+        if vtype in ("enum16", "bitfield32"):
+            self._options = self._point_meta.get("symbols", None)
+            if self._options is None:
+                self.use_device_class = None
+            else:
+                self.use_device_class = SensorDeviceClass.ENUM
+                self._options = [item["name"] for item in self._options]
+                self._options.append("")
 
         self._device_id = config_entry.entry_id
         name = self._group_meta.get("name", str(self.model_id))
@@ -155,7 +164,7 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
 
         self._name = f"{name.capitalize()} {desc}"
         _LOGGER.debug(
-            "Createed sensor for %s in model %s using prefix %s: %s uid %s, device class %s unit %s",
+            "Created sensor for %s in model %s using prefix %s: %s uid %s, device class %s unit %s",
             self.key,
             self.model_id,
             data["prefix"],
@@ -164,9 +173,17 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
             self.use_device_class,
             self.unit,
         )
+        if self.device_class == SensorDeviceClass.ENUM:
+            _LOGGER.debug("Valid options for ENUM: %s", self._options)
 
     # def async_will_remove_from_hass(self):
     #    _LOGGER.debug(f"Will remove sensor {self._uniqe_id}")
+
+    @property
+    def options(self):
+        if self.device_class != SensorDeviceClass.ENUM:
+            return None
+        return self._options
 
     @property
     def name(self):
@@ -196,13 +213,15 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
             return None
         vtype = self._meta["type"]
         if vtype in ("enum16", "bitfield32"):
-            symbols = self._meta.get("symbols", None)
+            symbols = self._point_meta.get("symbols", None)
             if symbols is None:
                 return val
             if vtype == "enum16":
                 symbol = list(filter(lambda s: s["value"] == val, symbols))
                 if len(symbol) == 1:
                     return symbol[0]["name"][:255]
+                else:
+                    return None
             else:
                 symbols = list(
                     filter(lambda s: (val >> int(s["value"])) & 1 == 1, symbols)
