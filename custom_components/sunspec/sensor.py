@@ -220,6 +220,8 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
                 symbol = list(filter(lambda s: s["value"] == val, symbols))
                 if len(symbol) == 1:
                     return symbol[0]["name"][:255]
+                else:
+                    return None
             else:
                 symbols = list(
                     filter(lambda s: (val >> int(s["value"])) & 1 == 1, symbols)
