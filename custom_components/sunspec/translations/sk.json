@@ -1,0 +1,57 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "SunSpec Modbus TCP pripojenie",
+        "description": "Ak potrebujete pomoc s konfiguráciou, pozrite sa sem: https://github.com/cjne/ha-sunspec",
+        "data": {
+          "host": "Meno hosťa/IP",
+          "port": "Port",
+          "slave_id": "Slave ID"
+        }
+      },
+      "settings": {
+        "title": "Možnosti snímača",
+        "description": "Zadajte voliteľnú predponu pre názvy snímačov a vyberte akékoľvek ďalšie modely SunSpec (údajové registre), pre ktoré chcete vytvoriť snímače. Toto je možné zmeniť aj neskôr v konfigurácii komponentov.",
+        "data": {
+          "models_enabled": "Čítať modely",
+          "prefix": "Predpona snímačov",
+          "scan_interval": "Interval skenovania (sekundy)"
+        }
+      }
+    },
+    "error": {
+      "connection": "Nepodarilo sa pripojiť, skontrolujte názov hostiteľa a port"
+    },
+    "abort": {
+      "single_instance_allowed": "Povolený je len jeden prípad."
+    }
+  },
+  "options": {
+    "step": {
+      "host_options": {
+        "title": "SunSpec Modbus TCP pripojenie",
+        "description": "Ak potrebujete pomoc s konfiguráciou, pozrite sa sem: https://github.com/cjne/ha-sunspec",
+        "data": {
+          "host": "Meno hosťa/IP",
+          "port": "Port",
+          "slave_id": "Slave ID"
+        }
+      },
+      "model_options": {
+        "title": "Možnosti zariadenia",
+        "description": "Vyberte modely SunSpec (údajové registre), pre ktoré chcete vytvoriť senzory.",
+        "data": {
+          "host": "Meno hosťa/IP",
+          "port": "Port",
+          "slave_id": "Slave ID",
+          "models_enabled": "Čítať modely",
+          "scan_interval": "Interval skenovania (sekundy)"
+        }
+      }
+    },
+    "error": {
+      "connection": "Nepodarilo sa pripojiť, skontrolujte názov hostiteľa a port"
+    }
+  }
+}
