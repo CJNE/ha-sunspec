@@ -3,4 +3,4 @@ black==23.1.0
 flake8==6.0.0
 reorder-python-imports==3.10.0
 homeassistant
-pysunspec2==1.0.8
+pysunspec2==1.0.9
