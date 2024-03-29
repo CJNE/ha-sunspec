@@ -15,6 +15,7 @@ from homeassistant.const import UnitOfIrradiance
 from homeassistant.const import UnitOfLength
 from homeassistant.const import PERCENTAGE
 from homeassistant.const import UnitOfApparentPower
+from homeassistant.const import POWER_VOLT_AMPERE_REACTIVE
 from homeassistant.const import UnitOfPower
 from homeassistant.const import UnitOfPressure
 from homeassistant.const import UnitOfSpeed
@@ -45,7 +46,7 @@ HA_META = {
     "Mbps": [UnitOfDataRate.MEGABITS_PER_SECOND, ICON_DEFAULT, None],
     "V": [UnitOfElectricPotential.VOLT, ICON_VOLT, SensorDeviceClass.VOLTAGE],
     "VA": [UnitOfApparentPower.VOLT_AMPERE, ICON_POWER, None],
-    "VAr": [UnitOfApparentPower.VOLT_AMPERE, ICON_POWER, None],
+    "VAr": [POWER_VOLT_AMPERE_REACTIVE, ICON_POWER, None],
     "W": [UnitOfPower.WATT, ICON_POWER, SensorDeviceClass.POWER],
     "W/m2": [UnitOfIrradiance.WATTS_PER_SQUARE_METER, ICON_DEFAULT, None],
     "Wh": [UnitOfEnergy.WATT_HOUR, ICON_ENERGY, SensorDeviceClass.ENERGY],
