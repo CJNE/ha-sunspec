@@ -42,11 +42,12 @@ class SunSpecModelWrapper:
     def getKeys(self):
         keys = list(filter(self.isValidPoint, self._models[0].points.keys()))
         for group_name in self._models[0].groups:
-            for idx, group in enumerate(self._models[0].groups[group_name]):
-                key_prefix = f"{group_name}:{idx}"
-                group_keys = map(lambda gp: f"{key_prefix}:{gp}", group.points.keys())
-                keys.extend(filter(self.isValidPoint, group_keys))
+            group = self._models[0].groups[group_name]
+            key_prefix = f"{group_name}:0"  # Es wird nur ein einzelnes Gruppenobjekt erwartet
+            group_keys = map(lambda gp: f"{key_prefix}:{gp}", group.points.keys())
+            keys.extend(filter(self.isValidPoint, group_keys))
         return keys
+
 
     def getValue(self, point_name, model_index=0):
         point = self.getPoint(point_name, model_index)
@@ -62,11 +63,11 @@ class SunSpecModelWrapper:
         point_path = point_name.split(":")
         if len(point_path) == 1:
             return self._models[model_index].points[point_name]
-        return (
-            self._models[model_index]
-            .groups[point_path[0]][int(point_path[1])]
-            .points[point_path[2]]
-        )
+        group = self._models[model_index].groups[point_path[0]]
+        if len(point_path) > 2:
+            return group.points[point_path[2]]  # Access to the specific point within the group
+        return group.points[point_name]  # Generic access if no specific subgrouping is specified
+
 
 
 # pragma: not covered
