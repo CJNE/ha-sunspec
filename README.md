@@ -33,7 +33,7 @@ Works out of the box with the energy dashboard.
 
 ## HACS Installation
 
-1. Add and search for sunspec in HACS
+1. Add and search for sunspec in [HACS](https://hacs.xyz/)
 2. Install
 
 ## Manual Installation

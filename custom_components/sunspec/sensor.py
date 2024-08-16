@@ -1,35 +1,26 @@
 """Sensor platform for SunSpec."""
 import logging
 
-from homeassistant.components.sensor import DEVICE_CLASS_CURRENT
-from homeassistant.components.sensor import DEVICE_CLASS_ENERGY
-from homeassistant.components.sensor import DEVICE_CLASS_TEMPERATURE
-from homeassistant.components.sensor import DEVICE_CLASS_VOLTAGE
 from homeassistant.components.sensor import RestoreSensor
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.components.sensor import SensorEntity
-from homeassistant.components.sensor import STATE_CLASS_MEASUREMENT
-from homeassistant.components.sensor import STATE_CLASS_TOTAL_INCREASING
-from homeassistant.const import DATA_RATE_BITS_PER_SECOND
-from homeassistant.const import DATA_RATE_MEGABITS_PER_SECOND
+from homeassistant.components.sensor import SensorStateClass
+from homeassistant.const import UnitOfDataRate
 from homeassistant.const import DEGREE
-from homeassistant.const import DEVICE_CLASS_POWER
-from homeassistant.const import ELECTRIC_CURRENT_AMPERE
-from homeassistant.const import ELECTRIC_POTENTIAL_VOLT
-from homeassistant.const import ENERGY_KILO_WATT_HOUR
-from homeassistant.const import ENERGY_WATT_HOUR
-from homeassistant.const import FREQUENCY_HERTZ
-from homeassistant.const import IRRADIATION_WATTS_PER_SQUARE_METER
-from homeassistant.const import LENGTH_METERS
-from homeassistant.const import LENGTH_MILLIMETERS
+from homeassistant.const import UnitOfElectricCurrent
+from homeassistant.const import UnitOfElectricPotential
+from homeassistant.const import UnitOfEnergy
+from homeassistant.const import UnitOfFrequency
+from homeassistant.const import UnitOfIrradiance
+from homeassistant.const import UnitOfLength
 from homeassistant.const import PERCENTAGE
-from homeassistant.const import POWER_VOLT_AMPERE
-from homeassistant.const import POWER_WATT
-from homeassistant.const import PRESSURE_HPA
-from homeassistant.const import SPEED_METERS_PER_SECOND
-from homeassistant.const import TEMP_CELSIUS
-from homeassistant.const import TIME_MILLISECONDS
-from homeassistant.const import TIME_SECONDS
+from homeassistant.const import UnitOfApparentPower
+from homeassistant.const import POWER_VOLT_AMPERE_REACTIVE
+from homeassistant.const import UnitOfPower
+from homeassistant.const import UnitOfPressure
+from homeassistant.const import UnitOfSpeed
+from homeassistant.const import UnitOfTemperature
+from homeassistant.const import UnitOfTime
 
 from . import get_sunspec_unique_id
 from .const import CONF_PREFIX
@@ -49,28 +40,28 @@ ICON_ENERGY = "mdi:solar-panel"
 ICON_TEMP = "mdi:thermometer"
 
 HA_META = {
-    "A": [ELECTRIC_CURRENT_AMPERE, ICON_AC_AMPS, DEVICE_CLASS_CURRENT],
-    "HPa": [PRESSURE_HPA, ICON_DEFAULT, None],
-    "Hz": [FREQUENCY_HERTZ, ICON_FREQ, None],
-    "Mbps": [DATA_RATE_MEGABITS_PER_SECOND, ICON_DEFAULT, None],
-    "V": [ELECTRIC_POTENTIAL_VOLT, ICON_VOLT, DEVICE_CLASS_VOLTAGE],
-    "VA": [POWER_VOLT_AMPERE, ICON_POWER, None],
-    "VAr": [POWER_VOLT_AMPERE, ICON_POWER, None],
-    "W": [POWER_WATT, ICON_POWER, DEVICE_CLASS_POWER],
-    "W/m2": [IRRADIATION_WATTS_PER_SQUARE_METER, ICON_DEFAULT, None],
-    "Wh": [ENERGY_WATT_HOUR, ICON_ENERGY, DEVICE_CLASS_ENERGY],
-    "WH": [ENERGY_WATT_HOUR, ICON_ENERGY, DEVICE_CLASS_ENERGY],
-    "bps": [DATA_RATE_BITS_PER_SECOND, ICON_DEFAULT, None],
-    "deg": [DEGREE, ICON_TEMP, DEVICE_CLASS_TEMPERATURE],
-    "Degrees": [DEGREE, ICON_TEMP, DEVICE_CLASS_TEMPERATURE],
-    "C": [TEMP_CELSIUS, ICON_TEMP, DEVICE_CLASS_TEMPERATURE],
-    "kWh": [ENERGY_KILO_WATT_HOUR, ICON_ENERGY, DEVICE_CLASS_ENERGY],
-    "m/s": [SPEED_METERS_PER_SECOND, ICON_DEFAULT, None],
-    "mSecs": [TIME_MILLISECONDS, ICON_DEFAULT, None],
-    "meters": [LENGTH_METERS, ICON_DEFAULT, None],
-    "mm": [LENGTH_MILLIMETERS, ICON_DEFAULT, None],
+    "A": [UnitOfElectricCurrent.AMPERE, ICON_AC_AMPS, SensorDeviceClass.CURRENT],
+    "HPa": [UnitOfPressure.HPA, ICON_DEFAULT, None],
+    "Hz": [UnitOfFrequency.HERTZ, ICON_FREQ, None],
+    "Mbps": [UnitOfDataRate.MEGABITS_PER_SECOND, ICON_DEFAULT, None],
+    "V": [UnitOfElectricPotential.VOLT, ICON_VOLT, SensorDeviceClass.VOLTAGE],
+    "VA": [UnitOfApparentPower.VOLT_AMPERE, ICON_POWER, None],
+    "VAr": [POWER_VOLT_AMPERE_REACTIVE, ICON_POWER, None],
+    "W": [UnitOfPower.WATT, ICON_POWER, SensorDeviceClass.POWER],
+    "W/m2": [UnitOfIrradiance.WATTS_PER_SQUARE_METER, ICON_DEFAULT, None],
+    "Wh": [UnitOfEnergy.WATT_HOUR, ICON_ENERGY, SensorDeviceClass.ENERGY],
+    "WH": [UnitOfEnergy.WATT_HOUR, ICON_ENERGY, SensorDeviceClass.ENERGY],
+    "bps": [UnitOfDataRate.BITS_PER_SECOND, ICON_DEFAULT, None],
+    "deg": [DEGREE, ICON_TEMP, SensorDeviceClass.TEMPERATURE],
+    "Degrees": [DEGREE, ICON_TEMP, SensorDeviceClass.TEMPERATURE],
+    "C": [UnitOfTemperature.CELSIUS, ICON_TEMP, SensorDeviceClass.TEMPERATURE],
+    "kWh": [UnitOfEnergy.KILO_WATT_HOUR, ICON_ENERGY, SensorDeviceClass.ENERGY],
+    "m/s": [UnitOfSpeed.METERS_PER_SECOND, ICON_DEFAULT, None],
+    "mSecs": [UnitOfTime.MILLISECONDS, ICON_DEFAULT, None],
+    "meters": [UnitOfLength.METERS, ICON_DEFAULT, None],
+    "mm": [UnitOfLength.MILLIMETERS, ICON_DEFAULT, None],
     "%": [PERCENTAGE, ICON_DEFAULT, None],
-    "Secs": [TIME_SECONDS, ICON_DEFAULT, None],
+    "Secs": [UnitOfTime.SECONDS, ICON_DEFAULT, None],
     "enum16": [None, ICON_DEFAULT, SensorDeviceClass.ENUM],
     "bitfield32": [None, ICON_DEFAULT, SensorDeviceClass.ENUM],
 }
@@ -99,7 +90,7 @@ async def async_setup_entry(hass, entry, async_add_devices):
                 sunspec_unit = meta.get("units", "")
                 ha_meta = HA_META.get(sunspec_unit, [sunspec_unit, None, None])
                 device_class = ha_meta[2]
-                if device_class == DEVICE_CLASS_ENERGY:
+                if device_class == SensorDeviceClass.ENERGY:
                     _LOGGER.debug("Adding energy sensor")
                     sensors.append(SunSpecEnergySensor(coordinator, entry, data))
                 else:
@@ -156,7 +147,7 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
             name = f"{name} {key_parts[0]} {key_parts[1]}"
 
         desc = self._meta.get("label", self.key)
-        if self.unit == ELECTRIC_CURRENT_AMPERE and "DC" in desc:
+        if self.unit == UnitOfElectricCurrent.AMPERE and "DC" in desc:
             self.use_icon = ICON_DC_AMPS
 
         if data["prefix"] != "":
@@ -254,9 +245,9 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
         """Return de device class of the sensor."""
         if self.unit == "" or self.unit is None:
             return None
-        if self.device_class == DEVICE_CLASS_ENERGY:
-            return STATE_CLASS_TOTAL_INCREASING
-        return STATE_CLASS_MEASUREMENT
+        if self.device_class == SensorDeviceClass.ENERGY:
+            return SensorStateClass.TOTAL_INCREASING
+        return SensorStateClass.MEASUREMENT
 
     @property
     def extra_state_attributes(self):
