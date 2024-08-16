@@ -4,9 +4,10 @@ Custom integration to integrate SunSpec with Home Assistant.
 For more details about this integration, please refer to
 https://github.com/cjne/ha-sunspec
 """
+
 import asyncio
-import logging
 from datetime import timedelta
+import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import Config
@@ -52,14 +53,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
     await coordinator.async_config_entry_first_refresh()
-    #    # await coordinator.async_refresh()
-    #    await coordinator._async_update_data()
-    #     for platform in PLATFORMS:
-    #         hass.async_add_job(
-    #             hass.config_entries.async_forward_entry_setup(entry, platform)
-    #         )
-    #     coordinator.entities_added = True
-
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
@@ -101,7 +95,6 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
     def __init__(self, hass: HomeAssistant, client: SunSpecApiClient, entry) -> None:
         """Initialize."""
         self.api = client
-        self.entities_added = False
         self.hass = hass
         self.entry = entry
 
@@ -141,14 +134,6 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
             for model_id in model_ids:
                 data[model_id] = await self.api.async_get_data(model_id)
             self.api.close()
-            if not self.entities_added:
-                for platform in PLATFORMS:
-                    self.hass.async_add_job(
-                        self.hass.config_entries.async_forward_entry_setup(
-                            self.entry, platform
-                        )
-                    )
-                self.entities_added = True
             return data
         except Exception as exception:
             _LOGGER.warning(exception)

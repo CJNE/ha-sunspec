@@ -1,21 +1,22 @@
 """Sensor platform for SunSpec."""
+
 import logging
 
 from homeassistant.components.sensor import RestoreSensor
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor import SensorStateClass
-from homeassistant.const import UnitOfDataRate
 from homeassistant.const import DEGREE
+from homeassistant.const import PERCENTAGE
+from homeassistant.const import POWER_VOLT_AMPERE_REACTIVE
+from homeassistant.const import UnitOfApparentPower
+from homeassistant.const import UnitOfDataRate
 from homeassistant.const import UnitOfElectricCurrent
 from homeassistant.const import UnitOfElectricPotential
 from homeassistant.const import UnitOfEnergy
 from homeassistant.const import UnitOfFrequency
 from homeassistant.const import UnitOfIrradiance
 from homeassistant.const import UnitOfLength
-from homeassistant.const import PERCENTAGE
-from homeassistant.const import UnitOfApparentPower
-from homeassistant.const import POWER_VOLT_AMPERE_REACTIVE
 from homeassistant.const import UnitOfPower
 from homeassistant.const import UnitOfPressure
 from homeassistant.const import UnitOfSpeed
@@ -26,7 +27,6 @@ from . import get_sunspec_unique_id
 from .const import CONF_PREFIX
 from .const import DOMAIN
 from .entity import SunSpecEntity
-
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
