@@ -1,10 +1,13 @@
 """Sample API Client."""
+
 import logging
+import socket
+import threading
 import time
 from types import SimpleNamespace
 
-import sunspec2.modbus.client as modbus_client
 from homeassistant.core import HomeAssistant
+import sunspec2.modbus.client as modbus_client
 from sunspec2.modbus.client import SunSpecModbusClientException
 from sunspec2.modbus.client import SunSpecModbusClientTimeout
 from sunspec2.modbus.modbus import ModbusClientError
@@ -89,10 +92,11 @@ class SunSpecApiClient:
         self._hass = hass
         self._slave_id = slave_id
         self._client_key = f"{host}:{port}:{slave_id}"
+        self._lock = threading.Lock()
 
-    def get_client(self, config=None):
+    def get_client(self, config=None, force=False):
         cached = SunSpecApiClient.CLIENT_CACHE.get(self._client_key, None)
-        if cached is None or config is not None:
+        if force or cached is None or config is not None:
             _LOGGER.debug("Not using cached connection")
             cached = self.modbus_connect(config)
             SunSpecApiClient.CLIENT_CACHE[self._client_key] = cached
@@ -130,8 +134,30 @@ class SunSpecApiClient:
 
     def reconnect(self):
         _LOGGER.debug("Client reconnecting")
-        client = self.get_client()
-        client.connect()
+        self.get_client(force=True)
+
+    def check_port(self) -> bool:
+        """Check if port is available"""
+        with self._lock:
+            sock_timeout = float(3)
+            _LOGGER.debug(
+                f"Check_Port: opening socket on {self._host}:{self._port} with a {sock_timeout}s timeout."
+            )
+            socket.setdefaulttimeout(sock_timeout)
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock_res = sock.connect_ex((self._host, self._port))
+            is_open = sock_res == 0  # True if open, False if not
+            if is_open:
+                sock.shutdown(socket.SHUT_RDWR)
+                _LOGGER.debug(
+                    f"Check_Port (SUCCESS): port open on {self._host}:{self._port}"
+                )
+            else:
+                _LOGGER.debug(
+                    f"Check_Port (ERROR): port not available on {self._host}:{self._port} - error: {sock_res}"
+                )
+            sock.close()
+        return is_open
 
     def modbus_connect(self, config=None):
         use_config = SimpleNamespace(
@@ -149,21 +175,27 @@ class SunSpecApiClient:
             ipport=use_config.port,
             timeout=TIMEOUT,
         )
-        try:
-            client.connect()
-            if not client.is_connected():
-                raise ConnectionError(
-                    f"Failed to connect to {self._host}:{self._port} slave id {self._slave_id}"
+        if self.check_port():
+            _LOGGER.debug("Inverter ready for Modbus TCP connection")
+            try:
+                with self._lock:
+                    client.connect()
+                if not client.is_connected():
+                    raise ConnectionError(
+                        f"Failed to connect to {self._host}:{self._port} slave id {self._slave_id}"
+                    )
+                _LOGGER.debug("Client connected, perform initial scan")
+                client.scan(
+                    connect=False, progress=progress, full_model_read=False, delay=0.5
                 )
-            _LOGGER.debug("Client connected, perform initial scan")
-            client.scan(
-                connect=False, progress=progress, full_model_read=False, delay=0.5
-            )
-            return client
-        except ModbusClientError:
-            raise ConnectionError(
-                f"Failed to connect to {use_config.host}:{use_config.port} slave id {use_config.slave_id}"
-            )
+                return client
+            except ModbusClientError:
+                raise ConnectionError(
+                    f"Failed to connect to {use_config.host}:{use_config.port} slave id {use_config.slave_id}"
+                )
+        else:
+            _LOGGER.debug("Inverter not ready for Modbus TCP connection")
+            raise ConnectionError(f"Inverter not active on {self._host}:{self._port}")
 
     def read_model(self, model_id) -> dict:
         client = self.get_client()
