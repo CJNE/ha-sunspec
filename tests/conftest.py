@@ -1,4 +1,5 @@
 """Global fixtures for SunSpec integration."""
+
 import logging
 from typing import Any
 from unittest.mock import Mock
@@ -6,6 +7,7 @@ from unittest.mock import patch
 
 import pytest
 import sunspec2.file.client as modbus_client
+
 from custom_components.sunspec.api import ConnectionError
 from custom_components.sunspec.api import ConnectionTimeoutError
 
@@ -80,6 +82,8 @@ def sunspec_client_mock():
     client.scan()
     with patch(
         "custom_components.sunspec.SunSpecApiClient.modbus_connect", return_value=client
+    ), patch(
+        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
     ):
         yield
 
@@ -92,6 +96,8 @@ def sunspec_client_mock_connect_error():
     client = MockFileClientDevice("./tests/test_data/inverter.json")
     with patch(
         "custom_components.sunspec.SunSpecApiClient.modbus_connect", return_value=client
+    ), patch(
+        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
     ), patch(
         "custom_components.sunspec.SunSpecApiClient.async_get_models",
         side_effect=ConnectionError,
@@ -106,6 +112,8 @@ def sunspec_client_mock_not_connected():
     client.scan()
     with patch(
         "custom_components.sunspec.SunSpecApiClient.modbus_connect", return_value=client
+    ), patch(
+        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
     ):
         yield
 
@@ -116,6 +124,8 @@ def sunspec_modbus_client_mock():
     mock = Mock()
     with patch(
         "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP", return_value=mock
+    ), patch(
+        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
     ):
         yield
 
@@ -128,6 +138,8 @@ def error_get_device_info_fixture():
     with patch(
         "custom_components.sunspec.SunSpecApiClient.async_get_device_info",
         side_effect=Exception,
+    ), patch(
+        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
     ):
         yield
 
@@ -141,6 +153,8 @@ def error_on_get_data():
     client.scan()
     with patch(
         "custom_components.sunspec.SunSpecApiClient.modbus_connect", return_value=client
+    ), patch(
+        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
     ), patch(
         "custom_components.sunspec.SunSpecApiClient.async_get_data",
         side_effect=ConnectionError,
@@ -158,6 +172,8 @@ def timeout_error_on_get_data():
     with patch(
         "custom_components.sunspec.SunSpecApiClient.get_client", return_value=client
     ), patch(
+        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
+    ), patch(
         "custom_components.sunspec.SunSpecApiClient.async_get_data",
         side_effect=ConnectionTimeoutError,
     ):
@@ -172,6 +188,8 @@ def connect_error_on_get_data():
     client = MockFileClientDevice("./tests/test_data/inverter.json")
     with patch(
         "custom_components.sunspec.SunSpecApiClient.modbus_connect", return_value=client
+    ), patch(
+        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
     ), patch(
         "custom_components.sunspec.SunSpecApiClient.async_get_data",
         side_effect=ConnectionError,

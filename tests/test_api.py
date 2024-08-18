@@ -1,11 +1,13 @@
 """Tests for SunSpec api."""
+
 import pytest
-from custom_components.sunspec.api import ConnectionError
-from custom_components.sunspec.api import ConnectionTimeoutError
-from custom_components.sunspec.api import SunSpecApiClient
 from sunspec2.modbus.client import SunSpecModbusClientException
 from sunspec2.modbus.client import SunSpecModbusClientTimeout
 from sunspec2.modbus.modbus import ModbusClientError
+
+from custom_components.sunspec.api import ConnectionError
+from custom_components.sunspec.api import ConnectionTimeoutError
+from custom_components.sunspec.api import SunSpecApiClient
 
 
 async def test_api(hass, sunspec_client_mock):
@@ -103,6 +105,9 @@ async def test_modbus_connect_exception(hass, mocker):
         # api_call is from slow.py but imported to main.py
         "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.is_connected",
         return_value=False,
+    )
+    mocker.patch(
+        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
     )
     """Test API calls."""
 
