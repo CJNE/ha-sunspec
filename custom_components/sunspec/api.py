@@ -45,9 +45,19 @@ class SunSpecModelWrapper:
     def getKeys(self):
         keys = list(filter(self.isValidPoint, self._models[0].points.keys()))
         for group_name in self._models[0].groups:
-            for idx, group in enumerate(self._models[0].groups[group_name]):
-                key_prefix = f"{group_name}:{idx}"
-                group_keys = map(lambda gp: f"{key_prefix}:{gp}", group.points.keys())
+            model_group = self._models[0].groups[group_name]
+            if type(model_group) is list:
+                for idx, group in enumerate(model_group):
+                    key_prefix = f"{group_name}:{idx}"
+                    group_keys = map(
+                        lambda gp: f"{key_prefix}:{gp}", group.points.keys()
+                    )
+                    keys.extend(filter(self.isValidPoint, group_keys))
+            else:
+                key_prefix = f"{group_name}:0"
+                group_keys = map(
+                    lambda gp: f"{key_prefix}:{gp}", model_group.points.keys()
+                )
                 keys.extend(filter(self.isValidPoint, group_keys))
         return keys
 
@@ -65,11 +75,18 @@ class SunSpecModelWrapper:
         point_path = point_name.split(":")
         if len(point_path) == 1:
             return self._models[model_index].points[point_name]
-        return (
-            self._models[model_index]
-            .groups[point_path[0]][int(point_path[1])]
-            .points[point_path[2]]
-        )
+
+        group = self._models[model_index].groups[point_path[0]]
+        if type(group) is list:
+            return group[int(point_path[1])].points[point_path[2]]
+        else:
+            if len(point_path) > 2:
+                return group.points[
+                    point_path[2]
+                ]  # Access to the specific point within the group
+            return group.points[
+                point_name
+            ]  # Generic access if no specific subgrouping is specified
 
 
 # pragma: not covered
@@ -102,7 +119,7 @@ class SunSpecApiClient:
             SunSpecApiClient.CLIENT_CACHE[self._client_key] = cached
         return cached
 
-    def async_get_client(self, config=None):
+    def async_get_client(self, config=None, force=False):
         return self._hass.async_add_executor_job(self.get_client, config)
 
     async def async_get_data(self, model_id) -> SunSpecModelWrapper:
@@ -132,9 +149,9 @@ class SunSpecApiClient:
         client = self.get_client()
         client.close()
 
-    def reconnect(self):
+    async def reconnect(self):
         _LOGGER.debug("Client reconnecting")
-        self.get_client(force=True)
+        await self.async_get_client(force=True)
 
     def check_port(self) -> bool:
         """Check if port is available"""
