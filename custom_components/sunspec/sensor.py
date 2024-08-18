@@ -197,6 +197,9 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
             val = self.coordinator.data[self.model_id].getValue(
                 self.key, self.model_index
             )
+        except KeyError:
+            _LOGGER.warning("Model %s not found", self.model_id)
+            return None
         except OverflowError:
             _LOGGER.warning(
                 "Math overflow error when retreiving calculated value for %s", self.key
