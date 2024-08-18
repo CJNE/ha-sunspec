@@ -1,20 +1,20 @@
 """Tests for SunSpec integration."""
+
 from __future__ import annotations
 
 from typing import Any
 from unittest.mock import Mock
 from unittest.mock import patch
 
-from custom_components.sunspec import DOMAIN
-from custom_components.sunspec import get_sunspec_unique_id
-from custom_components.sunspec.api import (
-    SunSpecApiClient,
-)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+from custom_components.sunspec import DOMAIN
+from custom_components.sunspec import get_sunspec_unique_id
+from custom_components.sunspec.api import SunSpecApiClient
 
 from .const import MOCK_CONFIG
 

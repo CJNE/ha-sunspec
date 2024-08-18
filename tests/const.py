@@ -1,4 +1,5 @@
 """Constants for SunSpec tests."""
+
 from custom_components.sunspec.const import CONF_ENABLED_MODELS
 from custom_components.sunspec.const import CONF_HOST
 from custom_components.sunspec.const import CONF_PORT

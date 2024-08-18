@@ -1,13 +1,15 @@
 """Test SunSpec config flow."""
+
 from unittest.mock import patch
 
+from homeassistant import config_entries
+from homeassistant import data_entry_flow
 import pytest
+from pytest_homeassistant_custom_component.common import MockConfigEntry
+
 from custom_components.sunspec.const import CONF_ENABLED_MODELS
 from custom_components.sunspec.const import CONF_SCAN_INTERVAL
 from custom_components.sunspec.const import DOMAIN
-from homeassistant import config_entries
-from homeassistant import data_entry_flow
-from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from . import MockSunSpecDataUpdateCoordinator
 from .const import MOCK_CONFIG

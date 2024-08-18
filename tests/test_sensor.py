@@ -1,8 +1,9 @@
 """Test SunSpec sensor."""
-from custom_components.sunspec.sensor import ICON_DC_AMPS
+
 from homeassistant.core import HomeAssistant
 
-from . import setup_mock_sunspec_config_entry
+from custom_components.sunspec.sensor import ICON_DC_AMPS
+
 from . import TEST_INVERTER_MM_SENSOR_POWER_ENTITY_ID
 from . import TEST_INVERTER_MM_SENSOR_STATE_ENTITY_ID
 from . import TEST_INVERTER_PREFIX_SENSOR_DC_ENTITY_ID
@@ -11,6 +12,7 @@ from . import TEST_INVERTER_SENSOR_ENERGY_ENTITY_ID
 from . import TEST_INVERTER_SENSOR_POWER_ENTITY_ID
 from . import TEST_INVERTER_SENSOR_STATE_ENTITY_ID
 from . import TEST_INVERTER_SENSOR_VAR_ID
+from . import setup_mock_sunspec_config_entry
 from .const import MOCK_CONFIG_MM
 from .const import MOCK_CONFIG_PREFIX
 
