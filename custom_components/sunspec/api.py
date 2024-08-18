@@ -14,7 +14,6 @@ from sunspec2.modbus.modbus import ModbusClientError
 
 TIMEOUT = 120
 
-
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
 
@@ -110,16 +109,18 @@ class SunSpecApiClient:
         self._slave_id = slave_id
         self._client_key = f"{host}:{port}:{slave_id}"
         self._lock = threading.Lock()
+        self._reconnect = False
 
-    def get_client(self, config=None, force=False):
+    def get_client(self, config=None):
         cached = SunSpecApiClient.CLIENT_CACHE.get(self._client_key, None)
-        if force or cached is None or config is not None:
+        if self._reconnect or cached is None or config is not None:
             _LOGGER.debug("Not using cached connection")
             cached = self.modbus_connect(config)
+            self._reconnect = False
             SunSpecApiClient.CLIENT_CACHE[self._client_key] = cached
         return cached
 
-    def async_get_client(self, config=None, force=False):
+    def async_get_client(self, config=None):
         return self._hass.async_add_executor_job(self.get_client, config)
 
     async def async_get_data(self, model_id) -> SunSpecModelWrapper:
@@ -145,13 +146,12 @@ class SunSpecApiClient:
         model_ids = sorted(list(filter(lambda m: type(m) is int, client.models.keys())))
         return model_ids
 
+    def reconnect_next(self):
+        self._reconnect = True
+
     def close(self):
         client = self.get_client()
         client.close()
-
-    async def reconnect(self):
-        _LOGGER.debug("Client reconnecting")
-        await self.async_get_client(force=True)
 
     def check_port(self) -> bool:
         """Check if port is available"""

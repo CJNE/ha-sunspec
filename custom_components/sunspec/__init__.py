@@ -137,5 +137,5 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
             return data
         except Exception as exception:
             _LOGGER.warning(exception)
-            await self.api.reconnect()
+            self.api.reconnect_next()
             raise UpdateFailed() from exception
