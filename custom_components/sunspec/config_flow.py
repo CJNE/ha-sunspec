@@ -3,7 +3,7 @@
 import logging
 
 from homeassistant import config_entries
-from homeassistant.core import callback
+from homeassistant.core_config import callback
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 
