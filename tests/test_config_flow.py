@@ -106,7 +106,7 @@ async def test_options_flow(hass, sunspec_client_mock):
     entry.add_to_hass(hass)
 
     coordinator = MockSunSpecDataUpdateCoordinator(hass, [1, 2])
-    # api = SunSpecApiClient(host="test", port=123, slave_id=1, hass=hass)
+    # api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
     hass.data[DOMAIN] = {entry.entry_id: coordinator}
 
     # Initialize an options flow
@@ -147,7 +147,7 @@ async def test_options_flow_connect_error(hass, sunspec_client_mock_connect_erro
     entry.add_to_hass(hass)
 
     coordinator = MockSunSpecDataUpdateCoordinator(hass, [1, 2])
-    # api = SunSpecApiClient(host="test", port=123, slave_id=1, hass=hass)
+    # api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
     hass.data[DOMAIN] = {entry.entry_id: coordinator}
 
     # Initialize an options flow

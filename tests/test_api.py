@@ -14,7 +14,7 @@ async def test_api(hass, sunspec_client_mock):
     """Test API calls."""
 
     # To test the api submodule, we first create an instance of our API client
-    api = SunSpecApiClient(host="test", port=123, slave_id=1, hass=hass)
+    api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
 
     models = await api.async_get_models()
     assert models == [
@@ -55,7 +55,7 @@ async def test_get_client(hass, sunspec_modbus_client_mock):
     """Test API calls."""
 
     # To test the api submodule, we first create an instance of our API client
-    api = SunSpecApiClient(host="test", port=123, slave_id=1, hass=hass)
+    api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
     client = api.get_client()
     client.scan.assert_called_once()
 
@@ -67,7 +67,7 @@ async def test_modbus_connect(hass, sunspec_modbus_client_mock):
     """Test API calls."""
 
     # To test the api submodule, we first create an instance of our API client
-    api = SunSpecApiClient(host="test", port=123, slave_id=1, hass=hass)
+    api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
     SunSpecApiClient.CLIENT_CACHE = {}
     client = api.get_client()
     client.scan.assert_called_once()
@@ -89,7 +89,7 @@ async def test_modbus_connect_fail(hass, mocker):
     """Test API calls."""
 
     # To test the api submodule, we first create an instance of our API client
-    api = SunSpecApiClient(host="test", port=123, slave_id=1, hass=hass)
+    api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
 
     with pytest.raises(Exception):
         api.modbus_connect()
@@ -112,7 +112,7 @@ async def test_modbus_connect_exception(hass, mocker):
     """Test API calls."""
 
     # To test the api submodule, we first create an instance of our API client
-    api = SunSpecApiClient(host="test", port=123, slave_id=1, hass=hass)
+    api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
 
     with pytest.raises(ConnectionError):
         api.modbus_connect()
@@ -123,7 +123,7 @@ async def test_read_model_timeout(hass, mocker):
         "custom_components.sunspec.api.SunSpecApiClient.read_model",
         side_effect=SunSpecModbusClientTimeout,
     )
-    api = SunSpecApiClient(host="test", port=123, slave_id=1, hass=hass)
+    api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
 
     with pytest.raises(ConnectionTimeoutError):
         await api.async_get_data(1)
@@ -134,7 +134,7 @@ async def test_read_model_error(hass, mocker):
         "custom_components.sunspec.api.SunSpecApiClient.read_model",
         side_effect=SunSpecModbusClientException,
     )
-    api = SunSpecApiClient(host="test", port=123, slave_id=1, hass=hass)
+    api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
 
     with pytest.raises(ConnectionError):
         await api.async_get_data(1)

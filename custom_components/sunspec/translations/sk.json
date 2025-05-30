@@ -7,7 +7,7 @@
         "data": {
           "host": "Meno hosťa/IP",
           "port": "Port",
-          "slave_id": "Slave ID"
+          "unit_id": "Unit ID"
         }
       },
       "settings": {
@@ -35,7 +35,7 @@
         "data": {
           "host": "Meno hosťa/IP",
           "port": "Port",
-          "slave_id": "Slave ID"
+          "unit_id": "Unit ID"
         }
       },
       "model_options": {
@@ -44,7 +44,7 @@
         "data": {
           "host": "Meno hosťa/IP",
           "port": "Port",
-          "slave_id": "Slave ID",
+          "unit_id": "Unit ID",
           "models_enabled": "Čítať modely",
           "scan_interval": "Interval skenovania (sekundy)"
         }
