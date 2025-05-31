@@ -3,7 +3,7 @@
 from unittest.mock import patch
 
 from homeassistant import config_entries
-from homeassistant import data_entry_flow
+from homeassistant.data_entry_flow import FlowResultType
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -23,12 +23,15 @@ from .const import MOCK_SETTINGS
 @pytest.fixture(autouse=True)
 def bypass_setup_fixture():
     """Prevent setup."""
-    with patch(
-        "custom_components.sunspec.async_setup",
-        return_value=True,
-    ), patch(
-        "custom_components.sunspec.async_setup_entry",
-        return_value=True,
+    with (
+        patch(
+            "custom_components.sunspec.async_setup",
+            return_value=True,
+        ),
+        patch(
+            "custom_components.sunspec.async_setup_entry",
+            return_value=True,
+        ),
     ):
         yield
 
@@ -46,7 +49,7 @@ async def test_successful_config_flow(
     )
 
     # Check that the config flow shows the user form as the first step
-    assert result["type"] == data_entry_flow.RESULT_TYPE_FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "user"
 
     flow_id = result["flow_id"]
@@ -58,13 +61,13 @@ async def test_successful_config_flow(
 
     # Check that the config flow is complete and a new entry is created with
     # the input data
-    assert result["type"] == data_entry_flow.RESULT_TYPE_FORM
+    assert result["type"] == FlowResultType.FORM
 
     result = await hass.config_entries.flow.async_configure(
         flow_id, user_input=MOCK_SETTINGS
     )
 
-    assert result["type"] == data_entry_flow.RESULT_TYPE_CREATE_ENTRY
+    assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["title"] == "test_host:123:1"
     assert result["data"] == MOCK_CONFIG
     assert result["result"]
@@ -83,14 +86,14 @@ async def test_failed_config_flow(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    assert result["type"] == data_entry_flow.RESULT_TYPE_FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "user"
 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], user_input=MOCK_CONFIG_STEP_1
     )
 
-    assert result["type"] == data_entry_flow.RESULT_TYPE_FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["errors"] == {"base": "connection"}
 
 
@@ -111,7 +114,7 @@ async def test_options_flow(hass, sunspec_client_mock):
     result = await hass.config_entries.options.async_init(entry.entry_id)
 
     # Verify that the first options step is a user form
-    assert result["type"] == data_entry_flow.RESULT_TYPE_FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "host_options"
 
     # Enter some fake data into the form
@@ -120,7 +123,7 @@ async def test_options_flow(hass, sunspec_client_mock):
     )
 
     # Verify that the second options step is a user form
-    assert result["type"] == data_entry_flow.RESULT_TYPE_FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "model_options"
 
     result = await hass.config_entries.options.async_configure(
@@ -128,7 +131,7 @@ async def test_options_flow(hass, sunspec_client_mock):
     )
 
     # Verify that the flow finishes
-    assert result["type"] == data_entry_flow.RESULT_TYPE_CREATE_ENTRY
+    assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["title"] == ""
 
     # Verify that the options were updated
@@ -152,7 +155,7 @@ async def test_options_flow_connect_error(hass, sunspec_client_mock_connect_erro
     result = await hass.config_entries.options.async_init(entry.entry_id)
 
     # Verify that the first options step is a user form
-    assert result["type"] == data_entry_flow.RESULT_TYPE_FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "host_options"
 
     # Enter some fake data into the form
@@ -161,5 +164,5 @@ async def test_options_flow_connect_error(hass, sunspec_client_mock_connect_erro
     )
 
     # Verify that we return to host settings
-    assert result["type"] == data_entry_flow.RESULT_TYPE_FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "host_options"
