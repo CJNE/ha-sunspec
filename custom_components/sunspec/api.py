@@ -175,6 +175,7 @@ class SunSpecApiClient:
                     f"Check_Port (ERROR): port not available on {self._host}:{self._port} - error: {sock_res}"
                 )
             sock.close()
+            time.sleep(0.1)
         return is_open
 
     def modbus_connect(self, config=None):
