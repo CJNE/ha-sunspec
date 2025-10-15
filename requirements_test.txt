@@ -1,5 +1,5 @@
 -r requirements_dev.txt
-pre-commit==3.6.2
+pre-commit==4.0.1
 pytest-homeassistant-custom-component
 serial
 pytest-mock
