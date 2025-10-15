@@ -35,7 +35,7 @@ TEST_INVERTER_PREFIX_SENSOR_DC_ENTITY_ID = "sensor.test_mppt_module_0_dc_current
 
 def create_mock_sunspec_client(hass: HomeAssistant):
     """Create a mock modubs client"""
-    api = SunSpecApiClient(host="test", port=123, slave_id=1, hass=hass)
+    api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
     return api
 
 
@@ -108,7 +108,7 @@ class MockSunSpecDataUpdateCoordinator(DataUpdateCoordinator):
 
     def __init__(self, hass, models) -> None:
         """Initialize."""
-        self.api = SunSpecApiClient(host="test", port=123, slave_id=1, hass=hass)
+        self.api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
         self.option_model_filter = set(map(lambda m: int(m), models))
 
     async def _async_update_data(self):

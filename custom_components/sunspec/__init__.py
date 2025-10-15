@@ -20,7 +20,7 @@ from .const import CONF_ENABLED_MODELS
 from .const import CONF_HOST
 from .const import CONF_PORT
 from .const import CONF_SCAN_INTERVAL
-from .const import CONF_SLAVE_ID
+from .const import CONF_UNIT_ID
 from .const import DEFAULT_MODELS
 from .const import DOMAIN
 from .const import PLATFORMS
@@ -44,9 +44,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     host = entry.data.get(CONF_HOST)
     port = entry.data.get(CONF_PORT)
-    slave_id = entry.data.get(CONF_SLAVE_ID, 1)
+    unit_id = entry.data.get(CONF_UNIT_ID, 1)
 
-    client = SunSpecApiClient(host, port, slave_id, hass)
+    client = SunSpecApiClient(host, port, unit_id, hass)
 
     _LOGGER.debug("Setup conifg entry for SunSpec")
     coordinator = SunSpecDataUpdateCoordinator(hass, client=client, entry=entry)
@@ -117,7 +117,7 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
             scan_interval,
             entry.data.get(CONF_HOST),
             entry.data.get(CONF_PORT),
-            entry.data.get(CONF_SLAVE_ID),
+            entry.data.get(CONF_UNIT_ID),
         )
         super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=scan_interval)
 

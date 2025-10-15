@@ -7,7 +7,7 @@
         "data": {
           "host": "Nazwa hosta/Adres IP",
           "port": "Port",
-          "slave_id": "Identyfikator urządzenia"
+          "unit_id": "Identyfikator urządzenia"
         }
       },
       "settings": {

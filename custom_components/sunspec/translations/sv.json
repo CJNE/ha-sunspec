@@ -7,7 +7,7 @@
         "data": {
           "host": "Värdnamn/IP",
           "port": "Port",
-          "slave_id": "Modbus slav-id"
+          "unit_id": "Modbus slav-id"
         }
       },
       "settings": {
@@ -35,7 +35,7 @@
         "data": {
           "host": "Värdnamn/IP",
           "port": "Port",
-          "slave_id": "Modbus slav-id",
+          "unit_id": "Modbus slav-id",
           "models_enabled": "Använd modeller",
           "scan_interval": "Updateringsinervall (sekunder)"
         }

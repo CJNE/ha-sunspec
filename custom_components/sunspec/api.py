@@ -97,17 +97,15 @@ def progress(msg):
 class SunSpecApiClient:
     CLIENT_CACHE = {}
 
-    def __init__(
-        self, host: str, port: int, slave_id: int, hass: HomeAssistant
-    ) -> None:
+    def __init__(self, host: str, port: int, unit_id: int, hass: HomeAssistant) -> None:
         """Sunspec modbus client."""
 
         _LOGGER.debug("New SunspecApi Client")
         self._host = host
         self._port = port
         self._hass = hass
-        self._slave_id = slave_id
-        self._client_key = f"{host}:{port}:{slave_id}"
+        self._unit_id = unit_id
+        self._client_key = f"{host}:{port}:{unit_id}"
         self._lock = threading.Lock()
         self._reconnect = False
 
@@ -183,14 +181,14 @@ class SunSpecApiClient:
         use_config = SimpleNamespace(
             **(
                 config
-                or {"host": self._host, "port": self._port, "slave_id": self._slave_id}
+                or {"host": self._host, "port": self._port, "unit_id": self._unit_id}
             )
         )
         _LOGGER.debug(
-            f"Client connect to IP {use_config.host} port {use_config.port} slave id {use_config.slave_id} using timeout {TIMEOUT}"
+            f"Client connect to IP {use_config.host} port {use_config.port} unit id {use_config.unit_id} using timeout {TIMEOUT}"
         )
         client = modbus_client.SunSpecModbusClientDeviceTCP(
-            slave_id=use_config.slave_id,
+            slave_id=use_config.unit_id,
             ipaddr=use_config.host,
             ipport=use_config.port,
             timeout=TIMEOUT,
@@ -202,7 +200,7 @@ class SunSpecApiClient:
                     client.connect()
                 if not client.is_connected():
                     raise ConnectionError(
-                        f"Failed to connect to {self._host}:{self._port} slave id {self._slave_id}"
+                        f"Failed to connect to {self._host}:{self._port} unit id {self._unit_id}"
                     )
                 _LOGGER.debug("Client connected, perform initial scan")
                 client.scan(
@@ -211,7 +209,7 @@ class SunSpecApiClient:
                 return client
             except ModbusClientError:
                 raise ConnectionError(
-                    f"Failed to connect to {use_config.host}:{use_config.port} slave id {use_config.slave_id}"
+                    f"Failed to connect to {use_config.host}:{use_config.port} unit id {use_config.unit_id}"
                 )
         else:
             _LOGGER.debug("Inverter not ready for Modbus TCP connection")
