@@ -4,7 +4,7 @@
 NAME = "SunSpec"
 DOMAIN = "sunspec"
 DOMAIN_DATA = f"{DOMAIN}_data"
-VERSION = "0.0.27"
+VERSION = "0.0.28"
 
 ATTRIBUTION = "Data provided by SunSpec alliance - https://sunspec.org"
 ISSUE_URL = "https://github.com/cjne/ha-sunspec/issues"
@@ -25,6 +25,8 @@ CONF_ENABLED = "enabled"
 CONF_HOST = "host"
 CONF_PORT = "port"
 CONF_UNIT_ID = "unit_id"
+# Legacy constant for backward compatibility
+CONF_SLAVE_ID = "slave_id"  # Deprecated, use CONF_UNIT_ID
 CONF_PREFIX = "prefix"
 CONF_SCAN_INTERVAL = "scan_interval"
 CONF_ENABLED_MODELS = "models_enabled"

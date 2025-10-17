@@ -24,7 +24,7 @@ _LOGGER: logging.Logger = logging.getLogger(__package__)
 class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for sunspec."""
 
-    VERSION = 1
+    VERSION = 2
     CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_POLL
 
     def __init__(self):
@@ -37,7 +37,7 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             host = user_input[CONF_HOST]
             port = user_input[CONF_PORT]
-            unit_id = user_input[CONF_UNIT_ID]
+            unit_id = user_input.get(CONF_UNIT_ID) or user_input.get("slave_id", 1)
             valid = await self._test_connection(host, port, unit_id)
             if valid:
                 uid = self._device_info.getValue("SN")
@@ -162,7 +162,7 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
         settings = data or self.config_entry.data
         host = settings.get(CONF_HOST)
         port = settings.get(CONF_PORT)
-        unit_id = settings.get(CONF_UNIT_ID)
+        unit_id = settings.get(CONF_UNIT_ID) or settings.get("slave_id", 1)
 
         return self.async_show_form(
             step_id="host_options",
