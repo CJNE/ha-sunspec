@@ -36,6 +36,38 @@ async def async_setup(hass: HomeAssistant, config: Config):
     return True
 
 
+async def async_migrate_entry(hass, config_entry: ConfigEntry):
+    """Migrate old entry."""
+    _LOGGER.debug("Migrating configuration from version %s", config_entry.version)
+
+    if config_entry.version == 1:
+        # Migrate from version 1 to version 2
+        # Version 1 used 'slave_id', version 2 uses 'unit_id'
+        new_data = {**config_entry.data}
+
+        # Migrate slave_id to unit_id if needed
+        if "slave_id" in new_data:
+            if "unit_id" not in new_data:
+                # No unit_id exists, migrate slave_id to unit_id
+                new_data["unit_id"] = new_data.pop("slave_id")
+                _LOGGER.info(
+                    "Migrated 'slave_id' to 'unit_id': %s", new_data["unit_id"]
+                )
+            else:
+                # Both exist, remove slave_id and keep unit_id
+                new_data.pop("slave_id")
+                _LOGGER.info(
+                    "Removed 'slave_id', keeping existing 'unit_id': %s",
+                    new_data["unit_id"],
+                )
+
+        # Update the config entry with new version and data
+        hass.config_entries.async_update_entry(config_entry, data=new_data, version=2)
+        _LOGGER.info("Migration to version %s successful", config_entry.version)
+
+    return True
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Set up this integration using UI."""
     if hass.data.get(DOMAIN) is None:

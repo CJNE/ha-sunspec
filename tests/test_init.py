@@ -85,3 +85,125 @@ async def test_fetch_data_connect_error(hass, connect_error_on_get_data):
 
 async def test_client_reconnect(hass, sunspec_client_mock_not_connected) -> None:
     await setup_mock_sunspec_config_entry(hass, MOCK_CONFIG)
+
+
+async def test_migrate_entry_from_v1_to_v2_with_slave_id(hass):
+    """Test migration from version 1 to version 2 with slave_id key."""
+    from custom_components.sunspec import async_migrate_entry
+
+    # Create a version 1 config entry with slave_id
+    config_entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
+            "host": "192.168.1.100",
+            "port": 502,
+            "slave_id": 5,
+            "models_enabled": [103, 160],
+            "scan_interval": 30,
+        },
+        entry_id="test_migration",
+        version=1,
+    )
+    config_entry.add_to_hass(hass)
+
+    # Run the migration
+    result = await async_migrate_entry(hass, config_entry)
+
+    # Verify migration was successful
+    assert result is True
+    assert config_entry.version == 2
+    assert "unit_id" in config_entry.data
+    assert config_entry.data["unit_id"] == 5
+    assert "slave_id" not in config_entry.data
+    assert config_entry.data["host"] == "192.168.1.100"
+    assert config_entry.data["port"] == 502
+
+
+async def test_migrate_entry_from_v1_to_v2_already_has_unit_id(hass):
+    """Test migration from version 1 to version 2 when unit_id already exists."""
+    from custom_components.sunspec import async_migrate_entry
+
+    # Create a version 1 config entry that already has unit_id (edge case)
+    config_entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
+            "host": "192.168.1.100",
+            "port": 502,
+            "unit_id": 3,
+            "models_enabled": [103, 160],
+            "scan_interval": 30,
+        },
+        entry_id="test_migration_already_migrated",
+        version=1,
+    )
+    config_entry.add_to_hass(hass)
+
+    # Run the migration
+    result = await async_migrate_entry(hass, config_entry)
+
+    # Verify migration was successful
+    assert result is True
+    assert config_entry.version == 2
+    assert "unit_id" in config_entry.data
+    assert config_entry.data["unit_id"] == 3
+    assert "slave_id" not in config_entry.data
+
+
+async def test_migrate_entry_from_v1_to_v2_with_both_keys(hass):
+    """Test migration when both slave_id and unit_id exist (prefer unit_id)."""
+    from custom_components.sunspec import async_migrate_entry
+
+    # Create a version 1 config entry with both keys (edge case)
+    config_entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
+            "host": "192.168.1.100",
+            "port": 502,
+            "slave_id": 5,
+            "unit_id": 3,
+            "models_enabled": [103, 160],
+            "scan_interval": 30,
+        },
+        entry_id="test_migration_both_keys",
+        version=1,
+    )
+    config_entry.add_to_hass(hass)
+
+    # Run the migration
+    result = await async_migrate_entry(hass, config_entry)
+
+    # Verify migration was successful and unit_id was preserved
+    assert result is True
+    assert config_entry.version == 2
+    assert "unit_id" in config_entry.data
+    assert config_entry.data["unit_id"] == 3
+    assert "slave_id" not in config_entry.data
+
+
+async def test_migrate_entry_version_2_no_migration_needed(hass):
+    """Test that version 2 entries don't get migrated."""
+    from custom_components.sunspec import async_migrate_entry
+
+    # Create a version 2 config entry (already migrated)
+    config_entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
+            "host": "192.168.1.100",
+            "port": 502,
+            "unit_id": 5,
+            "models_enabled": [103, 160],
+            "scan_interval": 30,
+        },
+        entry_id="test_no_migration",
+        version=2,
+    )
+    config_entry.add_to_hass(hass)
+
+    # Run the migration
+    result = await async_migrate_entry(hass, config_entry)
+
+    # Verify no migration occurred
+    assert result is True
+    assert config_entry.version == 2
+    assert "unit_id" in config_entry.data
+    assert config_entry.data["unit_id"] == 5
