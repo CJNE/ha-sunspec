@@ -151,7 +151,13 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
             entry.data.get(CONF_PORT),
             entry.data.get(CONF_UNIT_ID),
         )
-        super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=scan_interval)
+        super().__init__(
+            hass,
+            _LOGGER,
+            name=DOMAIN,
+            update_interval=scan_interval,
+            config_entry=entry,
+        )
 
     async def _async_update_data(self):
         """Update data via library."""
