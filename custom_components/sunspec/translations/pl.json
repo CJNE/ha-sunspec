@@ -21,7 +21,9 @@
       }
     },
     "error": {
-      "connection": "Wystąpiłbłąd w trakcie połączenia, sprawdż nazwę hosta i/lub port"
+      "connection": "Wystąpiłbłąd w trakcie połączenia, sprawdż nazwę hosta i/lub port",
+      "device_error": "Połączenie dotarło do urządzenia, ale inicjalizacja się nie powiodła. Sprawdź logi Home Assistant, aby uzyskać szczegóły.",
+      "timeout": "Upłynął limit czasu połączenia. Sprawdź, czy urządzenie jest online i odpowiada pod skonfigurowaną nazwą hosta, portem i Unit ID."
     },
     "abort": {
       "single_instance_allowed": "Dozwolona jest tylko jedna instancja."
@@ -37,6 +39,11 @@
           "scan_interval": "Częstotliwość pobierania danych (sekundy)"
         }
       }
+    },
+    "error": {
+      "connection": "Wystąpiłbłąd w trakcie połączenia, sprawdż nazwę hosta i/lub port",
+      "device_error": "Połączenie dotarło do urządzenia, ale inicjalizacja się nie powiodła. Sprawdź logi Home Assistant, aby uzyskać szczegóły.",
+      "timeout": "Upłynął limit czasu połączenia. Sprawdź, czy urządzenie jest online i odpowiada pod skonfigurowaną nazwą hosta, portem i Unit ID."
     }
   }
 }

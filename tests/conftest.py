@@ -144,6 +144,18 @@ def error_get_device_info_fixture():
         yield
 
 
+@pytest.fixture(name="timeout_on_get_device_info")
+def timeout_get_device_info_fixture():
+    """Simulate timeout when retrieving data from API."""
+    with patch(
+        "custom_components.sunspec.SunSpecApiClient.async_get_device_info",
+        side_effect=ConnectionTimeoutError,
+    ), patch(
+        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
+    ):
+        yield
+
+
 # In this fixture, we are forcing calls to async_get_data to raise an Exception. This is useful
 # for exception handling.
 @pytest.fixture

@@ -21,7 +21,9 @@
       }
     },
     "error": {
-      "connection": "Kunde inte ansluta, kontrollera värdnamn och port"
+      "connection": "Kunde inte ansluta, kontrollera värdnamn och port",
+      "device_error": "Anslutningen nådde enheten, men initieringen misslyckades. Kontrollera Home Assistant-loggarna för detaljer.",
+      "timeout": "Anslutningen tog för lång tid. Kontrollera att enheten är online och svarar på konfigurerat värdnamn, port och Unit ID."
     },
     "abort": {
       "single_instance_allowed": "Endast en instans är tillåten"
@@ -40,6 +42,11 @@
           "scan_interval": "Updateringsinervall (sekunder)"
         }
       }
+    },
+    "error": {
+      "connection": "Kunde inte ansluta, kontrollera värdnamn och port",
+      "device_error": "Anslutningen nådde enheten, men initieringen misslyckades. Kontrollera Home Assistant-loggarna för detaljer.",
+      "timeout": "Anslutningen tog för lång tid. Kontrollera att enheten är online och svarar på konfigurerat värdnamn, port och Unit ID."
     }
   }
 }

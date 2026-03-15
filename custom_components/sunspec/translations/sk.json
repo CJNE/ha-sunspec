@@ -21,7 +21,9 @@
       }
     },
     "error": {
-      "connection": "Nepodarilo sa pripojiť, skontrolujte názov hostiteľa a port"
+      "connection": "Nepodarilo sa pripojiť, skontrolujte názov hostiteľa a port",
+      "device_error": "Spojenie dosiahlo zariadenie, ale inicializácia zlyhala. Podrobnosti nájdete v logoch Home Assistant.",
+      "timeout": "Časový limit spojenia vypršal. Skontrolujte, či je zariadenie online a odpovedá na nakonfigurovanom hostiteľovi, porte a Unit ID."
     },
     "abort": {
       "single_instance_allowed": "Povolený je len jeden prípad."
@@ -51,7 +53,9 @@
       }
     },
     "error": {
-      "connection": "Nepodarilo sa pripojiť, skontrolujte názov hostiteľa a port"
+      "connection": "Nepodarilo sa pripojiť, skontrolujte názov hostiteľa a port",
+      "device_error": "Spojenie dosiahlo zariadenie, ale inicializácia zlyhala. Podrobnosti nájdete v logoch Home Assistant.",
+      "timeout": "Časový limit spojenia vypršal. Skontrolujte, či je zariadenie online a odpovedá na nakonfigurovanom hostiteľovi, porte a Unit ID."
     }
   }
 }

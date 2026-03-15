@@ -21,7 +21,9 @@
       }
     },
     "error": {
-      "connection": "Failed to connect, check hostname and port"
+      "connection": "Failed to connect, check hostname and port",
+      "device_error": "Connection reached the device, but initialization failed. Check the Home Assistant logs for details.",
+      "timeout": "Connection timed out. Check that the device is online and responding on the configured host, port, and Unit ID."
     },
     "abort": {
       "single_instance_allowed": "Only a single instance is allowed."
@@ -51,7 +53,9 @@
       }
     },
     "error": {
-      "connection": "Failed to connect, check hostname and port"
+      "connection": "Failed to connect, check hostname and port",
+      "device_error": "Connection reached the device, but initialization failed. Check the Home Assistant logs for details.",
+      "timeout": "Connection timed out. Check that the device is online and responding on the configured host, port, and Unit ID."
     }
   }
 }

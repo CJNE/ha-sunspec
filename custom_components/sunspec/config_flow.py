@@ -8,6 +8,8 @@ import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 
 from . import SCAN_INTERVAL
+from .api import ConnectionError
+from .api import ConnectionTimeoutError
 from .api import SunSpecApiClient
 from .const import CONF_ENABLED_MODELS
 from .const import CONF_HOST
@@ -19,6 +21,39 @@ from .const import DEFAULT_MODELS
 from .const import DOMAIN
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
+
+
+def set_connection_error(errors, host, port, unit_id, err):
+    """Map backend failures to user-visible config flow errors."""
+    if isinstance(err, ConnectionTimeoutError):
+        errors["base"] = "timeout"
+        _LOGGER.warning(
+            "Timeout while connecting to host %s:%s unit %s",
+            host,
+            port,
+            unit_id,
+        )
+        return
+
+    if isinstance(err, ConnectionError):
+        errors["base"] = "connection"
+        _LOGGER.warning(
+            "Connection failed for host %s:%s unit %s: %s",
+            host,
+            port,
+            unit_id,
+            err,
+        )
+        return
+
+    errors["base"] = "device_error"
+    _LOGGER.exception(
+        "Unexpected error while connecting to host %s:%s unit %s",
+        host,
+        port,
+        unit_id,
+        exc_info=err,
+    )
 
 
 class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
@@ -49,8 +84,6 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 )
                 self.init_info = user_input
                 return await self.async_step_settings()
-
-            self._errors["base"] = "connection"
 
             return await self._show_config_form(user_input)
 
@@ -122,10 +155,8 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             self._device_info = await self.client.async_get_device_info()
             _LOGGER.info(self._device_info)
             return True
-        except Exception as e:
-            _LOGGER.error(
-                "Failed to connect to host %s:%s unit %s - %s", host, port, unit_id, e
-            )
+        except Exception as err:
+            set_connection_error(self._errors, host, port, unit_id, err)
         return False
 
 
@@ -136,12 +167,14 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
 
     def __init__(self):
         """Initialize options flow."""
+        self._errors = {}
         self.settings = {}
         self.options = {}
         self.coordinator = None
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
+        self._errors = {}
         self.options = dict(self.config_entry.options)
         self.coordinator = self.hass.data[DOMAIN][self.config_entry.entry_id]
         return await self.async_step_host_options()
@@ -209,15 +242,15 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
                 ),
             )
         except Exception as e:
-            _LOGGER.error(
-                "Failed to connect to host %s:%s unit %s - %s",
+            set_connection_error(
+                self._errors,
                 self.settings[CONF_HOST],
                 self.settings[CONF_PORT],
                 self.settings[CONF_UNIT_ID],
                 e,
             )
             return await self.show_settings_form(
-                data=self.settings, errors={"base": "connection"}
+                data=self.settings, errors=self._errors
             )
 
     async def _update_options(self):

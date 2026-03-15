@@ -94,7 +94,27 @@ async def test_failed_config_flow(
     )
 
     assert result["type"] == FlowResultType.FORM
-    assert result["errors"] == {"base": "connection"}
+    assert result["errors"] == {"base": "device_error"}
+
+
+async def test_timeout_config_flow(
+    hass, timeout_on_get_device_info, sunspec_client_mock
+):
+    """Test a failed config flow due to a timeout during validation."""
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "user"
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input=MOCK_CONFIG_STEP_1
+    )
+
+    assert result["type"] == FlowResultType.FORM
+    assert result["errors"] == {"base": "timeout"}
 
 
 # Our config flow also has an options flow, so we must test it as well.
@@ -166,3 +186,4 @@ async def test_options_flow_connect_error(hass, sunspec_client_mock_connect_erro
     # Verify that we return to host settings
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "host_options"
+    assert result["errors"] == {"base": "connection"}
