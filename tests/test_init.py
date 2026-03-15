@@ -20,9 +20,7 @@ from .const import MOCK_CONFIG
 # Home Assistant using the pytest_homeassistant_custom_component plugin.
 # Assertions allow you to verify that the return value of whatever is on the left
 # side of the assertion matches with the right side.
-async def test_setup_unload_and_reload_entry(
-    hass, bypass_get_data, sunspec_client_mock
-):
+async def test_setup_unload_and_reload_entry(hass, sunspec_client_mock):
     """Test entry setup and unload."""
     # Create a mock entry so we don't have to go through config flow
     config_entry = MockConfigEntry(
@@ -30,8 +28,7 @@ async def test_setup_unload_and_reload_entry(
     )
 
     # Set up the entry and assert that the values set during setup are where we expect
-    # them to be. Because we have patched the SunSpecDataUpdateCoordinator.async_get_data
-    # call, no code from custom_components/sunspec/api.py actually runs.
+    # them to be. The sunspec_client_mock fixture provides stable test data for setup.
     assert await async_setup_entry(hass, config_entry)
     assert DOMAIN in hass.data and config_entry.entry_id in hass.data[DOMAIN]
     assert (

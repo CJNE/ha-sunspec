@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "SunSpec Modbus TCP pripojenie",
-        "description": "Ak potrebujete pomoc s konfiguráciou, pozrite sa sem: https://github.com/cjne/ha-sunspec",
+        "description": "Zadajte hostiteľa, port a Unit ID pre pripojenie k zariadeniu SunSpec.",
         "data": {
           "host": "Meno hosťa/IP",
           "port": "Port",
@@ -33,7 +33,7 @@
     "step": {
       "host_options": {
         "title": "SunSpec Modbus TCP pripojenie",
-        "description": "Ak potrebujete pomoc s konfiguráciou, pozrite sa sem: https://github.com/cjne/ha-sunspec",
+        "description": "Aktualizujte hostiteľa, port a Unit ID pre toto pripojenie SunSpec.",
         "data": {
           "host": "Meno hosťa/IP",
           "port": "Port",

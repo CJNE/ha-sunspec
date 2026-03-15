@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "SunSpec Modbus TCP connection",
-        "description": "If you need help with the configuration have a look here: https://github.com/cjne/ha-sunspec",
+        "description": "Enter the device host, port, and Unit ID to connect to your SunSpec device.",
         "data": {
           "host": "Hostname/IP",
           "port": "Port",
@@ -33,7 +33,7 @@
     "step": {
       "host_options": {
         "title": "SunSpec Modbus TCP connection",
-        "description": "If you need help with the configuration have a look here: https://github.com/cjne/ha-sunspec",
+        "description": "Update the device host, port, and Unit ID for this SunSpec connection.",
         "data": {
           "host": "Hostname/IP",
           "port": "Port",

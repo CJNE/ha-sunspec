@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Połączenie z SunSpec Modbus TCP",
-        "description": "Jeśli potrzebujesz pomocy w konfiguracji, zajrzyj tu: https://github.com/cjne/ha-sunspec",
+        "description": "Wprowadź host, port i Unit ID, aby połączyć się z urządzeniem SunSpec.",
         "data": {
           "host": "Nazwa hosta/Adres IP",
           "port": "Port",

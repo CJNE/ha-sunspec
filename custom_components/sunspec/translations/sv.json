@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "SunSpec Modbus TCP ansulutning",
-        "description": "Om du behover hjälp gå till https://github.com/cjne/ha-sunspec",
+        "description": "Ange värdnamn, port och Unit ID för att ansluta till din SunSpec-enhet.",
         "data": {
           "host": "Värdnamn/IP",
           "port": "Port",
