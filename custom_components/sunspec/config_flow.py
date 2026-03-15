@@ -66,6 +66,23 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Initialize."""
         self._errors = {}
 
+    def _get_unique_id(self, host, port, unit_id):
+        """Build a stable unique ID even when device serial data is missing."""
+        try:
+            uid = self._device_info.getValue("SN")
+        except KeyError:
+            uid = None
+
+        if uid in (None, ""):
+            fallback_uid = f"{host}:{port}:{unit_id}"
+            _LOGGER.info(
+                "Device did not provide serial number during setup, using %s as unique ID",
+                fallback_uid,
+            )
+            return fallback_uid
+
+        return str(uid)
+
     async def async_step_user(self, user_input=None):
         """Handle a flow initialized by the user."""
         self._errors = {}
@@ -75,7 +92,7 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             unit_id = user_input.get(CONF_UNIT_ID) or user_input.get("slave_id", 1)
             valid = await self._test_connection(host, port, unit_id)
             if valid:
-                uid = self._device_info.getValue("SN")
+                uid = self._get_unique_id(host, port, unit_id)
                 _LOGGER.debug(f"Sunspec device unique id: {uid}")
                 await self.async_set_unique_id(uid)
 

@@ -3,6 +3,7 @@
 import logging
 from typing import Any
 from unittest.mock import Mock
+from unittest.mock import PropertyMock
 from unittest.mock import patch
 
 import pytest
@@ -154,6 +155,21 @@ def timeout_get_device_info_fixture():
         "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
     ):
         yield
+
+
+@pytest.fixture(name="device_info_without_serial")
+def device_info_without_serial_fixture():
+    """Return device info without an SN point."""
+    device_info = Mock()
+
+    def get_value(point_name, model_index=0):
+        if point_name == "SN":
+            raise KeyError(point_name)
+        return None
+
+    device_info.getValue.side_effect = get_value
+    type(device_info).num_models = PropertyMock(return_value=1)
+    yield device_info
 
 
 # In this fixture, we are forcing calls to async_get_data to raise an Exception. This is useful

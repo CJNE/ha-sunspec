@@ -117,6 +117,36 @@ async def test_timeout_config_flow(
     assert result["errors"] == {"base": "timeout"}
 
 
+async def test_config_flow_without_serial_number(
+    hass, device_info_without_serial, sunspec_client_mock
+):
+    """Test config flow falls back when the device does not expose SN."""
+    with patch(
+        "custom_components.sunspec.SunSpecApiClient.async_get_device_info",
+        return_value=device_info_without_serial,
+    ):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN, context={"source": config_entries.SOURCE_USER}
+        )
+
+        assert result["type"] == FlowResultType.FORM
+        assert result["step_id"] == "user"
+
+        flow_id = result["flow_id"]
+        result = await hass.config_entries.flow.async_configure(
+            flow_id, user_input=MOCK_CONFIG_STEP_1
+        )
+
+        assert result["type"] == FlowResultType.FORM
+
+        result = await hass.config_entries.flow.async_configure(
+            flow_id, user_input=MOCK_SETTINGS
+        )
+
+        assert result["type"] == FlowResultType.CREATE_ENTRY
+        assert result["title"] == "test_host:123:1"
+
+
 # Our config flow also has an options flow, so we must test it as well.
 async def test_options_flow(hass, sunspec_client_mock):
     """Test an options flow."""
