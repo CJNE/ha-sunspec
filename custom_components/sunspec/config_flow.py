@@ -24,7 +24,7 @@ _LOGGER: logging.Logger = logging.getLogger(__package__)
 class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for sunspec."""
 
-    VERSION = 1
+    VERSION = 2
     CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_POLL
 
     def __init__(self):
@@ -37,7 +37,7 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             host = user_input[CONF_HOST]
             port = user_input[CONF_PORT]
-            unit_id = user_input[CONF_UNIT_ID]
+            unit_id = user_input.get(CONF_UNIT_ID) or user_input.get("slave_id", 1)
             valid = await self._test_connection(host, port, unit_id)
             if valid:
                 uid = self._device_info.getValue("SN")
@@ -49,8 +49,6 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 )
                 self.init_info = user_input
                 return await self.async_step_settings()
-
-                # return self.async_create_entry(title=f"{host}:{port}", data=user_input)
 
             self._errors["base"] = "connection"
 
@@ -77,9 +75,9 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(config_entry):
-        return SunSpecOptionsFlowHandler(config_entry)
+        return SunSpecOptionsFlowHandler()
 
-    async def _show_config_form(self, user_input):  # pylint: disable=unused-argument
+    async def _show_config_form(self, user_input):
         """Show the configuration form to edit connection data."""
         defaults = user_input or {CONF_HOST: "", CONF_PORT: 502, CONF_UNIT_ID: 1}
         return self.async_show_form(
@@ -94,7 +92,7 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             errors=self._errors,
         )
 
-    async def _show_settings_form(self, user_input):  # pylint: disable=unused-argument
+    async def _show_settings_form(self, user_input):
         """Show the configuration form to edit settings data."""
         models = set(await self.client.async_get_models())
         model_filter = {model for model in sorted(models)}
@@ -124,11 +122,10 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             self._device_info = await self.client.async_get_device_info()
             _LOGGER.info(self._device_info)
             return True
-        except Exception as e:  # pylint: disable=broad-except
+        except Exception as e:
             _LOGGER.error(
                 "Failed to connect to host %s:%s unit %s - %s", host, port, unit_id, e
             )
-            pass
         return False
 
 
@@ -137,15 +134,15 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
 
     VERSION = 1
 
-    def __init__(self, config_entry):
-        """Initialize HACS options flow."""
-        self.config_entry = config_entry
+    def __init__(self):
+        """Initialize options flow."""
         self.settings = {}
-        self.options = dict(config_entry.options)
+        self.options = {}
         self.coordinator = None
 
-    async def async_step_init(self, user_input=None):  # pylint: disable=unused-argument
+    async def async_step_init(self, user_input=None):
         """Manage the options."""
+        self.options = dict(self.config_entry.options)
         self.coordinator = self.hass.data[DOMAIN][self.config_entry.entry_id]
         return await self.async_step_host_options()
 
@@ -162,7 +159,7 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
         settings = data or self.config_entry.data
         host = settings.get(CONF_HOST)
         port = settings.get(CONF_PORT)
-        unit_id = settings.get(CONF_UNIT_ID)
+        unit_id = settings.get(CONF_UNIT_ID) or settings.get("slave_id", 1)
 
         return self.async_show_form(
             step_id="host_options",
@@ -211,7 +208,7 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
                     }
                 ),
             )
-        except Exception as e:  # pylint: disable=broad-except
+        except Exception as e:
             _LOGGER.error(
                 "Failed to connect to host %s:%s unit %s - %s",
                 self.settings[CONF_HOST],
@@ -225,8 +222,6 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
 
     async def _update_options(self):
         """Update config entry options."""
-        # self.settings[CONF_PORT] = 503
-        # self.settings[CONF_ENABLED_MODELS] = [160, 103]
         title = f"{self.settings[CONF_HOST]}:{self.settings[CONF_PORT]}:{self.settings[CONF_UNIT_ID]}"
         _LOGGER.debug(
             "Saving config entry with title %s, data: %s options %s",
