@@ -214,6 +214,7 @@ def timeout_error_on_get_data():
 def connect_error_on_get_data():
     """Simulate connection error when retrieving data from API."""
     client = MockFileClientDevice("./tests/test_data/inverter.json")
+    client.scan()
     with patch(
         "custom_components.sunspec.SunSpecApiClient.modbus_connect", return_value=client
     ), patch(
