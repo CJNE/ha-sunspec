@@ -11,6 +11,7 @@ import sunspec2.file.client as modbus_client
 
 from custom_components.sunspec.api import ConnectionError
 from custom_components.sunspec.api import ConnectionTimeoutError
+from custom_components.sunspec.api import SunSpecApiClient
 
 pytest_plugins = "pytest_homeassistant_custom_component"
 _LOGGER: logging.Logger = logging.getLogger(__package__)
@@ -56,6 +57,14 @@ def auto_enable_custom_integrations(
     hass: Any, enable_custom_integrations: Any  # noqa: F811
 ) -> None:
     """Enable custom integrations defined in the test dir."""
+
+
+@pytest.fixture(autouse=True)
+def clear_sunspec_client_cache():
+    """Avoid cross-test reuse of cached clients with different fixture behavior."""
+    SunSpecApiClient.CLIENT_CACHE = {}
+    yield
+    SunSpecApiClient.CLIENT_CACHE = {}
 
 
 # This fixture, when used, will result in calls to async_get_data to return None. To have the call
