@@ -124,11 +124,32 @@ def get_sunspec_unique_id(
 class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching data from the API."""
 
+    # Per-gateway asyncio lock used to serialise update cycles from multiple
+    # config entries that share the same TCP endpoint (host, port). Several
+    # inverters and Modbus TCP gateways - notably SolarEdge - only accept a
+    # single TCP connection at a time. Without this lock two coordinators
+    # polling different unit IDs behind the same gateway race each other and
+    # produce "connection reset by peer" errors. See issue #317.
+    _GATEWAY_LOCKS: dict = {}
+
+    @classmethod
+    def _get_gateway_lock(cls, host: str, port: int) -> asyncio.Lock:
+        """Return (and lazily create) the asyncio lock for a (host, port)."""
+        key = (host, port)
+        lock = cls._GATEWAY_LOCKS.get(key)
+        if lock is None:
+            lock = asyncio.Lock()
+            cls._GATEWAY_LOCKS[key] = lock
+        return lock
+
     def __init__(self, hass: HomeAssistant, client: SunSpecApiClient, entry) -> None:
         """Initialize."""
         self.api = client
         self.hass = hass
         self.entry = entry
+        self._gateway_lock = self._get_gateway_lock(
+            entry.data.get(CONF_HOST), entry.data.get(CONF_PORT)
+        )
 
         _LOGGER.debug("Data: %s", entry.data)
         _LOGGER.debug("Options: %s", entry.options)
@@ -162,18 +183,22 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self):
         """Update data via library."""
         _LOGGER.debug("SunSpec Update data coordinator update")
-        data = {}
-        try:
-            model_ids = self.option_model_filter & set(
-                await self.api.async_get_models()
-            )
-            _LOGGER.debug("SunSpec Update data got models %s", model_ids)
+        # Hold the per-gateway lock for the entire connect/read/close cycle
+        # so that two coordinators sharing the same TCP endpoint never have
+        # an open connection at the same time.
+        async with self._gateway_lock:
+            data = {}
+            try:
+                model_ids = self.option_model_filter & set(
+                    await self.api.async_get_models()
+                )
+                _LOGGER.debug("SunSpec Update data got models %s", model_ids)
 
-            for model_id in model_ids:
-                data[model_id] = await self.api.async_get_data(model_id)
-            self.api.close()
-            return data
-        except Exception as exception:
-            _LOGGER.warning(exception)
-            self.api.reconnect_next()
-            raise UpdateFailed() from exception
+                for model_id in model_ids:
+                    data[model_id] = await self.api.async_get_data(model_id)
+                self.api.close()
+                return data
+            except Exception as exception:
+                _LOGGER.warning(exception)
+                self.api.reconnect_next()
+                raise UpdateFailed() from exception

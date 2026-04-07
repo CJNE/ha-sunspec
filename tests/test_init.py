@@ -186,6 +186,28 @@ async def test_migrate_entry_from_v1_to_v2_with_both_keys(hass):
     assert "slave_id" not in config_entry.data
 
 
+async def test_gateway_lock_shared_per_host_port(hass):
+    """Coordinators sharing the same TCP endpoint must share one lock.
+
+    See issue #317: this serialises Modbus reads from multiple unit IDs
+    behind one gateway so they don't fight over a single TCP connection.
+    """
+    # Reset class-level state to avoid contamination from other tests.
+    SunSpecDataUpdateCoordinator._GATEWAY_LOCKS.clear()
+
+    a = SunSpecDataUpdateCoordinator._get_gateway_lock("10.0.0.1", 502)
+    b = SunSpecDataUpdateCoordinator._get_gateway_lock("10.0.0.1", 502)
+    c = SunSpecDataUpdateCoordinator._get_gateway_lock("10.0.0.1", 503)
+    d = SunSpecDataUpdateCoordinator._get_gateway_lock("10.0.0.2", 502)
+
+    # Same (host, port) -> same lock instance
+    assert a is b
+    # Different port -> different lock
+    assert a is not c
+    # Different host -> different lock
+    assert a is not d
+
+
 async def test_migrate_entry_version_2_no_migration_needed(hass):
     """Test that version 2 entries don't get migrated."""
     from custom_components.sunspec import async_migrate_entry
