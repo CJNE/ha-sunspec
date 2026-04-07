@@ -24,8 +24,11 @@ from homeassistant.const import UnitOfTemperature
 from homeassistant.const import UnitOfTime
 
 from . import get_sunspec_unique_id
+from .const import CONF_MAX_AC_POWER_KW
 from .const import CONF_PREFIX
+from .const import CONF_SCAN_INTERVAL
 from .const import DOMAIN
+from .const import ENERGY_DELTA_SAFETY_FACTOR
 from .entity import SunSpecEntity
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
@@ -38,6 +41,43 @@ ICON_POWER = "mdi:solar-power"
 ICON_FREQ = "mdi:sine-wave"
 ICON_ENERGY = "mdi:solar-panel"
 ICON_TEMP = "mdi:thermometer"
+
+_POWER_UNITS = (
+    UnitOfPower.WATT,
+    UnitOfApparentPower.VOLT_AMPERE,
+    UnitOfReactivePower.VOLT_AMPERE_REACTIVE,
+)
+
+
+def _power_limit_in_native_unit(unit, max_power_kw):
+    """Convert the configured peak power (kW) to the sensor's native unit.
+
+    All sunspec power-like units (W, VA, VAr) are 1:1 with watts in HA, so the
+    same conversion applies. Returns None if the sensor is not power-like.
+    """
+    if max_power_kw is None or unit not in _POWER_UNITS:
+        return None
+    return max_power_kw * 1000.0
+
+
+def _energy_delta_limit_in_native_unit(unit, max_power_kw, scan_interval_seconds):
+    """Compute the maximum plausible energy delta between two consecutive reads.
+
+    Derived from the configured peak power and the scan interval, with a safety
+    factor (see ENERGY_DELTA_SAFETY_FACTOR). Returns None if the sensor is not
+    a known energy unit or no peak power is configured.
+    """
+    if max_power_kw is None or scan_interval_seconds is None:
+        return None
+    max_delta_kwh = (
+        max_power_kw * (scan_interval_seconds / 3600.0) * ENERGY_DELTA_SAFETY_FACTOR
+    )
+    if unit == UnitOfEnergy.WATT_HOUR:
+        return max_delta_kwh * 1000.0
+    if unit == UnitOfEnergy.KILO_WATT_HOUR:
+        return max_delta_kwh
+    return None
+
 
 HA_META = {
     "A": [UnitOfElectricCurrent.AMPERE, ICON_AC_AMPS, SensorDeviceClass.CURRENT],
@@ -124,6 +164,12 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
         self.lastKnown = None
         self._assumed_state = False
 
+        # Plausibility filter: if the user configured a peak AC power, drop
+        # power-like readings that exceed it. Stored in the sensor's native
+        # unit so the per-update check is a single comparison.
+        max_power_kw = config_entry.options.get(CONF_MAX_AC_POWER_KW)
+        self._max_native_value = _power_limit_in_native_unit(self.unit, max_power_kw)
+
         self._uniqe_id = get_sunspec_unique_id(
             config_entry.entry_id, self.key, self.model_id, self.model_index
         )
@@ -205,6 +251,20 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
                 "Math overflow error when retreiving calculated value for %s", self.key
             )
             return None
+        if (
+            self._max_native_value is not None
+            and isinstance(val, (int, float))
+            and val > self._max_native_value
+        ):
+            _LOGGER.warning(
+                "Dropping implausible value for %s: %s %s exceeds configured peak %s %s",
+                self.key,
+                val,
+                self.unit,
+                self._max_native_value,
+                self.unit,
+            )
+            return None
         vtype = self._meta["type"]
         if vtype in ("enum16", "bitfield32"):
             symbols = self._point_meta.get("symbols", None)
@@ -276,6 +336,17 @@ class SunSpecEnergySensor(SunSpecSensor, RestoreSensor):
         super().__init__(coordinator, config_entry, data)
         self.last_known_value = None
 
+        # Plausibility filter: derive the maximum plausible delta between two
+        # consecutive reads from the configured peak power and the scan
+        # interval. None disables the check.
+        max_power_kw = config_entry.options.get(CONF_MAX_AC_POWER_KW)
+        scan_interval = config_entry.options.get(
+            CONF_SCAN_INTERVAL, config_entry.data.get(CONF_SCAN_INTERVAL)
+        )
+        self._max_native_delta = _energy_delta_limit_in_native_unit(
+            self.unit, max_power_kw, scan_interval
+        )
+
     @property
     def native_value(self):
         val = super().native_value
@@ -283,6 +354,48 @@ class SunSpecEnergySensor(SunSpecSensor, RestoreSensor):
         if val == 0:
             _LOGGER.debug(
                 "Returning last known value instead of 0 for {self.name) to avoid resetting total_increasing counter"
+            )
+            self._assumed_state = True
+            return self.lastKnown
+        # Plausibility filter active but no baseline yet (e.g. fresh setup, or
+        # restart where the restored state was not numeric): discard this read
+        # so a potential garbage value never becomes the baseline. The next
+        # poll will have a valid lastKnown to compare against.
+        if (
+            val is not None
+            and self._max_native_delta is not None
+            and self.lastKnown is None
+            and isinstance(val, (int, float))
+        ):
+            _LOGGER.info(
+                "Establishing energy baseline for %s, discarding first read %s %s",
+                self.key,
+                val,
+                self.unit,
+            )
+            self.lastKnown = val
+            self._assumed_state = True
+            return None
+        # Delta-based plausibility check: if the increase since the last known
+        # value would imply a power above the configured peak, treat the read
+        # as garbage and fall back to the last known value (same mechanism as
+        # the val == 0 path, so total_increasing stats stay intact).
+        if (
+            val is not None
+            and self._max_native_delta is not None
+            and self.lastKnown is not None
+            and isinstance(val, (int, float))
+            and isinstance(self.lastKnown, (int, float))
+            and (val - self.lastKnown) > self._max_native_delta
+        ):
+            _LOGGER.warning(
+                "Dropping implausible energy delta for %s: %s -> %s %s exceeds max plausible delta %s %s",
+                self.key,
+                self.lastKnown,
+                val,
+                self.unit,
+                self._max_native_delta,
+                self.unit,
             )
             self._assumed_state = True
             return self.lastKnown
@@ -300,5 +413,10 @@ class SunSpecEnergySensor(SunSpecSensor, RestoreSensor):
                 f"{self.name} Got last known value from state: {state.native_value}"
             )
             self.last_known_value = state.native_value
+            # Also seed lastKnown so the val == 0 fallback and the delta-based
+            # plausibility filter work on the very first read after a restart,
+            # not only after the second poll.
+            if isinstance(state.native_value, (int, float)):
+                self.lastKnown = state.native_value
         else:
             _LOGGER.debug(f"{self.name} No previous state was found")

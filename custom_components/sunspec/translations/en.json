@@ -42,13 +42,14 @@
       },
       "model_options": {
         "title": "Device Options",
-        "description": "Select what SunSpec models (data registers) you would like to create sensors for.",
+        "description": "Select what SunSpec models (data registers) you would like to create sensors for. The peak AC power is optional and used to discard unrealistic values that some inverters report at dawn or dusk (e.g. spikes in the MW or TWh range). Leave it empty to disable filtering.",
         "data": {
           "host": "Hostname/IP",
           "port": "Port",
           "unit_id": "Unit ID",
           "models_enabled": "Read models",
-          "scan_interval": "Scan interval (seconds)"
+          "scan_interval": "Scan interval (seconds)",
+          "max_ac_power_kw": "Peak AC power of the inverter (kW, optional)"
         }
       }
     },

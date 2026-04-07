@@ -13,6 +13,7 @@ from .api import ConnectionTimeoutError
 from .api import SunSpecApiClient
 from .const import CONF_ENABLED_MODELS
 from .const import CONF_HOST
+from .const import CONF_MAX_AC_POWER_KW
 from .const import CONF_PORT
 from .const import CONF_PREFIX
 from .const import CONF_SCAN_INTERVAL
@@ -21,6 +22,19 @@ from .const import DEFAULT_MODELS
 from .const import DOMAIN
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
+
+
+def _optional_positive_float(value):
+    """Coerce empty values to None and validate positive floats otherwise."""
+    if value is None or value == "":
+        return None
+    try:
+        result = float(value)
+    except (TypeError, ValueError) as err:
+        raise vol.Invalid("must be a number") from err
+    if result <= 0:
+        raise vol.Invalid("must be greater than zero")
+    return result
 
 
 def set_connection_error(errors, host, port, unit_id, err):
@@ -235,6 +249,7 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
         scan_interval = self.config_entry.options.get(
             CONF_SCAN_INTERVAL, self.config_entry.data.get(CONF_SCAN_INTERVAL)
         )
+        max_ac_power_kw = self.config_entry.options.get(CONF_MAX_AC_POWER_KW)
         try:
             models = set(await self.coordinator.api.async_get_models(self.settings))
             model_filter = {model for model in sorted(models)}
@@ -245,18 +260,26 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
 
             default_models = {model for model in default_models if model in models}
 
+            schema = {
+                vol.Optional(CONF_PREFIX, default=prefix): str,
+                vol.Optional(CONF_SCAN_INTERVAL, default=scan_interval): int,
+                vol.Optional(
+                    CONF_ENABLED_MODELS,
+                    default=default_models,
+                ): cv.multi_select(model_filter),
+            }
+            # Use suggested_value (not default) so the field can stay empty.
+            # An empty value disables the corresponding plausibility filter.
+            schema[
+                vol.Optional(
+                    CONF_MAX_AC_POWER_KW,
+                    description={"suggested_value": max_ac_power_kw},
+                )
+            ] = _optional_positive_float
+
             return self.async_show_form(
                 step_id="model_options",
-                data_schema=vol.Schema(
-                    {
-                        vol.Optional(CONF_PREFIX, default=prefix): str,
-                        vol.Optional(CONF_SCAN_INTERVAL, default=scan_interval): int,
-                        vol.Optional(
-                            CONF_ENABLED_MODELS,
-                            default=default_models,
-                        ): cv.multi_select(model_filter),
-                    }
-                ),
+                data_schema=vol.Schema(schema),
             )
         except Exception as e:
             set_connection_error(
