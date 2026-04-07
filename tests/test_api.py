@@ -1,6 +1,7 @@
 """Tests for SunSpec api."""
 
 import pytest
+from sunspec2.modbus.client import SunSpecModbusClientError
 from sunspec2.modbus.client import SunSpecModbusClientException
 from sunspec2.modbus.client import SunSpecModbusClientTimeout
 from sunspec2.modbus.modbus import ModbusClientError
@@ -116,6 +117,39 @@ async def test_modbus_connect_exception(hass, mocker):
 
     with pytest.raises(ConnectionError):
         api.modbus_connect()
+
+
+async def test_modbus_connect_scan_error_surfaces_message(hass, mocker):
+    """SunSpec scan failures must surface their message in ConnectionError.
+
+    Regression test for issue #346 where client.scan() raised
+    SunSpecModbusClientError but it was not caught by the except block in
+    modbus_connect, leaking through as a generic Exception with message
+    "Unexpected error while connecting" and no actionable details.
+    """
+    mocker.patch(
+        "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.connect",
+        return_value=None,
+    )
+    mocker.patch(
+        "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.is_connected",
+        return_value=True,
+    )
+    mocker.patch(
+        "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.scan",
+        side_effect=SunSpecModbusClientError("data time out"),
+    )
+    mocker.patch(
+        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
+    )
+
+    api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
+
+    with pytest.raises(ConnectionError) as excinfo:
+        api.modbus_connect()
+    # The original sunspec2 message must be preserved so users get something
+    # actionable instead of a generic "Unexpected error".
+    assert "data time out" in str(excinfo.value)
 
 
 async def test_read_model_timeout(hass, mocker):

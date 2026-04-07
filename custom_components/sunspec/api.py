@@ -8,6 +8,7 @@ from types import SimpleNamespace
 
 from homeassistant.core import HomeAssistant
 import sunspec2.modbus.client as modbus_client
+from sunspec2.modbus.client import SunSpecModbusClientError
 from sunspec2.modbus.client import SunSpecModbusClientException
 from sunspec2.modbus.client import SunSpecModbusClientTimeout
 from sunspec2.modbus.modbus import ModbusClientError
@@ -208,10 +209,24 @@ class SunSpecApiClient:
                     connect=False, progress=progress, full_model_read=False, delay=0.5
                 )
                 return client
-            except ModbusClientError:
+            except ModbusClientError as err:
                 raise ConnectionError(
-                    f"Failed to connect to {use_config.host}:{use_config.port} unit id {use_config.unit_id}"
-                )
+                    f"Modbus error while connecting to "
+                    f"{use_config.host}:{use_config.port} unit id "
+                    f"{use_config.unit_id}: {err}"
+                ) from err
+            except SunSpecModbusClientError as err:
+                # Raised by client.scan() when no SunSpec base address is
+                # found, when the device responds without the SunSpec marker,
+                # or on read timeouts during the scan. Without this catch the
+                # original message ("Unknown error", "data time out", etc.)
+                # is hidden behind a generic "Unexpected error" further up
+                # the stack and the user has nothing actionable to report.
+                raise ConnectionError(
+                    f"SunSpec scan failed for "
+                    f"{use_config.host}:{use_config.port} unit id "
+                    f"{use_config.unit_id}: {err}"
+                ) from err
         else:
             _LOGGER.debug("Inverter not ready for Modbus TCP connection")
             raise ConnectionError(f"Inverter not active on {self._host}:{self._port}")
