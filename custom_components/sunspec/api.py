@@ -112,13 +112,39 @@ class SunSpecApiClient:
     def get_client(self, config=None):
         cached = SunSpecApiClient.CLIENT_CACHE.get(self._client_key, None)
         if cached is None or config is not None:
+            # No cached client yet (first call, or evicted by a failed reconnect
+            # attempt) or an explicit config override was supplied (config-flow
+            # validation).  Always perform a full connect + model scan.
             _LOGGER.debug("Not using cached connection")
             cached = self.modbus_connect(config)
             SunSpecApiClient.CLIENT_CACHE[self._client_key] = cached
-        if self._reconnect:
-            if self.check_port():
-                cached.connect()
-                self._reconnect = False
+            # A fresh modbus_connect already includes connect() + scan(), so
+            # clear the reconnect flag regardless of how it was set.
+            self._reconnect = False
+        elif self._reconnect:
+            # A previous poll raised an exception and called reconnect_next().
+            # Simply calling cached.connect() is insufficient: after a real
+            # network drop the pysunspec2 client object can be in an
+            # indeterminate state (stale socket, incomplete Modbus framing).
+            # Evict the stale client and build a completely fresh one,
+            # including a new model scan, so client.models is repopulated.
+            # If the device is still unreachable modbus_connect() raises
+            # ConnectionError, which propagates to the coordinator and leaves
+            # _reconnect=True for the next attempt.
+            _LOGGER.info(
+                "Full reconnect to %s:%s unit_id %s",
+                self._host,
+                self._port,
+                self._unit_id,
+            )
+            SunSpecApiClient.CLIENT_CACHE.pop(self._client_key, None)
+            try:
+                cached.close()
+            except Exception:
+                pass
+            cached = self.modbus_connect(config)
+            SunSpecApiClient.CLIENT_CACHE[self._client_key] = cached
+            self._reconnect = False
         return cached
 
     def async_get_client(self, config=None):
