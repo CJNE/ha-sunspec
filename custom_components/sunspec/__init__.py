@@ -12,6 +12,7 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.core_config import Config
+from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
@@ -103,6 +104,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
     if unloaded:
         coordinator = hass.data[DOMAIN].pop(entry.entry_id)
+        coordinator.cancel_retry()
         coordinator.unsub()
 
     return True  # unloaded
@@ -124,11 +126,21 @@ def get_sunspec_unique_id(
 class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching data from the API."""
 
+    # Retry delays (seconds) after consecutive failures: 30 s, 60 s, 120 s,
+    # then capped at 300 s for all subsequent attempts.  These fire in addition
+    # to the normal scan_interval so recovery is fast even when scan_interval
+    # is long (e.g. 5 minutes).
+    _RETRY_DELAYS = (30, 60, 120, 300)
+
     def __init__(self, hass: HomeAssistant, client: SunSpecApiClient, entry) -> None:
         """Initialize."""
         self.api = client
         self.hass = hass
         self.entry = entry
+        self._consecutive_failures = 0
+        # Cancellation handle for a pending async_call_later retry; None when
+        # no retry is scheduled.
+        self._retry_unsub = None
 
         _LOGGER.debug("Data: %s", entry.data)
         _LOGGER.debug("Options: %s", entry.options)
@@ -159,6 +171,36 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
             config_entry=entry,
         )
 
+    def cancel_retry(self):
+        """Cancel any pending exponential-backoff retry timer."""
+        if self._retry_unsub is not None:
+            self._retry_unsub()
+            self._retry_unsub = None
+
+    def _schedule_retry(self):
+        """Schedule a one-shot reconnect attempt using exponential backoff.
+
+        Only one retry can be pending at a time; subsequent failures while a
+        retry is already queued are ignored — the queued retry will trigger
+        async_request_refresh() which will either succeed or schedule the next
+        one.
+        """
+        if self._retry_unsub is not None:
+            return
+        idx = min(self._consecutive_failures - 1, len(self._RETRY_DELAYS) - 1)
+        delay = self._RETRY_DELAYS[idx]
+        _LOGGER.info(
+            "SunSpec scheduling reconnect retry in %ds (attempt #%d)",
+            delay,
+            self._consecutive_failures,
+        )
+        self._retry_unsub = async_call_later(self.hass, delay, self._async_retry_cb)
+
+    async def _async_retry_cb(self, _now):
+        """Fired by async_call_later; clears the handle then requests a refresh."""
+        self._retry_unsub = None
+        await self.async_request_refresh()
+
     async def _async_update_data(self):
         """Update data via library."""
         _LOGGER.debug("SunSpec Update data coordinator update")
@@ -171,9 +213,22 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
 
             for model_id in model_ids:
                 data[model_id] = await self.api.async_get_data(model_id)
+            # Close the TCP connection after each successful poll; pysunspec2
+            # will re-open it on the next read, keeping connections short-lived.
             self.api.close()
+            if self._consecutive_failures > 0:
+                _LOGGER.info(
+                    "SunSpec connection restored after %d failure(s)",
+                    self._consecutive_failures,
+                )
+            self._consecutive_failures = 0
+            self.cancel_retry()
             return data
         except Exception as exception:
-            _LOGGER.warning(exception)
+            _LOGGER.warning("SunSpec update failed: %s", exception)
+            self._consecutive_failures += 1
+            # Mark the API client so the next get_client() call performs a full
+            # modbus_connect() + model scan instead of reusing the stale client.
             self.api.reconnect_next()
+            self._schedule_retry()
             raise UpdateFailed() from exception
