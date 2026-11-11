@@ -60,7 +60,6 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for sunspec."""
 
     VERSION = 2
-    CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_POLL
 
     def __init__(self):
         """Initialize."""
