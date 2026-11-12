@@ -22,6 +22,7 @@ from homeassistant.const import UnitOfReactivePower
 from homeassistant.const import UnitOfSpeed
 from homeassistant.const import UnitOfTemperature
 from homeassistant.const import UnitOfTime
+from homeassistant.core import callback
 
 from . import get_sunspec_unique_id
 from .const import CONF_PREFIX
@@ -70,33 +71,45 @@ HA_META = {
 async def async_setup_entry(hass, entry, async_add_devices):
     """Setup sensor platform."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
-    sensors = []
     device_info = await coordinator.api.async_get_device_info()
     prefix = entry.options.get(CONF_PREFIX, entry.data.get(CONF_PREFIX, ""))
-    for model_id in coordinator.data.keys():
-        model_wrapper = coordinator.data[model_id]
-        for key in model_wrapper.getKeys():
-            for model_index in range(model_wrapper.num_models):
-                data = {
-                    "device_info": device_info,
-                    "key": key,
-                    "model_id": model_id,
-                    "model_index": model_index,
-                    "model": model_wrapper,
-                    "prefix": prefix,
-                }
+    added = set()
 
-                meta = model_wrapper.getMeta(key)
-                sunspec_unit = meta.get("units", "")
-                ha_meta = HA_META.get(sunspec_unit, [sunspec_unit, None, None])
-                device_class = ha_meta[2]
-                if device_class == SensorDeviceClass.ENERGY:
-                    _LOGGER.debug("Adding energy sensor")
-                    sensors.append(SunSpecEnergySensor(coordinator, entry, data))
-                else:
-                    sensors.append(SunSpecSensor(coordinator, entry, data))
+    # A point gets its sensor with its first value, which can come after setup:
+    # a device reports "not implemented" for a point it cannot measure yet, such
+    # as at night, the same as for a point it does not have.
+    @callback
+    def add_sensors():
+        sensors = []
+        for model_id, model_wrapper in coordinator.data.items():
+            for key in model_wrapper.getKeys():
+                if (model_id, key) in added:
+                    continue
+                added.add((model_id, key))
+                for model_index in range(model_wrapper.num_models):
+                    data = {
+                        "device_info": device_info,
+                        "key": key,
+                        "model_id": model_id,
+                        "model_index": model_index,
+                        "model": model_wrapper,
+                        "prefix": prefix,
+                    }
 
-    async_add_devices(sensors)
+                    meta = model_wrapper.getMeta(key)
+                    sunspec_unit = meta.get("units", "")
+                    ha_meta = HA_META.get(sunspec_unit, [sunspec_unit, None, None])
+                    device_class = ha_meta[2]
+                    if device_class == SensorDeviceClass.ENERGY:
+                        _LOGGER.debug("Adding energy sensor")
+                        sensors.append(SunSpecEnergySensor(coordinator, entry, data))
+                    else:
+                        sensors.append(SunSpecSensor(coordinator, entry, data))
+        if sensors:
+            async_add_devices(sensors)
+
+    add_sensors()
+    entry.async_on_unload(coordinator.async_add_listener(add_sensors))
 
 
 class SunSpecSensor(SunSpecEntity, SensorEntity):
