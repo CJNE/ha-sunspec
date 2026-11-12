@@ -7,6 +7,7 @@ import pytest
 from sunspec2.modbus.client import SunSpecModbusClientException
 from sunspec2.modbus.client import SunSpecModbusClientTimeout
 from sunspec2.modbus.modbus import ModbusClientError
+from sunspec2.modbus.modbus import ModbusClientException
 
 from custom_components.sunspec.api import ConnectionError
 from custom_components.sunspec.api import ConnectionTimeoutError
@@ -112,6 +113,27 @@ async def test_check_port(hass, mocker, connect_result, is_open):
     assert api.check_port() is is_open
     sock.settimeout.assert_called_once_with(3)
     assert socket.getdefaulttimeout() is None
+
+
+async def test_modbus_connect_partial_scan(hass, mocker):
+    """Test that a scan ended by a Modbus exception keeps the models found."""
+
+    def scan(self, **kwargs):
+        self.models[1] = ["common"]
+        raise ModbusClientException("Modbus exception 2")
+
+    mocker.patch("sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.connect")
+    mocker.patch(
+        "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.is_connected",
+        return_value=True,
+    )
+    mocker.patch("sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.scan", scan)
+    mocker.patch(
+        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
+    )
+    api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
+
+    assert api.modbus_connect().models == {1: ["common"]}
 
 
 async def test_modbus_connect_exception(hass, mocker):
