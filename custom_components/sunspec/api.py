@@ -1,6 +1,7 @@
 """Sample API Client."""
 
 import logging
+import select
 import socket
 import threading
 import time
@@ -97,6 +98,19 @@ class SunSpecModelWrapper:
 def progress(msg):
     _LOGGER.debug(msg)
     return True
+
+
+def closed_by_device(client) -> bool:
+    """Return True if the device closed the connection between requests."""
+    sock = client.client.socket
+    if sock is None:
+        return False
+    # No answer is due between requests, so a readable socket means the device
+    # closed the connection or sent something nobody asked for. poll() takes
+    # any file descriptor, select() only those below 1024.
+    poller = select.poll()
+    poller.register(sock, select.POLLIN)
+    return bool(poller.poll(0))
 
 
 class SunSpecApiClient:
@@ -233,6 +247,10 @@ class SunSpecApiClient:
 
     def read_model(self, model_id) -> dict:
         client = self.get_client()
+        if closed_by_device(client):
+            _LOGGER.debug("Device closed the connection, reconnecting")
+            self.reconnect_next()
+            self.get_client()
         models = client.models[model_id]
         for model in models:
             time.sleep(0.6)

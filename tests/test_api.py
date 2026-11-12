@@ -136,6 +136,27 @@ async def test_modbus_connect_partial_scan(hass, mocker):
     assert api.modbus_connect().models == {1: ["common"]}
 
 
+@pytest.mark.parametrize("closed", [True, False])
+async def test_read_model_reconnects_closed_connection(hass, mocker, closed):
+    """Test that a connection the device closed is reopened before reading."""
+    sock, device_end = socket.socketpair()
+    if closed:
+        device_end.close()
+    client = mocker.Mock(models={1: []})
+    client.client.socket = sock
+    SunSpecApiClient.CLIENT_CACHE["test:123:1"] = client
+    mocker.patch(
+        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
+    )
+    api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
+
+    api.read_model(1)
+
+    assert client.connect.called is closed
+    sock.close()
+    device_end.close()
+
+
 async def test_modbus_connect_exception(hass, mocker):
     mocker.patch(
         # api_call is from slow.py but imported to main.py

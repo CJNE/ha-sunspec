@@ -1,6 +1,7 @@
 """Global fixtures for SunSpec integration."""
 
 import logging
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import Mock
 from unittest.mock import PropertyMock
@@ -18,6 +19,8 @@ _LOGGER: logging.Logger = logging.getLogger(__package__)
 
 
 class MockFileClientDeviceNotConnected(modbus_client.FileClientDevice):
+    client = SimpleNamespace(socket=None)
+
     def is_connected(self):
         return False
 
@@ -26,6 +29,8 @@ class MockFileClientDeviceNotConnected(modbus_client.FileClientDevice):
 
 
 class MockFileClientDevice(modbus_client.FileClientDevice):
+    client = SimpleNamespace(socket=None)
+
     def is_connected(self):
         return True
 
