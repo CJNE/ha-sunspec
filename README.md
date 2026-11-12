@@ -33,8 +33,9 @@ Works out of the box with the energy dashboard.
 
 ## HACS Installation
 
-1. Add and search for sunspec in [HACS](https://hacs.xyz/)
-2. Install
+1. Search for SunSpec in [HACS](https://hacs.xyz/) and download it
+2. Restart Home Assistant
+3. In Settings -> Devices & services, click "Add integration" and search for "SunSpec"
 
 ## Manual Installation
 
@@ -44,7 +45,7 @@ Works out of the box with the energy dashboard.
 4. Download _all_ the files from the `custom_components/sunspec/` directory (folder) in this repository.
 5. Place the files you downloaded in the new directory (folder) you created.
 6. Restart Home Assistant
-7. In the HA UI go to "Configuration" -> "Integrations" click "+" and search for "SunSpec"
+7. In Settings -> Devices & services, click "Add integration" and search for "SunSpec"
 
 Using your HA configuration directory (folder) as a starting point you should now also have this:
 
