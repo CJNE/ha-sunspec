@@ -271,10 +271,6 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
 
 
 class SunSpecEnergySensor(SunSpecSensor, RestoreSensor):
-    def __init__(self, coordinator, config_entry, data):
-        super().__init__(coordinator, config_entry, data)
-        self.last_known_value = None
-
     @property
     def native_value(self):
         val = super().native_value
@@ -298,6 +294,6 @@ class SunSpecEnergySensor(SunSpecSensor, RestoreSensor):
             _LOGGER.debug(
                 f"{self.name} Got last known value from state: {state.native_value}"
             )
-            self.last_known_value = state.native_value
+            self.lastKnown = state.native_value
         else:
             _LOGGER.debug(f"{self.name} No previous state was found")

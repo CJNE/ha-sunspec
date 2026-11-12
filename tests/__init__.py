@@ -33,6 +33,9 @@ TEST_INVERTER_MM_SENSOR_STATE_ENTITY_ID = (
 TEST_INVERTER_MM_SENSOR_POWER_ENTITY_ID = (
     "sensor.der_ac_measurement_dermeasureac_1_active_power"
 )
+TEST_INVERTER_MM_SENSOR_ENERGY_ENTITY_ID = (
+    "sensor.der_ac_measurement_dermeasureac_total_energy_absorbed"
+)
 TEST_INVERTER_RG_SENSOR_INCLX_ENTITY_ID = (
     "sensor.inclinometer_incl_2_x_axis_inclination"
 )
