@@ -278,7 +278,8 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
             self.settings,
             self.options,
         )
-        self.hass.config_entries.async_update_entry(
-            self.config_entry, data=self.settings, title=title
-        )
+        if self.hass.config_entries.async_update_entry(
+            self.config_entry, data=self.settings, options=self.options, title=title
+        ):
+            self.hass.config_entries.async_schedule_reload(self.config_entry.entry_id)
         return self.async_create_entry(title="", data=self.options)

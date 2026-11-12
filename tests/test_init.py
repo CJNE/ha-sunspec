@@ -1,5 +1,7 @@
 """Test SunSpec setup process."""
 
+from datetime import timedelta
+
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.exceptions import ConfigEntryNotReady
 import pytest
@@ -7,10 +9,14 @@ from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.sunspec import SunSpecDataUpdateCoordinator
 from custom_components.sunspec import async_setup_entry
+from custom_components.sunspec.const import CONF_ENABLED_MODELS
+from custom_components.sunspec.const import CONF_SCAN_INTERVAL
 from custom_components.sunspec.const import DOMAIN
 
+from . import TEST_INVERTER_SENSOR_POWER_ENTITY_ID
 from . import setup_mock_sunspec_config_entry
 from .const import MOCK_CONFIG
+from .const import MOCK_CONFIG_STEP_1
 
 
 def set_entry_setup_in_progress(hass, config_entry: MockConfigEntry) -> None:
@@ -48,6 +54,26 @@ async def test_setup_unload_and_reload_entry(hass, sunspec_client_mock):
     # Unload the entry and verify that the data has been removed.
     assert await hass.config_entries.async_unload(config_entry.entry_id)
     assert config_entry.entry_id not in hass.data[DOMAIN]
+
+
+async def test_options_change_reloads_entry(hass, sunspec_client_mock):
+    """Test that changed options are applied by a reload."""
+    config_entry = await setup_mock_sunspec_config_entry(hass)
+
+    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input=MOCK_CONFIG_STEP_1
+    )
+    await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        user_input={CONF_ENABLED_MODELS: [103], CONF_SCAN_INTERVAL: 20},
+    )
+    await hass.async_block_till_done()
+
+    assert config_entry.state is ConfigEntryState.LOADED
+    coordinator = hass.data[DOMAIN][config_entry.entry_id]
+    assert coordinator.update_interval == timedelta(seconds=20)
+    assert hass.states.get(TEST_INVERTER_SENSOR_POWER_ENTITY_ID).state == "800"
 
 
 async def test_setup_entry_exception(hass, error_on_get_data):
