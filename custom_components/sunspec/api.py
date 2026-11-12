@@ -165,8 +165,8 @@ class SunSpecApiClient:
             _LOGGER.debug(
                 f"Check_Port: opening socket on {self._host}:{self._port} with a {sock_timeout}s timeout."
             )
-            socket.setdefaulttimeout(sock_timeout)
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(sock_timeout)
             sock_res = sock.connect_ex((self._host, self._port))
             is_open = sock_res == 0  # True if open, False if not
             if is_open:

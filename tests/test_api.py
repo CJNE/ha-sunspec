@@ -1,6 +1,7 @@
 """Tests for SunSpec api."""
 
 import errno
+import socket
 
 import pytest
 from sunspec2.modbus.client import SunSpecModbusClientException
@@ -109,6 +110,8 @@ async def test_check_port(hass, mocker, connect_result, is_open):
     api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
 
     assert api.check_port() is is_open
+    sock.settimeout.assert_called_once_with(3)
+    assert socket.getdefaulttimeout() is None
 
 
 async def test_modbus_connect_exception(hass, mocker):
