@@ -11,6 +11,7 @@ import sunspec2.modbus.client as modbus_client
 from sunspec2.modbus.client import SunSpecModbusClientException
 from sunspec2.modbus.client import SunSpecModbusClientTimeout
 from sunspec2.modbus.modbus import ModbusClientError
+from sunspec2.modbus.modbus import ModbusClientException
 
 from .const import GROUP_NAMES
 
@@ -208,9 +209,19 @@ class SunSpecApiClient:
                         f"Failed to connect to {self._host}:{self._port} unit id {self._unit_id}"
                     )
                 _LOGGER.debug("Client connected, perform initial scan")
-                client.scan(
-                    connect=False, progress=progress, full_model_read=False, delay=0.5
-                )
+                try:
+                    client.scan(
+                        connect=False,
+                        progress=progress,
+                        full_model_read=False,
+                        delay=0.5,
+                    )
+                except ModbusClientException as err:
+                    if not client.models:
+                        raise
+                    _LOGGER.warning(
+                        "Scan stopped early, using the models found: %s", err
+                    )
                 return client
             except ModbusClientError:
                 raise ConnectionError(
