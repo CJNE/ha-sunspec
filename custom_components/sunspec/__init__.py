@@ -102,16 +102,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
     )
     if unloaded:
-        coordinator = hass.data[DOMAIN].pop(entry.entry_id)
-        coordinator.unsub()
+        hass.data[DOMAIN].pop(entry.entry_id)
 
     return True  # unloaded
-
-
-async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Reload config entry."""
-    await async_unload_entry(hass, entry)
-    await async_setup_entry(hass, entry)
 
 
 def get_sunspec_unique_id(
@@ -142,7 +135,6 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
             )
         )
         self.option_model_filter = set(map(lambda m: int(m), models))
-        self.unsub = entry.add_update_listener(async_reload_entry)
         _LOGGER.debug(
             "Setup entry with models %s, scan interval %s. IP: %s Port: %s ID: %s",
             self.option_model_filter,
