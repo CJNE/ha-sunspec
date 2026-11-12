@@ -12,6 +12,8 @@ from sunspec2.modbus.client import SunSpecModbusClientException
 from sunspec2.modbus.client import SunSpecModbusClientTimeout
 from sunspec2.modbus.modbus import ModbusClientError
 
+from .const import GROUP_NAMES
+
 TIMEOUT = 120
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
@@ -68,7 +70,9 @@ class SunSpecModelWrapper:
         return self.getPoint(point_name).pdef
 
     def getGroupMeta(self):
-        return self._models[0].gdef
+        gdef = self._models[0].gdef
+        name = GROUP_NAMES.get(self._models[0].model_id)
+        return {**gdef, "name": name} if name else gdef
 
     def getPoint(self, point_name, model_index=0):
         point_path = point_name.split(":")
