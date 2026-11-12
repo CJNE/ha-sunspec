@@ -13,7 +13,7 @@ from custom_components.sunspec.api import ConnectionError
 from custom_components.sunspec.api import ConnectionTimeoutError
 from custom_components.sunspec.api import SunSpecApiClient
 
-pytest_plugins = "pytest_homeassistant_custom_component"
+pytest_plugins = "pytest_homeassistant"
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
 

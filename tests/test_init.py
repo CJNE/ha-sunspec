@@ -3,7 +3,7 @@
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.exceptions import ConfigEntryNotReady
 import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.sunspec import SunSpecDataUpdateCoordinator
 from custom_components.sunspec import async_setup_entry
@@ -20,7 +20,7 @@ def set_entry_setup_in_progress(hass, config_entry: MockConfigEntry) -> None:
 
 # We can pass fixtures as defined in conftest.py to tell pytest to use the fixture
 # for a given test. We can also leverage fixtures and mocks that are available in
-# Home Assistant using the pytest_homeassistant_custom_component plugin.
+# Home Assistant using the pytest_homeassistant plugin.
 # Assertions allow you to verify that the return value of whatever is on the left
 # side of the assertion matches with the right side.
 async def test_setup_unload_and_reload_entry(hass, sunspec_client_mock):

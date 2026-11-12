@@ -1,5 +1,7 @@
 """Tests for SunSpec api."""
 
+import errno
+
 import pytest
 from sunspec2.modbus.client import SunSpecModbusClientException
 from sunspec2.modbus.client import SunSpecModbusClientTimeout
@@ -86,13 +88,27 @@ async def test_modbus_connect_fail(hass, mocker):
         "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.is_connected",
         return_value=False,
     )
+    mocker.patch(
+        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
+    )
     """Test API calls."""
 
     # To test the api submodule, we first create an instance of our API client
     api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
 
-    with pytest.raises(Exception):
+    with pytest.raises(ConnectionError):
         api.modbus_connect()
+
+
+@pytest.mark.parametrize(
+    ("connect_result", "is_open"), [(0, True), (errno.ECONNREFUSED, False)]
+)
+async def test_check_port(hass, mocker, connect_result, is_open):
+    sock = mocker.patch("custom_components.sunspec.api.socket.socket").return_value
+    sock.connect_ex.return_value = connect_result
+    api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
+
+    assert api.check_port() is is_open
 
 
 async def test_modbus_connect_exception(hass, mocker):

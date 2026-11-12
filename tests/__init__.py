@@ -10,7 +10,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.sunspec import DOMAIN
 from custom_components.sunspec import get_sunspec_unique_id
@@ -20,17 +20,27 @@ from .const import MOCK_CONFIG
 
 TEST_CONFIG_ENTRY_ID = "77889900aa"
 TEST_SERIAL_NO = "abc123"
-TEST_INVERTER_SENSOR_STATE_ENTITY_ID = "sensor.inverter_operating_state"
-TEST_INVERTER_SENSOR_POWER_ENTITY_ID = "sensor.inverter_watts"
-TEST_INVERTER_SENSOR_VAR_ID = "sensor.inverter_var"
-TEST_INVERTER_SENSOR_ENERGY_ENTITY_ID = "sensor.inverter_watthours"
-TEST_INVERTER_MM_SENSOR_STATE_ENTITY_ID = "sensor.dermeasureac_1_operating_state"
-TEST_INVERTER_MM_SENSOR_POWER_ENTITY_ID = "sensor.dermeasureac_1_active_power"
+TEST_INVERTER_SENSOR_STATE_ENTITY_ID = (
+    "sensor.inverter_three_phase_inverter_operating_state"
+)
+TEST_INVERTER_SENSOR_POWER_ENTITY_ID = "sensor.inverter_three_phase_inverter_watts"
+TEST_INVERTER_SENSOR_VAR_ID = "sensor.inverter_three_phase_inverter_var"
+TEST_INVERTER_SENSOR_ENERGY_ENTITY_ID = "sensor.inverter_three_phase_inverter_watthours"
+TEST_INVERTER_MM_SENSOR_STATE_ENTITY_ID = (
+    "sensor.der_ac_measurement_dermeasureac_1_operating_state"
+)
+TEST_INVERTER_MM_SENSOR_POWER_ENTITY_ID = (
+    "sensor.der_ac_measurement_dermeasureac_1_active_power"
+)
 TEST_INVERTER_RG_SENSOR_INCLX_ENTITY_ID = (
     "sensor.inclinometer_incl_2_x_axis_inclination"
 )
-TEST_INVERTER_SENSOR_DC_ENTITY_ID = "sensor.mppt_module_0_dc_current"
-TEST_INVERTER_PREFIX_SENSOR_DC_ENTITY_ID = "sensor.test_mppt_module_0_dc_current"
+TEST_INVERTER_SENSOR_DC_ENTITY_ID = (
+    "sensor.multiple_mppt_inverter_extension_model_mppt_module_0_dc_current"
+)
+TEST_INVERTER_PREFIX_SENSOR_DC_ENTITY_ID = (
+    "sensor.multiple_mppt_inverter_extension_model_test_mppt_module_0_dc_current"
+)
 
 
 def create_mock_sunspec_client(hass: HomeAssistant):

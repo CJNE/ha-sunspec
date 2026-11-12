@@ -1,5 +1,6 @@
 -r requirements_dev.txt
-pre-commit==4.5.1
-pytest-homeassistant-custom-component
-serial
+pytest-homeassistant
+pytest-cov
 pytest-mock
+pytest-timeout
+pytest-xdist
