@@ -4,6 +4,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.core import State
 from pytest_homeassistant.common import mock_restore_cache_with_extra_data
 
+from custom_components.sunspec.api import SunSpecApiClient
+from custom_components.sunspec.const import DOMAIN
 from custom_components.sunspec.sensor import ICON_DC_AMPS
 
 from . import TEST_INVERTER_MM_SENSOR_ENERGY_ENTITY_ID
@@ -15,6 +17,7 @@ from . import TEST_INVERTER_SENSOR_ENERGY_ENTITY_ID
 from . import TEST_INVERTER_SENSOR_EVENT_ENTITY_ID
 from . import TEST_INVERTER_SENSOR_POWER_ENTITY_ID
 from . import TEST_INVERTER_SENSOR_STATE_ENTITY_ID
+from . import TEST_INVERTER_SENSOR_TMPSNK_ENTITY_ID
 from . import TEST_INVERTER_SENSOR_VAR_ID
 from . import setup_mock_sunspec_config_entry
 from .const import MOCK_CONFIG_MM
@@ -106,6 +109,22 @@ async def test_sensor_energy_restored(hass: HomeAssistant, sunspec_client_mock) 
 
     entity_state = hass.states.get(TEST_INVERTER_MM_SENSOR_ENERGY_ENTITY_ID)
     assert entity_state.state == "1234"
+
+
+async def test_sensor_added_with_first_value(
+    hass: HomeAssistant, sunspec_client_mock
+) -> None:
+    """Verify a point without a value at setup gets its sensor with its first value."""
+
+    config_entry = await setup_mock_sunspec_config_entry(hass)
+    assert hass.states.get(TEST_INVERTER_SENSOR_TMPSNK_ENTITY_ID) is None
+
+    client = SunSpecApiClient.CLIENT_CACHE["test:123:1"]
+    client.models[103][0].points["TmpSnk"].value = 45
+    await hass.data[DOMAIN][config_entry.entry_id].async_refresh()
+    await hass.async_block_till_done()
+
+    assert hass.states.get(TEST_INVERTER_SENSOR_TMPSNK_ENTITY_ID).state == "45"
 
 
 async def test_sensor_bitfield(hass: HomeAssistant, sunspec_client_mock) -> None:

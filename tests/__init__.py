@@ -27,6 +27,9 @@ TEST_INVERTER_SENSOR_POWER_ENTITY_ID = "sensor.inverter_three_phase_inverter_wat
 TEST_INVERTER_SENSOR_VAR_ID = "sensor.inverter_three_phase_inverter_var"
 TEST_INVERTER_SENSOR_ENERGY_ENTITY_ID = "sensor.inverter_three_phase_inverter_watthours"
 TEST_INVERTER_SENSOR_EVENT_ENTITY_ID = "sensor.inverter_three_phase_inverter_event1"
+TEST_INVERTER_SENSOR_TMPSNK_ENTITY_ID = (
+    "sensor.inverter_three_phase_inverter_heat_sink_temperature"
+)
 TEST_INVERTER_MM_SENSOR_STATE_ENTITY_ID = (
     "sensor.der_ac_measurement_dermeasureac_1_operating_state"
 )
