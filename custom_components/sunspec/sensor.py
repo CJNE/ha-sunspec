@@ -63,7 +63,7 @@ HA_META = {
     "%": [PERCENTAGE, ICON_DEFAULT, None],
     "Secs": [UnitOfTime.SECONDS, ICON_DEFAULT, None],
     "enum16": [None, ICON_DEFAULT, SensorDeviceClass.ENUM],
-    "bitfield32": [None, ICON_DEFAULT, SensorDeviceClass.ENUM],
+    "bitfield32": [None, ICON_DEFAULT, None],
 }
 
 
@@ -129,14 +129,13 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
         )
 
         vtype = self._meta["type"]
-        if vtype in ("enum16", "bitfield32"):
+        if vtype == "enum16":
             self._options = self._point_meta.get("symbols", None)
             if self._options is None:
                 self.use_device_class = None
             else:
                 self.use_device_class = SensorDeviceClass.ENUM
                 self._options = [item["name"] for item in self._options]
-                self._options.append("")
 
         self._device_id = config_entry.entry_id
         name = self._group_meta.get("name", str(self.model_id))
