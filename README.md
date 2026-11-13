@@ -16,8 +16,9 @@ Works out of the box with the energy dashboard.
 [![pre-commit][pre-commit-shield]][pre-commit]
 [![Black][black-shield]][black]
 
-[![hacs][hacsbadge]][hacs]
+[![Marketplace][marketplacebadge]][marketplace]
 [![Project Maintenance][maintenance-shield]][user_profile]
+[![Project Maintenance][maintenance-shield-enoch85]][user_profile_enoch85]
 [![BuyMeCoffee][buymecoffeebadge]][buymecoffee]
 
 [![Discord][discord-shield]][discord]
@@ -31,11 +32,22 @@ Works out of the box with the energy dashboard.
 
 ![logo][logoimg]
 
-## HACS Installation
+## How it works
 
-1. Search for SunSpec in [HACS](https://hacs.xyz/) and download it
-2. Restart Home Assistant
-3. In Settings -> Devices & services, click "Add integration" and search for "SunSpec"
+This integration wraps [pysunspec2](https://github.com/sunspec/pysunspec2), the SunSpec Alliance's Python library, for Home Assistant:
+
+- pysunspec2 talks Modbus TCP or Modbus RTU to the device, finds the SunSpec models the device has, and decodes their registers with the SunSpec model definitions it ships with: point names, units, scale factors, and the names of states and flags.
+- The integration adds the Home Assistant side: setup and options in the UI, reading each selected model at its interval, a device per model, and a sensor for each measurement, state and flag the device reports, with Home Assistant units, device classes and state classes, energy sensors included.
+
+The integration holds no register maps of its own, so it reads any device that implements the SunSpec models, whatever the brand. New and corrected models come with new pysunspec2 versions; each release of this integration uses the pysunspec2 version pinned in its `manifest.json`.
+
+## Marketplace Installation
+
+[![Open your Home Assistant instance and open the SunSpec repository in the Marketplace.](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=CJNE&repository=ha-sunspec&category=integration)
+
+1. In Settings -> Marketplace, search for "SunSpec" and open it, or use the button above
+2. Select "Install"
+3. The SunSpec setup opens when the installation is done. If you close it, go to Settings -> Devices & services, click "Add integration" and search for "SunSpec"
 
 ## Manual Installation
 
@@ -57,6 +69,7 @@ custom_components/sunspec/config_flow.py
 custom_components/sunspec/const.py
 custom_components/sunspec/entity.py
 custom_components/sunspec/manifest.json
+custom_components/sunspec/recorder.py
 custom_components/sunspec/sensor.py
 ```
 
@@ -83,17 +96,19 @@ Code template was mainly taken from [@Ludeeus](https://github.com/ludeeus)'s [in
 [buymecoffeebadge]: https://img.shields.io/badge/buy%20me%20a%20coffee-donate-yellow.svg?style=for-the-badge
 [commits-shield]: https://img.shields.io/github/commit-activity/y/cjne/ha-sunspec.svg?style=for-the-badge
 [commits]: https://github.com/cjne/ha-sunspec/commits/main
-[hacs]: https://hacs.xyz
-[hacsbadge]: https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge
 [discord]: https://discord.gg/Qa5fW2R
 [discord-shield]: https://img.shields.io/discord/330944238910963714.svg?style=for-the-badge
 [logoimg]: logo.png
+[marketplace]: https://www.home-assistant.io/integrations/marketplace/
+[marketplacebadge]: https://img.shields.io/badge/Marketplace-catalog-41BDF5.svg?style=for-the-badge
 [forum-shield]: https://img.shields.io/badge/community-forum-brightgreen.svg?style=for-the-badge
 [forum]: https://community.home-assistant.io/
 [license-shield]: https://img.shields.io/github/license/cjne/ha-sunspec.svg?style=for-the-badge
 [maintenance-shield]: https://img.shields.io/badge/maintainer-%40cjne-blue.svg?style=for-the-badge
+[maintenance-shield-enoch85]: https://img.shields.io/badge/maintainer-%40enoch85-blue.svg?style=for-the-badge
 [pre-commit]: https://github.com/pre-commit/pre-commit
 [pre-commit-shield]: https://img.shields.io/badge/pre--commit-enabled-brightgreen?style=for-the-badge
 [releases-shield]: https://img.shields.io/github/release/cjne/ha-sunspec.svg?style=for-the-badge
 [releases]: https://github.com/cjne/ha-sunspec/releases
 [user_profile]: https://github.com/cjne
+[user_profile_enoch85]: https://github.com/enoch85
