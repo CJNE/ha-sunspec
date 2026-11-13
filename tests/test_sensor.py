@@ -2,6 +2,7 @@
 
 from homeassistant.core import HomeAssistant
 from homeassistant.core import State
+import pytest
 from pytest_homeassistant.common import mock_restore_cache_with_extra_data
 
 from custom_components.sunspec.api import SunSpecApiClient
@@ -19,7 +20,11 @@ from . import TEST_INVERTER_SENSOR_POWER_ENTITY_ID
 from . import TEST_INVERTER_SENSOR_STATE_ENTITY_ID
 from . import TEST_INVERTER_SENSOR_TMPSNK_ENTITY_ID
 from . import TEST_INVERTER_SENSOR_VAR_ID
+from . import TEST_METER_FLOAT_ENERGY_ENTITY_ID
+from . import TEST_METER_FLOAT_HZ_ENTITY_ID
+from . import TEST_METER_FLOAT_VOLTAGE_ENTITY_ID
 from . import setup_mock_sunspec_config_entry
+from .const import MOCK_CONFIG_METER_FLOAT
 from .const import MOCK_CONFIG_MM
 from .const import MOCK_CONFIG_PREFIX
 
@@ -125,6 +130,25 @@ async def test_sensor_added_with_first_value(
     await hass.async_block_till_done()
 
     assert hass.states.get(TEST_INVERTER_SENSOR_TMPSNK_ENTITY_ID).state == "45"
+
+
+@pytest.mark.parametrize("sunspec_fixture", ["meter_float.json"])
+@pytest.mark.parametrize(
+    ("entity_id", "state"),
+    [
+        (TEST_METER_FLOAT_HZ_ENTITY_ID, "49.97"),
+        (TEST_METER_FLOAT_VOLTAGE_ENTITY_ID, "230.1"),
+        (TEST_METER_FLOAT_ENERGY_ENTITY_ID, "25000002.0"),
+    ],
+)
+async def test_sensor_float32(
+    hass: HomeAssistant, sunspec_client_mock, entity_id, state
+) -> None:
+    """Verify a float32 point reports the decimal the device sent."""
+
+    await setup_mock_sunspec_config_entry(hass, MOCK_CONFIG_METER_FLOAT)
+
+    assert hass.states.get(entity_id).state == state
 
 
 async def test_sensor_bitfield(hass: HomeAssistant, sunspec_client_mock) -> None:

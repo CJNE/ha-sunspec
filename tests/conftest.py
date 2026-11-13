@@ -91,9 +91,15 @@ def bypass_get_data_fixture():
 
 
 @pytest.fixture
-def sunspec_client_mock():
+def sunspec_fixture():
+    """Name the tests/test_data file that the mocked device serves."""
+    return "inverter.json"
+
+
+@pytest.fixture
+def sunspec_client_mock(sunspec_fixture):
     """Skip calls to get data from API."""
-    client = MockFileClientDevice("./tests/test_data/inverter.json")
+    client = MockFileClientDevice(f"./tests/test_data/{sunspec_fixture}")
     client.scan()
     with patch(
         "custom_components.sunspec.SunSpecApiClient.modbus_connect", return_value=client

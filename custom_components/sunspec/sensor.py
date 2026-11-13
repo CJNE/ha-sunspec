@@ -1,6 +1,7 @@
 """Sensor platform for SunSpec."""
 
 import logging
+import struct
 
 from homeassistant.components.sensor import RestoreSensor
 from homeassistant.components.sensor import SensorDeviceClass
@@ -66,6 +67,17 @@ HA_META = {
     "enum16": [None, ICON_DEFAULT, SensorDeviceClass.ENUM],
     "bitfield32": [None, ICON_DEFAULT, None],
 }
+
+
+def float32_decimal(value):
+    """Return the shortest decimal that is the same float32 as value."""
+    # pysunspec2 widens a float32 to a double, which adds digits the device
+    # never sent, such as 49.970001220703125 for 49.97.
+    for digits in range(6, 10):
+        decimal = float(f"{value:.{digits}g}")
+        if struct.pack(">f", decimal) == struct.pack(">f", value):
+            return decimal
+    return value
 
 
 async def async_setup_entry(hass, entry, async_add_devices):
@@ -235,6 +247,8 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
                 if len(symbols) > 0:
                     return ",".join(map(lambda s: s["name"], symbols))[:255]
                 return ""
+        if vtype == "float32" and val is not None:
+            return float32_decimal(val)
         return val
 
     @property
