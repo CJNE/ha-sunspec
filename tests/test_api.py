@@ -2,6 +2,7 @@
 
 import errno
 import socket
+import struct
 
 import pytest
 from sunspec2.device import ModelError
@@ -9,6 +10,7 @@ from sunspec2.modbus.client import SunSpecModbusClientException
 from sunspec2.modbus.client import SunSpecModbusClientTimeout
 from sunspec2.modbus.modbus import ModbusClientError
 from sunspec2.modbus.modbus import ModbusClientException
+from sunspec2.modbus.modbus import ModbusClientTimeout
 
 from custom_components.sunspec.api import ConnectionError
 from custom_components.sunspec.api import ConnectionTimeoutError
@@ -163,6 +165,37 @@ async def test_read_model_reconnects_closed_connection(hass, mocker, closed):
     assert client.connect.called is closed
     sock.close()
     device_end.close()
+
+
+@pytest.mark.parametrize(
+    ("error", "raised"),
+    [
+        (ModbusClientTimeout("Response timeout"), ConnectionError),
+        (struct.error("'H' format requires 0 <= number <= 65535"), struct.error),
+    ],
+)
+async def test_modbus_connect_failed_scan_closes(hass, mocker, error, raised):
+    """Test that a failed scan closes its connection."""
+    mocker.patch("sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.connect")
+    mocker.patch(
+        "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.is_connected",
+        return_value=True,
+    )
+    mocker.patch(
+        "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.scan", side_effect=error
+    )
+    disconnect = mocker.patch(
+        "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.disconnect"
+    )
+    mocker.patch(
+        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
+    )
+    api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
+
+    with pytest.raises(raised):
+        api.modbus_connect()
+
+    disconnect.assert_called_once()
 
 
 async def test_modbus_connect_exception(hass, mocker):

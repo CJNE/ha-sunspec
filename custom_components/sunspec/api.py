@@ -241,9 +241,15 @@ class SunSpecApiClient:
                     )
                 return client
             except ModbusClientError:
+                client.disconnect()
                 raise ConnectionError(
                     f"Failed to connect to {use_config.host}:{use_config.port} unit id {use_config.unit_id}"
                 )
+            except Exception:
+                # Garbage collection would close it much later, and a device
+                # accepts only a few connections.
+                client.disconnect()
+                raise
         else:
             _LOGGER.debug("Inverter not ready for Modbus TCP connection")
             raise ConnectionError(f"Inverter not active on {self._host}:{self._port}")
