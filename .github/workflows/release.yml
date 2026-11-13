@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+      - "[0-9]+.[0-9]+.[0-9]+-*"
+
+permissions: {}
+
+jobs:
+  release:
+    name: Draft the release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Check that the tag is the version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version=$(jq -r .version custom_components/sunspec/manifest.json)
+          if [ "$version" != "$TAG" ]; then
+            echo "::error::Tag $TAG, but manifest.json has version $version"
+            exit 1
+          fi
+
+      # A draft: users see the release only once the notes are written and it
+      # is published. GitHub's list of the pull requests follows the template.
+      # A version with a suffix, such as 1.2.3-beta.1, is a pre-release, which
+      # Home Assistant offers only to those who ask for it.
+      - name: Draft the release from the template
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          sed "s/{homeassistant}/$(jq -r .homeassistant hacs.json)/" .github/RELEASE_TEMPLATE.md > "$RUNNER_TEMP/notes.md"
+          args=(--verify-tag --draft --title "Version $TAG" --notes-file "$RUNNER_TEMP/notes.md" --generate-notes)
+          if [[ "$TAG" == *-* ]]; then
+            args+=(--prerelease)
+          fi
+          gh release create "$TAG" "${args[@]}"
