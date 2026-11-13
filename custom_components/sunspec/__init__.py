@@ -15,6 +15,7 @@ from homeassistant.core_config import Config
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
+from .api import ModelRefusedError
 from .api import SunSpecApiClient
 from .const import CONF_ENABLED_MODELS
 from .const import CONF_HOST
@@ -173,7 +174,17 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
             _LOGGER.debug("SunSpec Update data got models %s", model_ids)
 
             for model_id in model_ids:
-                data[model_id] = await self.api.async_get_data(model_id)
+                try:
+                    data[model_id] = await self.api.async_get_data(model_id)
+                except ModelRefusedError as err:
+                    # The device answered but refused the model, as an SMA
+                    # Sunny Tripower X does while it sleeps at night.
+                    if model_id not in (self.data or {}):
+                        raise
+                    _LOGGER.debug(
+                        "Keeping the last values of model %s: %s", model_id, err
+                    )
+                    data[model_id] = self.data[model_id]
             return data
         except Exception as exception:
             _LOGGER.warning(exception)

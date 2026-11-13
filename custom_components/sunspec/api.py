@@ -30,6 +30,10 @@ class ConnectionError(Exception):
     pass
 
 
+class ModelRefusedError(Exception):
+    """The device answered a model read with a Modbus exception."""
+
+
 class SunSpecModelWrapper:
     def __init__(self, models) -> None:
         """Sunspec model wrapper"""
@@ -169,6 +173,8 @@ class SunSpecApiClient:
         except SunSpecModbusClientException as connect_error:
             _LOGGER.warning("Async get data connect_error")
             raise ConnectionError() from connect_error
+        except ModbusClientException as err:
+            raise ModelRefusedError(err) from err
 
     async def read(self, model_id) -> SunSpecModelWrapper:
         return await self._hass.async_add_executor_job(self.read_model, model_id)
