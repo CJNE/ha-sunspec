@@ -39,6 +39,13 @@ TEST_INVERTER_MM_SENSOR_POWER_ENTITY_ID = (
 TEST_INVERTER_MM_SENSOR_ENERGY_ENTITY_ID = (
     "sensor.der_ac_measurement_dermeasureac_total_energy_absorbed"
 )
+TEST_METER_FLOAT_HZ_ENTITY_ID = "sensor.wye_connect_three_phase_abcn_meter_ac_meter_hz"
+TEST_METER_FLOAT_VOLTAGE_ENTITY_ID = (
+    "sensor.wye_connect_three_phase_abcn_meter_ac_meter_phase_voltage_an"
+)
+TEST_METER_FLOAT_ENERGY_ENTITY_ID = (
+    "sensor.wye_connect_three_phase_abcn_meter_ac_meter_total_watt_hours_imported"
+)
 TEST_INVERTER_RG_SENSOR_INCLX_ENTITY_ID = (
     "sensor.inclinometer_incl_2_x_axis_inclination"
 )
