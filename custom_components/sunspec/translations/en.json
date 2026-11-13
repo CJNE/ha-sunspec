@@ -2,11 +2,29 @@
   "config": {
     "step": {
       "user": {
+        "title": "SunSpec connection",
+        "description": "How is the SunSpec device connected?",
+        "menu_options": {
+          "tcp": "Modbus TCP (network)",
+          "serial": "Modbus RTU (serial port)"
+        }
+      },
+      "tcp": {
         "title": "SunSpec Modbus TCP connection",
         "description": "Enter the device host, port, and Unit ID to connect to your SunSpec device.",
         "data": {
           "host": "Hostname/IP",
           "port": "Port",
+          "unit_id": "Unit ID"
+        }
+      },
+      "serial": {
+        "title": "SunSpec Modbus RTU connection",
+        "description": "Enter the serial port, such as /dev/ttyUSB0, its baud rate and parity, and the Unit ID of your SunSpec device.",
+        "data": {
+          "device": "Serial port",
+          "baudrate": "Baud rate",
+          "parity": "Parity",
           "unit_id": "Unit ID"
         }
       },
@@ -21,7 +39,7 @@
       }
     },
     "error": {
-      "connection": "Failed to connect, check hostname and port",
+      "connection": "Failed to connect, check the connection settings",
       "device_error": "Connection reached the device, but initialization failed. Check the Home Assistant logs for details.",
       "timeout": "Connection timed out. Check that the device is online and responding on the configured host, port, and Unit ID."
     },
@@ -40,6 +58,16 @@
           "unit_id": "Unit ID"
         }
       },
+      "serial_options": {
+        "title": "SunSpec Modbus RTU connection",
+        "description": "Update the serial port, baud rate, parity, and Unit ID for this SunSpec connection.",
+        "data": {
+          "device": "Serial port",
+          "baudrate": "Baud rate",
+          "parity": "Parity",
+          "unit_id": "Unit ID"
+        }
+      },
       "model_options": {
         "title": "Device Options",
         "description": "Select what SunSpec models (data registers) you would like to create sensors for.",
@@ -53,7 +81,7 @@
       }
     },
     "error": {
-      "connection": "Failed to connect, check hostname and port",
+      "connection": "Failed to connect, check the connection settings",
       "device_error": "Connection reached the device, but initialization failed. Check the Home Assistant logs for details.",
       "timeout": "Connection timed out. Check that the device is online and responding on the configured host, port, and Unit ID."
     }

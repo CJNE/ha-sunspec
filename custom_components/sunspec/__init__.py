@@ -17,8 +17,11 @@ from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from .api import ModelRefusedError
 from .api import SunSpecApiClient
+from .const import CONF_BAUDRATE
+from .const import CONF_DEVICE
 from .const import CONF_ENABLED_MODELS
 from .const import CONF_HOST
+from .const import CONF_PARITY
 from .const import CONF_PORT
 from .const import CONF_SCAN_INTERVAL
 from .const import CONF_UNIT_ID
@@ -30,6 +33,19 @@ from .const import STARTUP_MESSAGE
 SCAN_INTERVAL = timedelta(seconds=30)
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
+
+
+def api_client(hass: HomeAssistant, data) -> SunSpecApiClient:
+    """Return the API client for an entry's connection settings."""
+    return SunSpecApiClient(
+        data.get(CONF_HOST),
+        data.get(CONF_PORT),
+        data.get(CONF_UNIT_ID, 1),
+        hass,
+        data.get(CONF_DEVICE),
+        data.get(CONF_BAUDRATE),
+        data.get(CONF_PARITY),
+    )
 
 
 async def async_setup(hass: HomeAssistant, config: Config):
@@ -75,11 +91,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         hass.data.setdefault(DOMAIN, {})
         _LOGGER.info(STARTUP_MESSAGE)
 
-    host = entry.data.get(CONF_HOST)
-    port = entry.data.get(CONF_PORT)
-    unit_id = entry.data.get(CONF_UNIT_ID, 1)
-
-    client = SunSpecApiClient(host, port, unit_id, hass)
+    client = api_client(hass, entry.data)
 
     _LOGGER.debug("Setup conifg entry for SunSpec")
     coordinator = SunSpecDataUpdateCoordinator(hass, client=client, entry=entry)
@@ -110,12 +122,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Close a removed entry's connection, which a device may allow only one of."""
-    client = SunSpecApiClient(
-        entry.data.get(CONF_HOST),
-        entry.data.get(CONF_PORT),
-        entry.data.get(CONF_UNIT_ID, 1),
-        hass,
-    )
+    client = api_client(hass, entry.data)
     await hass.async_add_executor_job(client.disconnect)
 
 

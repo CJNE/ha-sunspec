@@ -25,6 +25,9 @@ CONF_ENABLED = "enabled"
 CONF_HOST = "host"
 CONF_PORT = "port"
 CONF_UNIT_ID = "unit_id"
+CONF_DEVICE = "device"
+CONF_BAUDRATE = "baudrate"
+CONF_PARITY = "parity"
 # Legacy constant for backward compatibility
 CONF_SLAVE_ID = "slave_id"  # Deprecated, use CONF_UNIT_ID
 CONF_PREFIX = "prefix"

@@ -207,6 +207,41 @@ async def test_entries_share_connection(hass, mocker):
     device_end.close()
 
 
+@pytest.mark.parametrize("scan_error", [None, ModbusClientTimeout("Response timeout")])
+async def test_serial_connection(hass, mocker, scan_error):
+    """Test that a serial entry reads over its port and then releases the port."""
+    rtu = mocker.patch("sunspec2.modbus.client.SunSpecModbusClientDeviceRTU")
+    rtu.return_value.scan.side_effect = scan_error
+    check_port = mocker.patch("custom_components.sunspec.SunSpecApiClient.check_port")
+    api = SunSpecApiClient(None, None, 1, hass, "/dev/ttyUSB0", 9600, "N")
+
+    if scan_error:
+        with pytest.raises(ConnectionError):
+            api.get_client()
+    else:
+        api.get_client()
+        api.disconnect()
+
+    rtu.assert_called_once_with(
+        slave_id=1, name="/dev/ttyUSB0", baudrate=9600, parity="N", timeout=3
+    )
+    check_port.assert_not_called()
+    rtu.return_value.close.assert_called_once()
+
+
+async def test_serial_poll_reopens_port(hass, mocker):
+    """Test that the poll after a failed one reopens the serial port."""
+    rtu = mocker.patch("sunspec2.modbus.client.SunSpecModbusClientDeviceRTU")
+    api = SunSpecApiClient(None, None, 1, hass, "/dev/ttyUSB0", 9600, "N")
+    api.get_client()
+
+    api.reconnect_next()
+    api.get_client()
+
+    rtu.return_value.client.close.assert_called_once()
+    rtu.return_value.client.open.assert_called_once()
+
+
 @pytest.mark.parametrize(
     ("error", "raised"),
     [
