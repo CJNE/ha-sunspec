@@ -8,6 +8,7 @@ import time
 from types import SimpleNamespace
 
 from homeassistant.core import HomeAssistant
+from sunspec2.device import ModelError
 import sunspec2.modbus.client as modbus_client
 from sunspec2.modbus.client import SunSpecModbusClientException
 from sunspec2.modbus.client import SunSpecModbusClientTimeout
@@ -230,7 +231,7 @@ class SunSpecApiClient:
                         full_model_read=False,
                         delay=0.5,
                     )
-                except ModbusClientException as err:
+                except (ModbusClientException, ModelError) as err:
                     if not client.models:
                         raise
                     _LOGGER.warning(

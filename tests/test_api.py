@@ -4,6 +4,7 @@ import errno
 import socket
 
 import pytest
+from sunspec2.device import ModelError
 from sunspec2.modbus.client import SunSpecModbusClientException
 from sunspec2.modbus.client import SunSpecModbusClientTimeout
 from sunspec2.modbus.modbus import ModbusClientError
@@ -115,12 +116,19 @@ async def test_check_port(hass, mocker, connect_result, is_open):
     assert socket.getdefaulttimeout() is None
 
 
-async def test_modbus_connect_partial_scan(hass, mocker):
-    """Test that a scan ended by a Modbus exception keeps the models found."""
+@pytest.mark.parametrize(
+    "error",
+    [
+        ModbusClientException("Modbus exception 2"),
+        ModelError("Repeating group count not consistent with model length"),
+    ],
+)
+async def test_modbus_connect_partial_scan(hass, mocker, error):
+    """Test that a scan ended by an exception or a model it cannot parse keeps the models found."""
 
     def scan(self, **kwargs):
         self.models[1] = ["common"]
-        raise ModbusClientException("Modbus exception 2")
+        raise error
 
     mocker.patch("sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.connect")
     mocker.patch(
