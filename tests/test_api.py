@@ -207,6 +207,33 @@ async def test_entries_share_connection(hass, mocker):
     device_end.close()
 
 
+async def test_changed_settings_leave_entry_device(hass, mocker):
+    """Test that models read with changed settings leave the entry on its device."""
+
+    def scan(self, **kwargs):
+        self.models[self.slave_id * 100 + 3] = [mocker.Mock()]
+
+    mocker.patch("sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.connect")
+    mocker.patch(
+        "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.is_connected",
+        return_value=True,
+    )
+    disconnect = mocker.patch(
+        "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.disconnect"
+    )
+    mocker.patch("sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.scan", scan)
+    mocker.patch(
+        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
+    )
+    api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
+
+    assert await api.async_get_models() == [103]
+    changed = {"host": "test", "port": 123, "unit_id": 2}
+    assert await api.async_get_models(changed) == [203]
+    assert await api.async_get_models() == [103]
+    disconnect.assert_called_once()
+
+
 @pytest.mark.parametrize("scan_error", [None, ModbusClientTimeout("Response timeout")])
 async def test_serial_connection(hass, mocker, scan_error):
     """Test that a serial entry reads over its port and then releases the port."""
