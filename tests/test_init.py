@@ -1,5 +1,6 @@
 """Test SunSpec setup process."""
 
+from collections import Counter
 from datetime import timedelta
 import threading
 
@@ -15,6 +16,7 @@ from custom_components.sunspec import SunSpecDataUpdateCoordinator
 from custom_components.sunspec import async_setup_entry
 from custom_components.sunspec.api import SunSpecApiClient
 from custom_components.sunspec.const import CONF_ENABLED_MODELS
+from custom_components.sunspec.const import CONF_MODEL_INTERVALS
 from custom_components.sunspec.const import CONF_SCAN_INTERVAL
 from custom_components.sunspec.const import DOMAIN
 
@@ -180,6 +182,30 @@ async def test_refused_model_keeps_last_values(
     await coordinator.async_refresh()
 
     assert hass.states.get(TEST_INVERTER_SENSOR_POWER_ENTITY_ID).state == state
+
+
+async def test_model_intervals(hass, sunspec_client_mock, mocker):
+    """Test that each model is read at its own interval."""
+    config_entry = create_mock_sunspec_config_entry(
+        hass,
+        options={
+            CONF_ENABLED_MODELS: [103, 160],
+            CONF_SCAN_INTERVAL: 30,
+            CONF_MODEL_INTERVALS: {"103": 10},
+        },
+    )
+    clock = mocker.patch("custom_components.sunspec.monotonic", return_value=0)
+    await setup_mock_sunspec_config_entry(hass, config_entry=config_entry)
+    coordinator = hass.data[DOMAIN][config_entry.entry_id]
+    read = mocker.spy(coordinator.api, "async_get_data")
+
+    # The last refresh comes right after a poll, as when an entity is updated.
+    for now in (10, 20, 30, 31):
+        clock.return_value = now
+        await coordinator.async_refresh()
+
+    assert coordinator.update_interval == timedelta(seconds=10)
+    assert Counter(call.args[0] for call in read.call_args_list) == {103: 4, 160: 1}
 
 
 async def test_migrate_entry_from_v1_to_v2_with_slave_id(hass):

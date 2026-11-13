@@ -8,6 +8,7 @@ https://github.com/cjne/ha-sunspec
 import asyncio
 from datetime import timedelta
 import logging
+from time import monotonic
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -21,6 +22,7 @@ from .const import CONF_BAUDRATE
 from .const import CONF_DEVICE
 from .const import CONF_ENABLED_MODELS
 from .const import CONF_HOST
+from .const import CONF_MODEL_INTERVALS
 from .const import CONF_PARITY
 from .const import CONF_PORT
 from .const import CONF_SCAN_INTERVAL
@@ -154,6 +156,13 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
             )
         )
         self.option_model_filter = set(map(lambda m: int(m), models))
+        intervals = entry.options.get(CONF_MODEL_INTERVALS, {})
+        # Seconds between reads of each model: its own or the scan interval.
+        self.model_intervals = {
+            model: intervals.get(str(model), scan_interval.total_seconds())
+            for model in self.option_model_filter
+        }
+        self.last_read = {}
         _LOGGER.debug(
             "Setup entry with models %s, scan interval %s. IP: %s Port: %s ID: %s",
             self.option_model_filter,
@@ -166,7 +175,12 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=scan_interval,
+            update_interval=timedelta(
+                seconds=min(
+                    self.model_intervals.values(),
+                    default=scan_interval.total_seconds(),
+                )
+            ),
             config_entry=entry,
         )
 
@@ -180,9 +194,23 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
             )
             _LOGGER.debug("SunSpec Update data got models %s", model_ids)
 
+            now = monotonic()
+            poll = self.update_interval.total_seconds()
             for model_id in model_ids:
+                interval = self.model_intervals[model_id]
+                # A model slower than the polls is read at the poll nearest to
+                # its interval. The others are read at every poll.
+                if (
+                    interval > poll
+                    and model_id in self.last_read
+                    and model_id in (self.data or {})
+                    and now - self.last_read[model_id] < interval - poll / 2
+                ):
+                    data[model_id] = self.data[model_id]
+                    continue
                 try:
                     data[model_id] = await self.api.async_get_data(model_id)
+                    self.last_read[model_id] = now
                 except ModelRefusedError as err:
                     # The device answered but refused the model, as an SMA
                     # Sunny Tripower X does while it sleeps at night.

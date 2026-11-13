@@ -77,6 +77,12 @@
           "unit_id": "Unit ID",
           "models_enabled": "Read models",
           "scan_interval": "Scan interval (seconds)"
+        },
+        "sections": {
+          "model_intervals": {
+            "name": "Poll interval per model",
+            "description": "Seconds between reads of a model. A model left empty is read at the scan interval."
+          }
         }
       }
     },

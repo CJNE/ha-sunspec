@@ -9,6 +9,7 @@ from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.sunspec.const import CONF_DEVICE
 from custom_components.sunspec.const import CONF_ENABLED_MODELS
+from custom_components.sunspec.const import CONF_MODEL_INTERVALS
 from custom_components.sunspec.const import CONF_SCAN_INTERVAL
 from custom_components.sunspec.const import DOMAIN
 
@@ -226,13 +227,19 @@ async def test_options_flow(
     assert result["step_id"] == "model_options"
 
     result = await hass.config_entries.options.async_configure(
-        result["flow_id"], user_input={CONF_ENABLED_MODELS: [], CONF_SCAN_INTERVAL: 10}
+        result["flow_id"],
+        user_input={
+            CONF_ENABLED_MODELS: [],
+            CONF_SCAN_INTERVAL: 10,
+            CONF_MODEL_INTERVALS: {"103": 5},
+        },
     )
 
     # Verify that the flow finishes
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["title"] == ""
     assert entry.title == title
+    assert entry.options[CONF_MODEL_INTERVALS] == {"103": 5}
 
     # Verify that the options were updated
     # assert entry.options == {BINARY_SENSOR: True, SENSOR: False, SWITCH: True}
