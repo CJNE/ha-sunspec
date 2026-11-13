@@ -107,6 +107,17 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True  # unloaded
 
 
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Close a removed entry's connection, which a device may allow only one of."""
+    client = SunSpecApiClient(
+        entry.data.get(CONF_HOST),
+        entry.data.get(CONF_PORT),
+        entry.data.get(CONF_UNIT_ID, 1),
+        hass,
+    )
+    await hass.async_add_executor_job(client.disconnect)
+
+
 def get_sunspec_unique_id(
     config_entry_id: str, key: str, model_id: int, model_index: int
 ) -> str:

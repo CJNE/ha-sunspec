@@ -140,6 +140,12 @@ class SunSpecApiClient:
                 self._reconnect = False
         return cached
 
+    def disconnect(self):
+        """Close the connection and forget the scanned device."""
+        client = SunSpecApiClient.CLIENT_CACHE.pop(self._client_key, None)
+        if client is not None:
+            client.disconnect()
+
     def async_get_client(self, config=None):
         return self._hass.async_add_executor_job(self.get_client, config)
 

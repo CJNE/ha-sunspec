@@ -10,11 +10,13 @@ from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.sunspec import SunSpecDataUpdateCoordinator
 from custom_components.sunspec import async_setup_entry
+from custom_components.sunspec.api import SunSpecApiClient
 from custom_components.sunspec.const import CONF_ENABLED_MODELS
 from custom_components.sunspec.const import CONF_SCAN_INTERVAL
 from custom_components.sunspec.const import DOMAIN
 
 from . import TEST_INVERTER_SENSOR_POWER_ENTITY_ID
+from . import create_mock_sunspec_config_entry
 from . import setup_mock_sunspec_config_entry
 from .const import MOCK_CONFIG
 from .const import MOCK_CONFIG_STEP_1
@@ -275,3 +277,14 @@ async def test_migrate_entry_version_2_no_migration_needed(hass):
     assert config_entry.version == 2
     assert "unit_id" in config_entry.data
     assert config_entry.data["unit_id"] == 5
+
+
+async def test_remove_entry_closes_connection(hass, mocker):
+    """Test that removing an entry closes its connection."""
+    config_entry = create_mock_sunspec_config_entry(hass)
+    client = mocker.Mock()
+    SunSpecApiClient.CLIENT_CACHE["test_host:123:1"] = client
+
+    await hass.config_entries.async_remove(config_entry.entry_id)
+
+    client.disconnect.assert_called_once()
