@@ -1,0 +1,32 @@
+name: Requirements
+
+on:
+  pull_request:
+    paths:
+      - custom_components/sunspec/manifest.json
+
+permissions:
+  contents: read
+
+jobs:
+  manifest:
+    name: Manifest requires the tested versions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      # Dependabot updates requirements_dev.txt, which the tests install, but
+      # cannot read manifest.json, from which Home Assistant installs. A change
+      # to manifest.json, such as a version bump, must require what the tests
+      # use.
+      - name: Compare manifest.json with requirements_dev.txt
+        run: |
+          status=0
+          while IFS= read -r requirement; do
+            if ! grep -qxF "$requirement" requirements_dev.txt; then
+              echo "::error file=custom_components/sunspec/manifest.json::$requirement, but requirements_dev.txt has $(grep -i "^${requirement%%=*}=" requirements_dev.txt || echo none)"
+              status=1
+            fi
+          done < <(jq -r '.requirements[]' custom_components/sunspec/manifest.json)
+          exit "$status"
