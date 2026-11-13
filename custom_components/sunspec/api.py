@@ -114,6 +114,15 @@ def closed_by_device(client) -> bool:
     return bool(poller.poll(0))
 
 
+def read_delay(client) -> float:
+    """Return the pause before each model read."""
+    common = client.models.get(1)
+    # SMA asks for at least a second between Modbus transfers.
+    if common and common[0].points["Mn"].value == "SMA":
+        return 1
+    return 0.6
+
+
 class SunSpecApiClient:
     CLIENT_CACHE = {}
 
@@ -262,7 +271,7 @@ class SunSpecApiClient:
             self.get_client()
         models = client.models[model_id]
         for model in models:
-            time.sleep(0.6)
+            time.sleep(read_delay(client))
             model.read()
 
         return SunSpecModelWrapper(models)

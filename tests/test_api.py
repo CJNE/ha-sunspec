@@ -221,6 +221,21 @@ async def test_modbus_connect_exception(hass, mocker):
         api.modbus_connect()
 
 
+@pytest.mark.parametrize(("manufacturer", "delay"), [("SMA", 1), ("Fronius", 0.6)])
+async def test_read_model_delay(hass, mocker, manufacturer, delay):
+    """Test that an SMA device gets a second before each model read."""
+    sleep = mocker.patch("custom_components.sunspec.api.time.sleep")
+    common = mocker.Mock(points={"Mn": mocker.Mock(value=manufacturer)})
+    client = mocker.Mock(models={1: [common], 103: [mocker.Mock()]})
+    client.client.socket = None
+    SunSpecApiClient.CLIENT_CACHE["test:123:1"] = client
+    api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
+
+    api.read_model(103)
+
+    sleep.assert_called_once_with(delay)
+
+
 async def test_read_model_timeout(hass, mocker):
     mocker.patch(
         "custom_components.sunspec.api.SunSpecApiClient.read_model",
