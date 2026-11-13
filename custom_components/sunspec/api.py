@@ -163,12 +163,12 @@ class SunSpecApiClient:
         self._lock = SunSpecApiClient.LOCKS.setdefault(connection, threading.RLock())
         self._reconnect = False
 
-    def get_client(self, config=None):
+    def get_client(self):
         with self._lock:
             cached = SunSpecApiClient.CLIENT_CACHE.get(self._client_key, None)
-            if cached is None or config is not None:
+            if cached is None:
                 _LOGGER.debug("Not using cached connection")
-                cached = self.modbus_connect(config)
+                cached = self.modbus_connect()
                 SunSpecApiClient.CLIENT_CACHE[self._client_key] = cached
             if self._reconnect:
                 if self._device:
@@ -195,9 +195,6 @@ class SunSpecApiClient:
             # A serial device leaves its port, which closes with the last one.
             client.close()
 
-    def async_get_client(self, config=None):
-        return self._hass.async_add_executor_job(self.get_client, config)
-
     async def async_get_data(self, model_id) -> SunSpecModelWrapper:
         try:
             _LOGGER.debug("Get data for model %s", model_id)
@@ -217,11 +214,21 @@ class SunSpecApiClient:
     async def async_get_device_info(self) -> SunSpecModelWrapper:
         return await self.read(1)
 
+    def get_models(self, config=None) -> list:
+        with self._lock:
+            if config is None:
+                client = self.get_client()
+            else:
+                # The entry reloads with changed settings and connects anew, so
+                # their scan neither stays open nor takes the entry's place.
+                client = self.modbus_connect(config)
+                client.disconnect()
+                client.close()
+        return sorted(list(filter(lambda m: type(m) is int, client.models.keys())))
+
     async def async_get_models(self, config=None) -> list:
         _LOGGER.debug("Fetching models")
-        client = await self.async_get_client(config)
-        model_ids = sorted(list(filter(lambda m: type(m) is int, client.models.keys())))
-        return model_ids
+        return await self._hass.async_add_executor_job(self.get_models, config)
 
     def reconnect_next(self):
         self._reconnect = True
