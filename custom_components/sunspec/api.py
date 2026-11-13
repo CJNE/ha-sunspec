@@ -18,6 +18,10 @@ from sunspec2.modbus.modbus import ModbusClientException
 from .const import GROUP_NAMES
 
 TIMEOUT = 120
+# A serial bus stays silent for a unit ID that no device has, and the scan
+# tries three base addresses. Home Assistant's Modbus integration waits three
+# seconds.
+SERIAL_TIMEOUT = 3
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
@@ -107,7 +111,8 @@ def progress(msg):
 
 def closed_by_device(client) -> bool:
     """Return True if the device closed the connection between requests."""
-    sock = client.client.socket
+    # A serial port has no socket.
+    sock = getattr(client.client, "socket", None)
     if sock is None:
         return False
     # No answer is due between requests, so a readable socket means the device
@@ -131,19 +136,31 @@ class SunSpecApiClient:
     CLIENT_CACHE = {}
     LOCKS = {}
 
-    def __init__(self, host: str, port: int, unit_id: int, hass: HomeAssistant) -> None:
-        """Sunspec modbus client."""
+    def __init__(
+        self,
+        host: str,
+        port: int,
+        unit_id: int,
+        hass: HomeAssistant,
+        device: str | None = None,
+        baudrate: int | None = None,
+        parity: str | None = None,
+    ) -> None:
+        """Sunspec modbus client, over TCP or, given a device, a serial port."""
 
         _LOGGER.debug("New SunspecApi Client")
         self._host = host
         self._port = port
         self._hass = hass
         self._unit_id = unit_id
-        self._client_key = f"{host}:{port}:{unit_id}"
-        # Entries on one host and port share its connection and take turns.
-        self._lock = SunSpecApiClient.LOCKS.setdefault(
-            f"{host}:{port}", threading.RLock()
-        )
+        self._device = device
+        self._baudrate = baudrate
+        self._parity = parity
+        connection = device or f"{host}:{port}"
+        self._client_key = f"{connection}:{unit_id}"
+        # Entries on one host and port, or one serial port, share its connection
+        # and take turns.
+        self._lock = SunSpecApiClient.LOCKS.setdefault(connection, threading.RLock())
         self._reconnect = False
 
     def get_client(self, config=None):
@@ -154,7 +171,12 @@ class SunSpecApiClient:
                 cached = self.modbus_connect(config)
                 SunSpecApiClient.CLIENT_CACHE[self._client_key] = cached
             if self._reconnect:
-                if self.check_port():
+                if self._device:
+                    # The port may have gone with its USB adapter.
+                    cached.client.close()
+                    cached.client.open()
+                    self._reconnect = False
+                elif self.check_port():
                     cached.connect()
                     self._reconnect = False
             return cached
@@ -163,11 +185,15 @@ class SunSpecApiClient:
         """Forget the scanned device and close its connection if no other uses it."""
         with self._lock:
             client = SunSpecApiClient.CLIENT_CACHE.pop(self._client_key, None)
-            if client is not None and all(
+            if client is None:
+                return
+            if all(
                 other.client is not client.client
                 for other in SunSpecApiClient.CLIENT_CACHE.values()
             ):
                 client.disconnect()
+            # A serial device leaves its port, which closes with the last one.
+            client.close()
 
     def async_get_client(self, config=None):
         return self._hass.async_add_executor_job(self.get_client, config)
@@ -226,36 +252,64 @@ class SunSpecApiClient:
 
     def modbus_connect(self, config=None):
         use_config = SimpleNamespace(
-            **(
-                config
-                or {"host": self._host, "port": self._port, "unit_id": self._unit_id}
+            **{
+                "device": None,
+                **(
+                    config
+                    or {
+                        "host": self._host,
+                        "port": self._port,
+                        "unit_id": self._unit_id,
+                        "device": self._device,
+                        "baudrate": self._baudrate,
+                        "parity": self._parity,
+                    }
+                ),
+            }
+        )
+        if use_config.device:
+            target = use_config.device
+            _LOGGER.debug(
+                f"Client connect to serial port {target} unit id {use_config.unit_id}"
             )
-        )
-        _LOGGER.debug(
-            f"Client connect to IP {use_config.host} port {use_config.port} unit id {use_config.unit_id} using timeout {TIMEOUT}"
-        )
-        client = modbus_client.SunSpecModbusClientDeviceTCP(
-            slave_id=use_config.unit_id,
-            ipaddr=use_config.host,
-            ipport=use_config.port,
-            timeout=TIMEOUT,
-        )
+            try:
+                client = modbus_client.SunSpecModbusClientDeviceRTU(
+                    slave_id=use_config.unit_id,
+                    name=target,
+                    baudrate=use_config.baudrate,
+                    parity=use_config.parity,
+                    timeout=SERIAL_TIMEOUT,
+                )
+            except ModbusClientError as err:
+                raise ConnectionError(f"Failed to open {target}: {err}") from err
+        else:
+            target = f"{use_config.host}:{use_config.port}"
+            _LOGGER.debug(
+                f"Client connect to IP {use_config.host} port {use_config.port} unit id {use_config.unit_id} using timeout {TIMEOUT}"
+            )
+            client = modbus_client.SunSpecModbusClientDeviceTCP(
+                slave_id=use_config.unit_id,
+                ipaddr=use_config.host,
+                ipport=use_config.port,
+                timeout=TIMEOUT,
+            )
         # A device may accept only one connection, so another entry's open
         # connection to it is shared. Changed options get one of their own.
         shared = None
-        if config is None:
+        if config is None and not use_config.device:
             shared = next(
                 (
                     other.client
                     for other in SunSpecApiClient.CLIENT_CACHE.values()
-                    if (other.ipaddr, other.ipport) == (self._host, self._port)
+                    if (getattr(other, "ipaddr", None), getattr(other, "ipport", None))
+                    == (self._host, self._port)
                     and other.is_connected()
                 ),
                 None,
             )
         if shared is not None:
             client.client = shared
-        if shared is not None or self.check_port():
+        if shared is not None or use_config.device or self.check_port():
             _LOGGER.debug("Inverter ready for Modbus TCP connection")
             try:
                 if shared is None:
@@ -284,14 +338,16 @@ class SunSpecApiClient:
             except ModbusClientError:
                 if shared is None:
                     client.disconnect()
+                    client.close()
                 raise ConnectionError(
-                    f"Failed to connect to {use_config.host}:{use_config.port} unit id {use_config.unit_id}"
+                    f"Failed to connect to {target} unit id {use_config.unit_id}"
                 )
             except Exception:
                 # Garbage collection would close it much later, and a device
                 # accepts only a few connections.
                 if shared is None:
                     client.disconnect()
+                    client.close()
                 raise
         else:
             _LOGGER.debug("Inverter not ready for Modbus TCP connection")

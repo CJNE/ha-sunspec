@@ -7,6 +7,7 @@ from homeassistant.data_entry_flow import FlowResultType
 import pytest
 from pytest_homeassistant.common import MockConfigEntry
 
+from custom_components.sunspec.const import CONF_DEVICE
 from custom_components.sunspec.const import CONF_ENABLED_MODELS
 from custom_components.sunspec.const import CONF_SCAN_INTERVAL
 from custom_components.sunspec.const import DOMAIN
@@ -14,6 +15,8 @@ from custom_components.sunspec.const import DOMAIN
 from . import MockSunSpecDataUpdateCoordinator
 from .const import MOCK_CONFIG
 from .const import MOCK_CONFIG_STEP_1
+from .const import MOCK_SERIAL_CONFIG
+from .const import MOCK_SERIAL_STEP_1
 from .const import MOCK_SETTINGS
 
 
@@ -36,27 +39,47 @@ def bypass_setup_fixture():
         yield
 
 
-# Here we simiulate a successful config flow from the backend.
-# Note that we use the `bypass_get_data` fixture here because
-# we want the config flow validation to succeed during the test.
-async def test_successful_config_flow(
-    hass, bypass_get_data, enable_custom_integrations, sunspec_client_mock
-):
-    """Test a successful config flow."""
-    # Initialize a config flow
+async def start_flow(hass, connection="tcp"):
+    """Start a config flow and choose how the device is connected."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
+    assert result["type"] == FlowResultType.MENU
+    return await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"next_step_id": connection}
+    )
 
-    # Check that the config flow shows the user form as the first step
+
+# Here we simiulate a successful config flow from the backend.
+# Note that we use the `bypass_get_data` fixture here because
+# we want the config flow validation to succeed during the test.
+@pytest.mark.parametrize(
+    ("connection", "user_input", "title", "data"),
+    [
+        ("tcp", MOCK_CONFIG_STEP_1, "test_host:123:1", MOCK_CONFIG),
+        ("serial", MOCK_SERIAL_STEP_1, "/dev/ttyUSB0:1", MOCK_SERIAL_CONFIG),
+    ],
+)
+async def test_successful_config_flow(
+    hass,
+    bypass_get_data,
+    enable_custom_integrations,
+    sunspec_client_mock,
+    connection,
+    user_input,
+    title,
+    data,
+):
+    """Test a successful config flow."""
+    result = await start_flow(hass, connection)
+
+    # Check that the config flow shows the connection form
     assert result["type"] == "form"
-    assert result["step_id"] == "user"
+    assert result["step_id"] == connection
 
     flow_id = result["flow_id"]
-    # If a user were to enter `test_username` for username and `test_password`
-    # for password, it would result in this function call
     result = await hass.config_entries.flow.async_configure(
-        flow_id, user_input=MOCK_CONFIG_STEP_1
+        flow_id, user_input=user_input
     )
 
     # Check that the config flow is complete and a new entry is created with
@@ -68,9 +91,32 @@ async def test_successful_config_flow(
     )
 
     assert result["type"] == FlowResultType.CREATE_ENTRY
-    assert result["title"] == "test_host:123:1"
-    assert result["data"] == MOCK_CONFIG
+    assert result["title"] == title
+    assert result["data"] == data
     assert result["result"]
+
+
+@pytest.mark.parametrize(
+    ("data", "connection", "user_input", "device"),
+    [
+        (MOCK_CONFIG, "serial", MOCK_SERIAL_STEP_1, "/dev/ttyUSB0"),
+        (MOCK_SERIAL_CONFIG, "tcp", MOCK_CONFIG_STEP_1, None),
+    ],
+)
+async def test_config_flow_moves_device(
+    hass, sunspec_client_mock, data, connection, user_input, device
+):
+    """Test that adding a configured device again moves it to the new connection."""
+    entry = MockConfigEntry(domain=DOMAIN, data=data, unique_id="sn-123456789")
+    entry.add_to_hass(hass)
+
+    result = await start_flow(hass, connection)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input=user_input
+    )
+
+    assert result["type"] == FlowResultType.ABORT
+    assert entry.data[CONF_DEVICE] == device
 
 
 # In this case, we want to simulate a failure during the config flow.
@@ -82,12 +128,10 @@ async def test_failed_config_flow(
 ):
     """Test a failed config flow due to credential validation failure."""
 
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
+    result = await start_flow(hass)
 
     assert result["type"] == FlowResultType.FORM
-    assert result["step_id"] == "user"
+    assert result["step_id"] == "tcp"
 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], user_input=MOCK_CONFIG_STEP_1
@@ -102,12 +146,10 @@ async def test_timeout_config_flow(
 ):
     """Test a failed config flow due to a timeout during validation."""
 
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
+    result = await start_flow(hass)
 
     assert result["type"] == FlowResultType.FORM
-    assert result["step_id"] == "user"
+    assert result["step_id"] == "tcp"
 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], user_input=MOCK_CONFIG_STEP_1
@@ -125,12 +167,10 @@ async def test_config_flow_without_serial_number(
         "custom_components.sunspec.SunSpecApiClient.async_get_device_info",
         return_value=device_info_without_serial,
     ):
-        result = await hass.config_entries.flow.async_init(
-            DOMAIN, context={"source": config_entries.SOURCE_USER}
-        )
+        result = await start_flow(hass)
 
         assert result["type"] == FlowResultType.FORM
-        assert result["step_id"] == "user"
+        assert result["step_id"] == "tcp"
 
         flow_id = result["flow_id"]
         result = await hass.config_entries.flow.async_configure(
@@ -148,11 +188,20 @@ async def test_config_flow_without_serial_number(
 
 
 # Our config flow also has an options flow, so we must test it as well.
-async def test_options_flow(hass, sunspec_client_mock):
+@pytest.mark.parametrize(
+    ("data", "step_id", "user_input", "title"),
+    [
+        (MOCK_CONFIG, "host_options", MOCK_CONFIG_STEP_1, "test_host:123:1"),
+        (MOCK_SERIAL_CONFIG, "serial_options", MOCK_SERIAL_STEP_1, "/dev/ttyUSB0:1"),
+    ],
+)
+async def test_options_flow(
+    hass, sunspec_client_mock, data, step_id, user_input, title
+):
     """Test an options flow."""
     # Create a new MockConfigEntry and add to HASS (we're bypassing config
     # flow entirely)
-    entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG, entry_id="test")
+    entry = MockConfigEntry(domain=DOMAIN, data=data, entry_id="test")
     entry.add_to_hass(hass)
 
     coordinator = MockSunSpecDataUpdateCoordinator(hass, [1, 2])
@@ -165,11 +214,11 @@ async def test_options_flow(hass, sunspec_client_mock):
 
     # Verify that the first options step is a user form
     assert result["type"] == FlowResultType.FORM
-    assert result["step_id"] == "host_options"
+    assert result["step_id"] == step_id
 
     # Enter some fake data into the form
     result = await hass.config_entries.options.async_configure(
-        result["flow_id"], user_input=MOCK_CONFIG_STEP_1
+        result["flow_id"], user_input=user_input
     )
 
     # Verify that the second options step is a user form
@@ -183,6 +232,7 @@ async def test_options_flow(hass, sunspec_client_mock):
     # Verify that the flow finishes
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["title"] == ""
+    assert entry.title == title
 
     # Verify that the options were updated
     # assert entry.options == {BINARY_SENSOR: True, SENSOR: False, SWITCH: True}

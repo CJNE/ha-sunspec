@@ -5,7 +5,7 @@ This custom component for [home assistant](https://home-assistant.io/) will let 
 It will auto discover and create sensors depending on the available data of the device.
 By default only the most common sensors are created, there is an optional configuration that lets you control exactly what data to use.
 
-Currenlty supports Modbus TCP connections. Modbus serial connection is planned.
+Supports Modbus TCP connections and Modbus RTU over a serial port.
 
 Works out of the box with the energy dashboard.
 

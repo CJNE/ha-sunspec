@@ -1,7 +1,7 @@
 {
   "config": {
     "step": {
-      "user": {
+      "tcp": {
         "title": "SunSpec Modbus TCP pripojenie",
         "description": "Zadajte hostiteľa, port a Unit ID pre pripojenie k zariadeniu SunSpec.",
         "data": {

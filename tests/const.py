@@ -1,7 +1,10 @@
 """Constants for SunSpec tests."""
 
+from custom_components.sunspec.const import CONF_BAUDRATE
+from custom_components.sunspec.const import CONF_DEVICE
 from custom_components.sunspec.const import CONF_ENABLED_MODELS
 from custom_components.sunspec.const import CONF_HOST
+from custom_components.sunspec.const import CONF_PARITY
 from custom_components.sunspec.const import CONF_PORT
 from custom_components.sunspec.const import CONF_PREFIX
 from custom_components.sunspec.const import CONF_SCAN_INTERVAL
@@ -38,3 +41,15 @@ MOCK_CONFIG_PREFIX = {
     CONF_ENABLED_MODELS: MOCK_SETTINGS_PREFIX[CONF_ENABLED_MODELS],
 }
 MOCK_CONFIG_METER_FLOAT = {**MOCK_CONFIG, CONF_ENABLED_MODELS: [213]}
+MOCK_SERIAL_STEP_1 = {
+    CONF_DEVICE: "/dev/ttyUSB0",
+    CONF_BAUDRATE: 9600,
+    CONF_PARITY: "N",
+    CONF_UNIT_ID: 1,
+}
+MOCK_SERIAL_CONFIG = {
+    **MOCK_SERIAL_STEP_1,
+    CONF_PREFIX: "",
+    CONF_SCAN_INTERVAL: 10,
+    CONF_ENABLED_MODELS: MOCK_SETTINGS[CONF_ENABLED_MODELS],
+}
