@@ -169,10 +169,6 @@ class SunSpecApiClient:
     def reconnect_next(self):
         self._reconnect = True
 
-    def close(self):
-        client = self.get_client()
-        client.close()
-
     def check_port(self) -> bool:
         """Check if port is available"""
         with self._lock:

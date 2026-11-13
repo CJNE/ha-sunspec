@@ -1,6 +1,7 @@
 """Test SunSpec setup process."""
 
 from datetime import timedelta
+import threading
 
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.exceptions import ConfigEntryNotReady
@@ -117,6 +118,25 @@ async def test_fetch_data_connect_error(hass, connect_error_on_get_data):
 
 async def test_client_reconnect(hass, sunspec_client_mock_not_connected) -> None:
     await setup_mock_sunspec_config_entry(hass, MOCK_CONFIG)
+
+
+async def test_poll_while_probe_refused(hass, sunspec_client_mock, mocker):
+    """Test that polls succeed while the device refuses the reconnect probe."""
+    config_entry = await setup_mock_sunspec_config_entry(hass)
+    coordinator = hass.data[DOMAIN][config_entry.entry_id]
+
+    def check_port():
+        # The probe connects and sleeps, so it must stay out of the event loop.
+        assert threading.get_ident() != hass.loop_thread_id
+        return False
+
+    mocker.patch(
+        "custom_components.sunspec.SunSpecApiClient.check_port", side_effect=check_port
+    )
+    coordinator.api.reconnect_next()
+    await coordinator.async_refresh()
+
+    assert coordinator.last_update_success
 
 
 async def test_migrate_entry_from_v1_to_v2_with_slave_id(hass):
