@@ -4,9 +4,12 @@ from datetime import timedelta
 import threading
 
 from homeassistant.config_entries import ConfigEntryState
+from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.exceptions import ConfigEntryNotReady
 import pytest
 from pytest_homeassistant.common import MockConfigEntry
+from sunspec2.modbus.modbus import ModbusClientException
+from sunspec2.modbus.modbus import ModbusClientTimeout
 
 from custom_components.sunspec import SunSpecDataUpdateCoordinator
 from custom_components.sunspec import async_setup_entry
@@ -155,6 +158,28 @@ async def test_poll_while_probe_refused(hass, sunspec_client_mock, mocker):
     await coordinator.async_refresh()
 
     assert coordinator.last_update_success
+
+
+@pytest.mark.parametrize(
+    ("error", "state"),
+    [
+        (ModbusClientException("Modbus exception 4"), "800"),
+        (ModbusClientTimeout("Response timeout"), STATE_UNAVAILABLE),
+    ],
+)
+async def test_refused_model_keeps_last_values(
+    hass, sunspec_client_mock, mocker, error, state
+):
+    """Test that a model the device refuses keeps its last values."""
+    config_entry = await setup_mock_sunspec_config_entry(hass)
+    coordinator = hass.data[DOMAIN][config_entry.entry_id]
+    mocker.patch(
+        "custom_components.sunspec.SunSpecApiClient.read_model", side_effect=error
+    )
+
+    await coordinator.async_refresh()
+
+    assert hass.states.get(TEST_INVERTER_SENSOR_POWER_ENTITY_ID).state == state
 
 
 async def test_migrate_entry_from_v1_to_v2_with_slave_id(hass):
