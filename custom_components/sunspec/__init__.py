@@ -163,7 +163,6 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
 
             for model_id in model_ids:
                 data[model_id] = await self.api.async_get_data(model_id)
-            self.api.close()
             return data
         except Exception as exception:
             _LOGGER.warning(exception)
