@@ -167,6 +167,46 @@ async def test_read_model_reconnects_closed_connection(hass, mocker, closed):
     device_end.close()
 
 
+async def test_entries_share_connection(hass, mocker):
+    """Test that entries on one host and port share its connection."""
+    sock, device_end = socket.socketpair()
+    sent = []
+
+    def connect(self, timeout=None):
+        self.socket = sock
+
+    def scan(self, **kwargs):
+        sent.append(self.client.slave_id)
+        model = mocker.Mock()
+        model.read.side_effect = lambda: sent.append(self.client.slave_id)
+        self.models[103] = [model]
+
+    connect = mocker.patch(
+        "sunspec2.modbus.modbus.ModbusClientTCP.connect",
+        autospec=True,
+        side_effect=connect,
+    )
+    mocker.patch("sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.scan", scan)
+    mocker.patch(
+        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
+    )
+    mocker.patch("custom_components.sunspec.api.time.sleep")
+    inverter = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
+    meter = SunSpecApiClient(host="test", port=123, unit_id=2, hass=hass)
+
+    inverter.read_model(103)
+    meter.read_model(103)
+    inverter.read_model(103)
+
+    assert connect.call_count == 1
+    assert sent == [1, 1, 2, 2, 1]
+    inverter.disconnect()
+    assert sock.fileno() != -1
+    meter.disconnect()
+    assert sock.fileno() == -1
+    device_end.close()
+
+
 @pytest.mark.parametrize(
     ("error", "raised"),
     [

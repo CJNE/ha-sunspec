@@ -20,6 +20,7 @@ _LOGGER: logging.Logger = logging.getLogger(__package__)
 
 class MockFileClientDeviceNotConnected(modbus_client.FileClientDevice):
     client = SimpleNamespace(socket=None)
+    slave_id = 1
 
     def is_connected(self):
         return False
@@ -30,6 +31,7 @@ class MockFileClientDeviceNotConnected(modbus_client.FileClientDevice):
 
 class MockFileClientDevice(modbus_client.FileClientDevice):
     client = SimpleNamespace(socket=None)
+    slave_id = 1
 
     def is_connected(self):
         return True
