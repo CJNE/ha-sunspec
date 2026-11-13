@@ -19,6 +19,7 @@ from homeassistant.const import UnitOfIrradiance
 from homeassistant.const import UnitOfLength
 from homeassistant.const import UnitOfPower
 from homeassistant.const import UnitOfPressure
+from homeassistant.const import UnitOfReactiveEnergy
 from homeassistant.const import UnitOfReactivePower
 from homeassistant.const import UnitOfSpeed
 from homeassistant.const import UnitOfTemperature
@@ -48,7 +49,17 @@ HA_META = {
     "Mbps": [UnitOfDataRate.MEGABITS_PER_SECOND, ICON_DEFAULT, None],
     "V": [UnitOfElectricPotential.VOLT, ICON_VOLT, SensorDeviceClass.VOLTAGE],
     "VA": [UnitOfApparentPower.VOLT_AMPERE, ICON_POWER, None],
-    "VAr": [UnitOfReactivePower.VOLT_AMPERE_REACTIVE, ICON_POWER, None],
+    "var": [
+        UnitOfReactivePower.VOLT_AMPERE_REACTIVE,
+        ICON_POWER,
+        SensorDeviceClass.REACTIVE_POWER,
+    ],
+    "Var": [
+        UnitOfReactivePower.VOLT_AMPERE_REACTIVE,
+        ICON_POWER,
+        SensorDeviceClass.REACTIVE_POWER,
+    ],
+    "Varh": [UnitOfReactiveEnergy.VOLT_AMPERE_REACTIVE_HOUR, ICON_DEFAULT, None],
     "W": [UnitOfPower.WATT, ICON_POWER, SensorDeviceClass.POWER],
     "W/m2": [UnitOfIrradiance.WATTS_PER_SQUARE_METER, ICON_DEFAULT, None],
     "Wh": [UnitOfEnergy.WATT_HOUR, ICON_ENERGY, SensorDeviceClass.ENERGY],
@@ -63,6 +74,7 @@ HA_META = {
     "meters": [UnitOfLength.METERS, ICON_DEFAULT, None],
     "mm": [UnitOfLength.MILLIMETERS, ICON_DEFAULT, None],
     "%": [PERCENTAGE, ICON_DEFAULT, None],
+    "Pct": [PERCENTAGE, ICON_DEFAULT, None],
     "Secs": [UnitOfTime.SECONDS, ICON_DEFAULT, None],
     "enum16": [None, ICON_DEFAULT, SensorDeviceClass.ENUM],
     "bitfield32": [None, ICON_DEFAULT, None],

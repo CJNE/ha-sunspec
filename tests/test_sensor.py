@@ -12,10 +12,13 @@ from custom_components.sunspec.sensor import ICON_DC_AMPS
 from . import TEST_INVERTER_MM_SENSOR_ENERGY_ENTITY_ID
 from . import TEST_INVERTER_MM_SENSOR_POWER_ENTITY_ID
 from . import TEST_INVERTER_MM_SENSOR_STATE_ENTITY_ID
+from . import TEST_INVERTER_MM_SENSOR_VARH_ID
+from . import TEST_INVERTER_MM_SENSOR_VAR_ID
 from . import TEST_INVERTER_PREFIX_SENSOR_DC_ENTITY_ID
 from . import TEST_INVERTER_SENSOR_DC_ENTITY_ID
 from . import TEST_INVERTER_SENSOR_ENERGY_ENTITY_ID
 from . import TEST_INVERTER_SENSOR_EVENT_ENTITY_ID
+from . import TEST_INVERTER_SENSOR_PF_ID
 from . import TEST_INVERTER_SENSOR_POWER_ENTITY_ID
 from . import TEST_INVERTER_SENSOR_STATE_ENTITY_ID
 from . import TEST_INVERTER_SENSOR_TMPSNK_ENTITY_ID
@@ -50,13 +53,25 @@ async def test_sensor_dc(hass: HomeAssistant, sunspec_client_mock) -> None:
     assert entity_state.attributes["icon"] == ICON_DC_AMPS
 
 
-async def test_sensor_var(hass: HomeAssistant, sunspec_client_mock) -> None:
-    """Verify device information includes expected details."""
+@pytest.mark.parametrize(
+    ("config", "entity_id", "unit", "device_class"),
+    [
+        (None, TEST_INVERTER_SENSOR_VAR_ID, "var", "reactive_power"),
+        (None, TEST_INVERTER_SENSOR_PF_ID, "%", None),
+        (MOCK_CONFIG_MM, TEST_INVERTER_MM_SENSOR_VAR_ID, "var", "reactive_power"),
+        (MOCK_CONFIG_MM, TEST_INVERTER_MM_SENSOR_VARH_ID, "varh", None),
+    ],
+)
+async def test_sensor_unit(
+    hass: HomeAssistant, sunspec_client_mock, config, entity_id, unit, device_class
+) -> None:
+    """Verify SunSpec units show as Home Assistant units and device classes."""
 
-    await setup_mock_sunspec_config_entry(hass)
+    await setup_mock_sunspec_config_entry(hass, config)
 
-    entity_state = hass.states.get(TEST_INVERTER_SENSOR_VAR_ID)
-    assert entity_state
+    entity_state = hass.states.get(entity_id)
+    assert entity_state.attributes["unit_of_measurement"] == unit
+    assert entity_state.attributes.get("device_class") == device_class
 
 
 async def test_sensor_with_prefix(hass: HomeAssistant, sunspec_client_mock) -> None:
