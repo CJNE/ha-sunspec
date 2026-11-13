@@ -1,4 +1,4 @@
-"""Sample API Client."""
+"""Read SunSpec devices over Modbus with pysunspec2."""
 
 import logging
 import select

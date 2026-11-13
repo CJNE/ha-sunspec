@@ -53,15 +53,17 @@ class MockFileClientDevice(modbus_client.FileClientDevice):
 @pytest.fixture(name="skip_notifications", autouse=True)
 def skip_notifications_fixture():
     """Skip notification calls."""
-    with patch("homeassistant.components.persistent_notification.async_create"), patch(
-        "homeassistant.components.persistent_notification.async_dismiss"
+    with (
+        patch("homeassistant.components.persistent_notification.async_create"),
+        patch("homeassistant.components.persistent_notification.async_dismiss"),
     ):
         yield
 
 
 @pytest.fixture(name="auto_enable_custom_integrations", autouse=True)
 def auto_enable_custom_integrations(
-    hass: Any, enable_custom_integrations: Any  # noqa: F811
+    hass: Any,
+    enable_custom_integrations: Any,  # noqa: F811
 ) -> None:
     """Enable custom integrations defined in the test dir."""
 
@@ -103,10 +105,14 @@ def sunspec_client_mock(sunspec_fixture):
     """Skip calls to get data from API."""
     client = MockFileClientDevice(f"./tests/test_data/{sunspec_fixture}")
     client.scan()
-    with patch(
-        "custom_components.sunspec.SunSpecApiClient.modbus_connect", return_value=client
-    ), patch(
-        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
+    with (
+        patch(
+            "custom_components.sunspec.SunSpecApiClient.modbus_connect",
+            return_value=client,
+        ),
+        patch(
+            "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
+        ),
     ):
         yield
 
@@ -117,13 +123,18 @@ def sunspec_client_mock(sunspec_fixture):
 def sunspec_client_mock_connect_error():
     """Simulate connection error when retrieving data from API."""
     client = MockFileClientDevice("./tests/test_data/inverter.json")
-    with patch(
-        "custom_components.sunspec.SunSpecApiClient.modbus_connect", return_value=client
-    ), patch(
-        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
-    ), patch(
-        "custom_components.sunspec.SunSpecApiClient.async_get_models",
-        side_effect=ConnectionError,
+    with (
+        patch(
+            "custom_components.sunspec.SunSpecApiClient.modbus_connect",
+            return_value=client,
+        ),
+        patch(
+            "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
+        ),
+        patch(
+            "custom_components.sunspec.SunSpecApiClient.async_get_models",
+            side_effect=ConnectionError,
+        ),
     ):
         yield
 
@@ -133,10 +144,14 @@ def sunspec_client_mock_not_connected():
     """Skip calls to get data from API."""
     client = MockFileClientDeviceNotConnected("./tests/test_data/inverter.json")
     client.scan()
-    with patch(
-        "custom_components.sunspec.SunSpecApiClient.modbus_connect", return_value=client
-    ), patch(
-        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
+    with (
+        patch(
+            "custom_components.sunspec.SunSpecApiClient.modbus_connect",
+            return_value=client,
+        ),
+        patch(
+            "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
+        ),
     ):
         yield
 
@@ -145,10 +160,11 @@ def sunspec_client_mock_not_connected():
 def sunspec_modbus_client_mock():
     """Skip calls to get data from API."""
     mock = Mock()
-    with patch(
-        "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP", return_value=mock
-    ), patch(
-        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
+    with (
+        patch("sunspec2.modbus.client.SunSpecModbusClientDeviceTCP", return_value=mock),
+        patch(
+            "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
+        ),
     ):
         yield
 
@@ -158,11 +174,14 @@ def sunspec_modbus_client_mock():
 @pytest.fixture(name="error_on_get_device_info")
 def error_get_device_info_fixture():
     """Simulate error when retrieving data from API."""
-    with patch(
-        "custom_components.sunspec.SunSpecApiClient.async_get_device_info",
-        side_effect=Exception,
-    ), patch(
-        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
+    with (
+        patch(
+            "custom_components.sunspec.SunSpecApiClient.async_get_device_info",
+            side_effect=Exception,
+        ),
+        patch(
+            "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
+        ),
     ):
         yield
 
@@ -170,11 +189,14 @@ def error_get_device_info_fixture():
 @pytest.fixture(name="timeout_on_get_device_info")
 def timeout_get_device_info_fixture():
     """Simulate timeout when retrieving data from API."""
-    with patch(
-        "custom_components.sunspec.SunSpecApiClient.async_get_device_info",
-        side_effect=ConnectionTimeoutError,
-    ), patch(
-        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
+    with (
+        patch(
+            "custom_components.sunspec.SunSpecApiClient.async_get_device_info",
+            side_effect=ConnectionTimeoutError,
+        ),
+        patch(
+            "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
+        ),
     ):
         yield
 
@@ -201,13 +223,18 @@ def error_on_get_data():
     """Simulate error when retrieving data from API."""
     client = MockFileClientDevice("./tests/test_data/inverter.json")
     client.scan()
-    with patch(
-        "custom_components.sunspec.SunSpecApiClient.modbus_connect", return_value=client
-    ), patch(
-        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
-    ), patch(
-        "custom_components.sunspec.SunSpecApiClient.async_get_data",
-        side_effect=ConnectionError,
+    with (
+        patch(
+            "custom_components.sunspec.SunSpecApiClient.modbus_connect",
+            return_value=client,
+        ),
+        patch(
+            "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
+        ),
+        patch(
+            "custom_components.sunspec.SunSpecApiClient.async_get_data",
+            side_effect=ConnectionError,
+        ),
     ):
         yield
 
@@ -219,13 +246,17 @@ def timeout_error_on_get_data():
     """Simulate timeout error when retrieving data from API."""
     client = MockFileClientDevice("./tests/test_data/inverter.json")
     client.scan()
-    with patch(
-        "custom_components.sunspec.SunSpecApiClient.get_client", return_value=client
-    ), patch(
-        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
-    ), patch(
-        "custom_components.sunspec.SunSpecApiClient.async_get_data",
-        side_effect=ConnectionTimeoutError,
+    with (
+        patch(
+            "custom_components.sunspec.SunSpecApiClient.get_client", return_value=client
+        ),
+        patch(
+            "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
+        ),
+        patch(
+            "custom_components.sunspec.SunSpecApiClient.async_get_data",
+            side_effect=ConnectionTimeoutError,
+        ),
     ):
         yield
 
@@ -237,13 +268,18 @@ def connect_error_on_get_data():
     """Simulate connection error when retrieving data from API."""
     client = MockFileClientDevice("./tests/test_data/inverter.json")
     client.scan()
-    with patch(
-        "custom_components.sunspec.SunSpecApiClient.modbus_connect", return_value=client
-    ), patch(
-        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
-    ), patch(
-        "custom_components.sunspec.SunSpecApiClient.async_get_data",
-        side_effect=ConnectionError,
+    with (
+        patch(
+            "custom_components.sunspec.SunSpecApiClient.modbus_connect",
+            return_value=client,
+        ),
+        patch(
+            "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
+        ),
+        patch(
+            "custom_components.sunspec.SunSpecApiClient.async_get_data",
+            side_effect=ConnectionError,
+        ),
     ):
         yield
 

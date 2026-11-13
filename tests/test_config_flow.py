@@ -27,15 +27,9 @@ from .const import MOCK_SETTINGS
 @pytest.fixture(autouse=True)
 def bypass_setup_fixture():
     """Prevent setup."""
-    with (
-        patch(
-            "custom_components.sunspec.async_setup",
-            return_value=True,
-        ),
-        patch(
-            "custom_components.sunspec.async_setup_entry",
-            return_value=True,
-        ),
+    with patch(
+        "custom_components.sunspec.async_setup_entry",
+        return_value=True,
     ):
         yield
 
@@ -206,11 +200,9 @@ async def test_options_flow(
     entry.add_to_hass(hass)
 
     coordinator = MockSunSpecDataUpdateCoordinator(hass, [1, 2])
-    # api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
     hass.data[DOMAIN] = {entry.entry_id: coordinator}
 
     # Initialize an options flow
-    # await hass.config_entries.async_setup(entry.entry_id)
     result = await hass.config_entries.options.async_init(entry.entry_id)
 
     # Verify that the first options step is a user form
@@ -241,9 +233,6 @@ async def test_options_flow(
     assert entry.title == title
     assert entry.options[CONF_MODEL_INTERVALS] == {"103": 5}
 
-    # Verify that the options were updated
-    # assert entry.options == {BINARY_SENSOR: True, SENSOR: False, SWITCH: True}
-
 
 # Test faild connection in options flow
 async def test_options_flow_connect_error(hass, sunspec_client_mock_connect_error):
@@ -254,11 +243,9 @@ async def test_options_flow_connect_error(hass, sunspec_client_mock_connect_erro
     entry.add_to_hass(hass)
 
     coordinator = MockSunSpecDataUpdateCoordinator(hass, [1, 2])
-    # api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
     hass.data[DOMAIN] = {entry.entry_id: coordinator}
 
     # Initialize an options flow
-    # await hass.config_entries.async_setup(entry.entry_id)
     result = await hass.config_entries.options.async_init(entry.entry_id)
 
     # Verify that the first options step is a user form

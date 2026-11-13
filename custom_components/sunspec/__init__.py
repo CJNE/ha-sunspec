@@ -12,7 +12,6 @@ from time import monotonic
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.core_config import Config
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
@@ -30,7 +29,6 @@ from .const import CONF_UNIT_ID
 from .const import DEFAULT_MODELS
 from .const import DOMAIN
 from .const import PLATFORMS
-from .const import STARTUP_MESSAGE
 
 SCAN_INTERVAL = timedelta(seconds=30)
 
@@ -48,11 +46,6 @@ def api_client(hass: HomeAssistant, data) -> SunSpecApiClient:
         data.get(CONF_BAUDRATE),
         data.get(CONF_PARITY),
     )
-
-
-async def async_setup(hass: HomeAssistant, config: Config):
-    """Set up this integration using YAML is not supported."""
-    return True
 
 
 async def async_migrate_entry(hass, config_entry: ConfigEntry):
@@ -89,9 +82,7 @@ async def async_migrate_entry(hass, config_entry: ConfigEntry):
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Set up this integration using UI."""
-    if hass.data.get(DOMAIN) is None:
-        hass.data.setdefault(DOMAIN, {})
-        _LOGGER.info(STARTUP_MESSAGE)
+    hass.data.setdefault(DOMAIN, {})
 
     client = api_client(hass, entry.data)
 

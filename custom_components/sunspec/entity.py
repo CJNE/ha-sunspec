@@ -12,11 +12,6 @@ class SunSpecEntity(CoordinatorEntity):
         self.config_entry = config_entry
         self.model_info = model_info
 
-    # @property
-    # def unique_id(self):
-    #    """Return a unique ID to use for this entity."""
-    #    return self.config_entry.entry_id
-
     @property
     def device_info(self):
         return {
