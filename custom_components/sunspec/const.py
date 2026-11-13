@@ -33,6 +33,7 @@ CONF_SLAVE_ID = "slave_id"  # Deprecated, use CONF_UNIT_ID
 CONF_PREFIX = "prefix"
 CONF_SCAN_INTERVAL = "scan_interval"
 CONF_ENABLED_MODELS = "models_enabled"
+CONF_MODEL_INTERVALS = "model_intervals"
 
 DEFAULT_MODELS = set(
     [

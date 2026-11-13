@@ -4,6 +4,7 @@ import logging
 
 from homeassistant import config_entries
 from homeassistant.core import callback
+from homeassistant.data_entry_flow import section
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 
@@ -15,6 +16,7 @@ from .const import CONF_BAUDRATE
 from .const import CONF_DEVICE
 from .const import CONF_ENABLED_MODELS
 from .const import CONF_HOST
+from .const import CONF_MODEL_INTERVALS
 from .const import CONF_PARITY
 from .const import CONF_PORT
 from .const import CONF_PREFIX
@@ -269,6 +271,7 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
         scan_interval = self.config_entry.options.get(
             CONF_SCAN_INTERVAL, self.config_entry.data.get(CONF_SCAN_INTERVAL)
         )
+        intervals = self.config_entry.options.get(CONF_MODEL_INTERVALS, {})
         connection = {key: self.config_entry.data.get(key) for key in self.settings}
         try:
             # The entry's connection serves unchanged settings: a device with one
@@ -293,6 +296,20 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
                             CONF_ENABLED_MODELS,
                             default=default_models,
                         ): cv.multi_select(model_filter),
+                        vol.Optional(CONF_MODEL_INTERVALS, default={}): section(
+                            vol.Schema(
+                                {
+                                    vol.Optional(
+                                        str(model),
+                                        description={
+                                            "suggested_value": intervals.get(str(model))
+                                        },
+                                    ): vol.All(int, vol.Range(min=1))
+                                    for model in model_filter
+                                }
+                            ),
+                            {"collapsed": True},
+                        ),
                     }
                 ),
             )
