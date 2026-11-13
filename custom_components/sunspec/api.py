@@ -129,6 +129,7 @@ def read_delay(client) -> float:
 
 class SunSpecApiClient:
     CLIENT_CACHE = {}
+    LOCKS = {}
 
     def __init__(self, host: str, port: int, unit_id: int, hass: HomeAssistant) -> None:
         """Sunspec modbus client."""
@@ -139,26 +140,34 @@ class SunSpecApiClient:
         self._hass = hass
         self._unit_id = unit_id
         self._client_key = f"{host}:{port}:{unit_id}"
-        self._lock = threading.Lock()
+        # Entries on one host and port share its connection and take turns.
+        self._lock = SunSpecApiClient.LOCKS.setdefault(
+            f"{host}:{port}", threading.RLock()
+        )
         self._reconnect = False
 
     def get_client(self, config=None):
-        cached = SunSpecApiClient.CLIENT_CACHE.get(self._client_key, None)
-        if cached is None or config is not None:
-            _LOGGER.debug("Not using cached connection")
-            cached = self.modbus_connect(config)
-            SunSpecApiClient.CLIENT_CACHE[self._client_key] = cached
-        if self._reconnect:
-            if self.check_port():
-                cached.connect()
-                self._reconnect = False
-        return cached
+        with self._lock:
+            cached = SunSpecApiClient.CLIENT_CACHE.get(self._client_key, None)
+            if cached is None or config is not None:
+                _LOGGER.debug("Not using cached connection")
+                cached = self.modbus_connect(config)
+                SunSpecApiClient.CLIENT_CACHE[self._client_key] = cached
+            if self._reconnect:
+                if self.check_port():
+                    cached.connect()
+                    self._reconnect = False
+            return cached
 
     def disconnect(self):
-        """Close the connection and forget the scanned device."""
-        client = SunSpecApiClient.CLIENT_CACHE.pop(self._client_key, None)
-        if client is not None:
-            client.disconnect()
+        """Forget the scanned device and close its connection if no other uses it."""
+        with self._lock:
+            client = SunSpecApiClient.CLIENT_CACHE.pop(self._client_key, None)
+            if client is not None and all(
+                other.client is not client.client
+                for other in SunSpecApiClient.CLIENT_CACHE.values()
+            ):
+                client.disconnect()
 
     def async_get_client(self, config=None):
         return self._hass.async_add_executor_job(self.get_client, config)
@@ -231,16 +240,33 @@ class SunSpecApiClient:
             ipport=use_config.port,
             timeout=TIMEOUT,
         )
-        if self.check_port():
+        # A device may accept only one connection, so another entry's open
+        # connection to it is shared. Changed options get one of their own.
+        shared = None
+        if config is None:
+            shared = next(
+                (
+                    other.client
+                    for other in SunSpecApiClient.CLIENT_CACHE.values()
+                    if (other.ipaddr, other.ipport) == (self._host, self._port)
+                    and other.is_connected()
+                ),
+                None,
+            )
+        if shared is not None:
+            client.client = shared
+        if shared is not None or self.check_port():
             _LOGGER.debug("Inverter ready for Modbus TCP connection")
             try:
-                with self._lock:
-                    client.connect()
+                if shared is None:
+                    with self._lock:
+                        client.connect()
                 if not client.is_connected():
                     raise ConnectionError(
                         f"Failed to connect to {self._host}:{self._port} unit id {self._unit_id}"
                     )
                 _LOGGER.debug("Client connected, perform initial scan")
+                client.client.slave_id = client.slave_id
                 try:
                     client.scan(
                         connect=False,
@@ -256,28 +282,32 @@ class SunSpecApiClient:
                     )
                 return client
             except ModbusClientError:
-                client.disconnect()
+                if shared is None:
+                    client.disconnect()
                 raise ConnectionError(
                     f"Failed to connect to {use_config.host}:{use_config.port} unit id {use_config.unit_id}"
                 )
             except Exception:
                 # Garbage collection would close it much later, and a device
                 # accepts only a few connections.
-                client.disconnect()
+                if shared is None:
+                    client.disconnect()
                 raise
         else:
             _LOGGER.debug("Inverter not ready for Modbus TCP connection")
             raise ConnectionError(f"Inverter not active on {self._host}:{self._port}")
 
     def read_model(self, model_id) -> dict:
-        client = self.get_client()
-        if closed_by_device(client):
-            _LOGGER.debug("Device closed the connection, reconnecting")
-            self.reconnect_next()
-            self.get_client()
-        models = client.models[model_id]
-        for model in models:
-            time.sleep(read_delay(client))
-            model.read()
+        with self._lock:
+            client = self.get_client()
+            if closed_by_device(client):
+                _LOGGER.debug("Device closed the connection, reconnecting")
+                self.reconnect_next()
+                self.get_client()
+            client.client.slave_id = client.slave_id
+            models = client.models[model_id]
+            for model in models:
+                time.sleep(read_delay(client))
+                model.read()
 
         return SunSpecModelWrapper(models)
