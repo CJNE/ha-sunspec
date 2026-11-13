@@ -234,8 +234,15 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
         scan_interval = self.config_entry.options.get(
             CONF_SCAN_INTERVAL, self.config_entry.data.get(CONF_SCAN_INTERVAL)
         )
+        connection = {
+            key: self.config_entry.data.get(key)
+            for key in (CONF_HOST, CONF_PORT, CONF_UNIT_ID)
+        }
         try:
-            models = set(await self.coordinator.api.async_get_models(self.settings))
+            # The entry's connection serves unchanged settings: a device with one
+            # Modbus TCP slot refuses a second connection while the entry polls.
+            config = None if self.settings == connection else self.settings
+            models = set(await self.coordinator.api.async_get_models(config))
             model_filter = {model for model in sorted(models)}
             default_enabled = {model for model in DEFAULT_MODELS if model in models}
             default_models = self.config_entry.options.get(

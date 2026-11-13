@@ -77,6 +77,22 @@ async def test_options_change_reloads_entry(hass, sunspec_client_mock):
     assert hass.states.get(TEST_INVERTER_SENSOR_POWER_ENTITY_ID).state == "800"
 
 
+async def test_options_flow_uses_entry_connection(hass, sunspec_client_mock, mocker):
+    """Test that the options flow lists the models without a second connection."""
+    config_entry = await setup_mock_sunspec_config_entry(hass)
+    mocker.patch(
+        "custom_components.sunspec.SunSpecApiClient.modbus_connect",
+        side_effect=ConnectionRefusedError,
+    )
+
+    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input=MOCK_CONFIG_STEP_1
+    )
+
+    assert result["step_id"] == "model_options"
+
+
 async def test_setup_entry_exception(hass, error_on_get_data):
     """Test ConfigEntryNotReady when API raises an exception during entry setup."""
     config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG, entry_id="test")
