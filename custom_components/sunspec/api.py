@@ -1,6 +1,8 @@
 """Read SunSpec devices over Modbus with pysunspec2."""
 
+from functools import cache
 import logging
+from pathlib import Path
 import select
 import socket
 import threading
@@ -8,12 +10,15 @@ import time
 from types import SimpleNamespace
 
 from homeassistant.core import HomeAssistant
+from sunspec2 import mdef
 from sunspec2.device import ModelError
+from sunspec2.device import add_mappings
 import sunspec2.modbus.client as modbus_client
 from sunspec2.modbus.client import SunSpecModbusClientError
 from sunspec2.modbus.modbus import ModbusClientError
 from sunspec2.modbus.modbus import ModbusClientException
 from sunspec2.modbus.modbus import ModbusClientTimeout
+from sunspec2.smdx import from_smdx_file
 
 from .const import GROUP_NAMES
 
@@ -134,6 +139,32 @@ def read_delay(client) -> float:
     if common and common[0].points["Mn"].value == "SMA":
         return 1
     return 0.6
+
+
+@cache
+def draft_definition(model_id):
+    """Return SunSpec's 2015 definition of model 801, 802 or 803."""
+    # github.com/sunspec/models e51bd84 (2015-09-29), Apache-2.0: see
+    # models/LICENSE. pysunspec2 carries only today's definitions.
+    definition = from_smdx_file(Path(__file__).parent / f"models/smdx_00{model_id}.xml")
+    add_mappings(definition[mdef.GROUP])
+    return definition
+
+
+class DraftAwareModel(modbus_client.SunSpecModbusClientModel):
+    """A model that, at a 2015 length, is read with its 2015 definition."""
+
+    def __init__(self, model_id=None, model_len=0, model_def=None, **kwargs):
+        # The E3DC S10 serves 801, 802 and 803 with 22, 20 and 16 plus 16 per
+        # string registers, as defined in 2015. Today they have 1, 62 and 26
+        # plus 32 per string, so a length tells the two apart.
+        if (model_id, model_len) in ((801, 22), (802, 20)) or (
+            model_id == 803 and model_len % 16 == 0
+        ):
+            model_def = draft_definition(model_id).copy()
+        super().__init__(
+            model_id=model_id, model_len=model_len, model_def=model_def, **kwargs
+        )
 
 
 class SunSpecApiClient:
@@ -288,6 +319,7 @@ class SunSpecApiClient:
                     baudrate=use_config.baudrate,
                     parity=use_config.parity,
                     timeout=SERIAL_TIMEOUT,
+                    model_class=DraftAwareModel,
                 )
             except ModbusClientError as err:
                 raise ConnectionError(f"Failed to open {target}: {err}") from err
@@ -301,6 +333,7 @@ class SunSpecApiClient:
                 ipaddr=use_config.host,
                 ipport=use_config.port,
                 timeout=TIMEOUT,
+                model_class=DraftAwareModel,
             )
         # A device may accept only one connection, so another entry's open
         # connection to it is shared. Changed options get one of their own.
