@@ -1,20 +1,13 @@
-# SunSpec
-
-This custom component for [home assistant](https://home-assistant.io/) will let you monitor any SunSpec Modbus compliant device, most commonly a solar inverter or energy meter. A list of compliant devices and manufacturers can be found on the [sunspec website](https://sunspec.org/sunspec-modbus-certified-products/).
-
-It will auto discover and create sensors depending on the available data of the device.
-By default only the most common sensors are created, there is an optional configuration that lets you control exactly what data to use.
-
-Supports Modbus TCP connections and Modbus RTU over a serial port.
-
-Works out of the box with the energy dashboard.
+<p align="center">
+  <img src="logo.png" alt="SunSpec logo" width="300">
+</p>
 
 [![GitHub Release][releases-shield]][releases]
 [![GitHub Activity][commits-shield]][commits]
 [![License][license-shield]](LICENSE)
 
 [![pre-commit][pre-commit-shield]][pre-commit]
-[![Black][black-shield]][black]
+[![Ruff][ruff-shield]][ruff]
 
 [![Marketplace][marketplacebadge]][marketplace]
 [![Project Maintenance][maintenance-shield]][user_profile]
@@ -24,22 +17,22 @@ Works out of the box with the energy dashboard.
 [![Discord][discord-shield]][discord]
 [![Community Forum][forum-shield]][forum]
 
-**This component will set up the following platforms.**
-
-| Platform | Description                 |
-| -------- | --------------------------- |
-| `sensor` | Show info from SunSpec API. |
-
-![logo][logoimg]
-
 ## How it works
 
-This integration wraps [pysunspec2](https://github.com/sunspec/pysunspec2), the SunSpec Alliance's Python library, for Home Assistant:
+This custom integration for [Home Assistant](https://home-assistant.io/) monitors any device that speaks SunSpec over Modbus, most commonly a solar inverter or an energy meter. The [SunSpec website](https://sunspec.org/sunspec-modbus-certified-products/) lists certified devices and manufacturers.
 
-- pysunspec2 talks Modbus TCP or Modbus RTU to the device, finds the SunSpec models the device has, and decodes their registers with the SunSpec model definitions it ships with: point names, units, scale factors, and the names of states and flags.
-- The integration adds the Home Assistant side: setup and options in the UI, reading each selected model at its interval, a device per model, and a sensor for each measurement, state and flag the device reports, with Home Assistant units, device classes and state classes, energy sensors included.
+It wraps [pysunspec2](https://github.com/sunspec/pysunspec2), the SunSpec Alliance's Python library:
 
-The integration holds no register maps of its own, so it reads any device that implements the SunSpec models, whatever the brand. New and corrected models come with new pysunspec2 versions; each release of this integration uses the pysunspec2 version pinned in its `manifest.json`.
+- pysunspec2 talks Modbus TCP, or Modbus RTU over a serial port, to the device, finds the SunSpec models the device has, and decodes their registers with the SunSpec model definitions it ships with: point names, units, scale factors, and the names of states and flags.
+- The integration adds the Home Assistant side: setup and options in the UI, reading each selected model at its interval, a device per model, and a sensor for each measurement, state and flag the device reports, with Home Assistant units, device classes and state classes. Its energy sensors work with the energy dashboard out of the box.
+
+Setup finds the device's models and selects the most common ones; Configure chooses exactly which models to read, and how often.
+
+| Platform | Description                                 |
+| -------- | ------------------------------------------- |
+| `sensor` | A sensor for each value the device reports. |
+
+It reads any device that implements the SunSpec models, whatever the brand, with the definitions that come with pysunspec2. New and corrected models come with new pysunspec2 versions; each release of this integration uses the pysunspec2 version pinned in its `manifest.json`.
 
 ## Marketplace Installation
 
@@ -90,15 +83,12 @@ Code template was mainly taken from [@Ludeeus](https://github.com/ludeeus)'s [in
 ---
 
 [integration_blueprint]: https://github.com/custom-components/integration_blueprint
-[black]: https://github.com/psf/black
-[black-shield]: https://img.shields.io/badge/code%20style-black-000000.svg?style=for-the-badge
 [buymecoffee]: https://www.buymeacoffee.com/cjne.coffee
 [buymecoffeebadge]: https://img.shields.io/badge/buy%20me%20a%20coffee-donate-yellow.svg?style=for-the-badge
 [commits-shield]: https://img.shields.io/github/commit-activity/y/cjne/ha-sunspec.svg?style=for-the-badge
 [commits]: https://github.com/cjne/ha-sunspec/commits/main
 [discord]: https://discord.gg/Qa5fW2R
 [discord-shield]: https://img.shields.io/discord/330944238910963714.svg?style=for-the-badge
-[logoimg]: logo.png
 [marketplace]: https://www.home-assistant.io/integrations/marketplace/
 [marketplacebadge]: https://img.shields.io/badge/Marketplace-catalog-41BDF5.svg?style=for-the-badge
 [forum-shield]: https://img.shields.io/badge/community-forum-brightgreen.svg?style=for-the-badge
@@ -110,5 +100,7 @@ Code template was mainly taken from [@Ludeeus](https://github.com/ludeeus)'s [in
 [pre-commit-shield]: https://img.shields.io/badge/pre--commit-enabled-brightgreen?style=for-the-badge
 [releases-shield]: https://img.shields.io/github/release/cjne/ha-sunspec.svg?style=for-the-badge
 [releases]: https://github.com/cjne/ha-sunspec/releases
+[ruff]: https://github.com/astral-sh/ruff
+[ruff-shield]: https://img.shields.io/badge/code%20style-ruff-261230.svg?style=for-the-badge
 [user_profile]: https://github.com/cjne
 [user_profile_enoch85]: https://github.com/enoch85
