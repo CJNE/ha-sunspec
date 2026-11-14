@@ -23,7 +23,7 @@ This custom integration for [Home Assistant](https://home-assistant.io/) monitor
 
 It wraps [pysunspec2](https://github.com/sunspec/pysunspec2), the SunSpec Alliance's Python library:
 
-- pysunspec2 talks Modbus TCP, or Modbus RTU over a serial port, to the device, finds the SunSpec models the device has, and decodes their registers with the SunSpec model definitions it ships with: point names, units, scale factors, and the names of states and flags.
+- pysunspec2 finds the SunSpec models the device has, and decodes their registers with the SunSpec model definitions it ships with: point names, units, scale factors, and the names of states and flags. It reads them through Home Assistant's Modbus connection, over TCP or a serial port, which other integrations reading the same device share.
 - The integration adds the Home Assistant side: setup and options in the UI, reading each selected model at its interval, a device per model, and a sensor for each measurement, state and flag the device reports, with Home Assistant units, device classes and state classes. Its energy sensors work with the energy dashboard out of the box.
 
 Setup finds the device's models and selects the most common ones; Configure chooses exactly which models to read, and how often.

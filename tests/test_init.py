@@ -6,16 +6,17 @@ import threading
 
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import STATE_UNAVAILABLE
+from modbus_connection import ModbusTimeoutError
+from modbus_connection import ServerDeviceFailureError
 import pytest
 from pytest_homeassistant.common import MockConfigEntry
-from sunspec2.modbus.modbus import ModbusClientException
-from sunspec2.modbus.modbus import ModbusClientTimeout
 
 from custom_components.sunspec import SunSpecDataUpdateCoordinator
 from custom_components.sunspec.api import SunSpecApiClient
 from custom_components.sunspec.const import CONF_ENABLED_MODELS
 from custom_components.sunspec.const import CONF_MODEL_INTERVALS
 from custom_components.sunspec.const import CONF_SCAN_INTERVAL
+from custom_components.sunspec.const import CONF_UNIT_ID
 from custom_components.sunspec.const import DOMAIN
 
 from . import TEST_INVERTER_SENSOR_POWER_ENTITY_ID
@@ -77,20 +78,29 @@ async def test_options_change_reloads_entry(hass, sunspec_client_mock):
     assert hass.states.get(TEST_INVERTER_SENSOR_POWER_ENTITY_ID).state == "800"
 
 
-async def test_options_flow_uses_entry_connection(hass, sunspec_client_mock, mocker):
-    """Test that the options flow lists the models without a second connection."""
+@pytest.mark.parametrize(
+    ("user_input", "scans"),
+    [(MOCK_CONFIG_STEP_1, 0), ({**MOCK_CONFIG_STEP_1, CONF_UNIT_ID: 2}, 1)],
+)
+async def test_options_flow_scans_changed_settings(
+    hass, sunspec_client_mock, mocker, user_input, scans
+):
+    """Test that Configure scans only changed settings, and leaves the entry its scan."""
     config_entry = await setup_mock_sunspec_config_entry(hass)
-    mocker.patch(
-        "custom_components.sunspec.SunSpecApiClient.modbus_connect",
-        side_effect=ConnectionRefusedError,
+    api = hass.data[DOMAIN][config_entry.entry_id].api
+    device = api.get_client()
+    scan = mocker.patch(
+        "custom_components.sunspec.SunSpecApiClient.scan", return_value=device
     )
 
     result = await hass.config_entries.options.async_init(config_entry.entry_id)
     result = await hass.config_entries.options.async_configure(
-        result["flow_id"], user_input=MOCK_CONFIG_STEP_1
+        result["flow_id"], user_input=user_input
     )
 
     assert result["step_id"] == "model_options"
+    assert scan.call_count == scans
+    assert api.get_client() is device
 
 
 async def test_setup_does_not_wait_for_the_device(hass, sunspec_client_mock, mocker):
@@ -98,9 +108,9 @@ async def test_setup_does_not_wait_for_the_device(hass, sunspec_client_mock, moc
     scanned = threading.Event()
     get_models = SunSpecApiClient.get_models
 
-    def slow_get_models(self, config=None):
+    def slow_get_models(self):
         scanned.wait(5)
-        return get_models(self, config)
+        return get_models(self)
 
     mocker.patch.object(SunSpecApiClient, "get_models", slow_get_models)
     config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG, entry_id="test")
@@ -129,34 +139,11 @@ async def test_setup_without_the_device(hass, request, error):
     assert hass.states.get(TEST_INVERTER_SENSOR_POWER_ENTITY_ID) is None
 
 
-async def test_client_reconnect(hass, sunspec_client_mock_not_connected) -> None:
-    await setup_mock_sunspec_config_entry(hass, MOCK_CONFIG)
-
-
-async def test_poll_while_probe_refused(hass, sunspec_client_mock, mocker):
-    """Test that polls succeed while the device refuses the reconnect probe."""
-    config_entry = await setup_mock_sunspec_config_entry(hass)
-    coordinator = hass.data[DOMAIN][config_entry.entry_id]
-
-    def check_port():
-        # The probe connects and sleeps, so it must stay out of the event loop.
-        assert threading.get_ident() != hass.loop_thread_id
-        return False
-
-    mocker.patch(
-        "custom_components.sunspec.SunSpecApiClient.check_port", side_effect=check_port
-    )
-    coordinator.api.reconnect_next()
-    await coordinator.async_refresh()
-
-    assert coordinator.last_update_success
-
-
 @pytest.mark.parametrize(
     ("error", "state"),
     [
-        (ModbusClientException("Modbus exception 4"), "800"),
-        (ModbusClientTimeout("Response timeout"), STATE_UNAVAILABLE),
+        (ServerDeviceFailureError(), "800"),
+        (ModbusTimeoutError("Response timeout"), STATE_UNAVAILABLE),
     ],
 )
 async def test_refused_model_keeps_last_values(
@@ -318,14 +305,3 @@ async def test_migrate_entry_version_2_no_migration_needed(hass):
     assert config_entry.version == 2
     assert "unit_id" in config_entry.data
     assert config_entry.data["unit_id"] == 5
-
-
-async def test_remove_entry_closes_connection(hass, mocker):
-    """Test that removing an entry closes its connection."""
-    config_entry = create_mock_sunspec_config_entry(hass)
-    client = mocker.Mock()
-    SunSpecApiClient.CLIENT_CACHE["test_host:123:1"] = client
-
-    await hass.config_entries.async_remove(config_entry.entry_id)
-
-    client.disconnect.assert_called_once()
