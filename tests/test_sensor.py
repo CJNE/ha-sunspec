@@ -5,7 +5,6 @@ from homeassistant.core import State
 import pytest
 from pytest_homeassistant.common import mock_restore_cache_with_extra_data
 
-from custom_components.sunspec.api import SunSpecApiClient
 from custom_components.sunspec.const import DOMAIN
 from custom_components.sunspec.sensor import ICON_DC_AMPS
 
@@ -139,7 +138,7 @@ async def test_sensor_added_with_first_value(
     config_entry = await setup_mock_sunspec_config_entry(hass)
     assert hass.states.get(TEST_INVERTER_SENSOR_TMPSNK_ENTITY_ID) is None
 
-    client = SunSpecApiClient.CLIENT_CACHE["test:123:1"]
+    client = hass.data[DOMAIN][config_entry.entry_id].api.get_client()
     client.models[103][0].points["TmpSnk"].value = 45
     await hass.data[DOMAIN][config_entry.entry_id].async_refresh()
     await hass.async_block_till_done(wait_background_tasks=True)

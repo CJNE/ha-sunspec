@@ -1,25 +1,34 @@
 """Read SunSpec devices over Modbus with pysunspec2."""
 
+import asyncio
+from contextlib import asynccontextmanager
 from functools import cache
 import logging
 from pathlib import Path
-import select
 import socket
-import threading
 import time
-from types import SimpleNamespace
 
+from homeassistant.components.modbus import async_get_temporary_unit
 from homeassistant.core import HomeAssistant
+from modbus_connection import ModbusError
+from modbus_connection import ModbusExceptionError
+from modbus_connection import ModbusSerialParams
+from modbus_connection import ModbusTcpParams
+from modbus_connection import ModbusTimeoutError
 from sunspec2 import mdef
 from sunspec2.device import ModelError
 from sunspec2.device import add_mappings
 import sunspec2.modbus.client as modbus_client
 from sunspec2.modbus.client import SunSpecModbusClientError
-from sunspec2.modbus.modbus import ModbusClientError
-from sunspec2.modbus.modbus import ModbusClientException
-from sunspec2.modbus.modbus import ModbusClientTimeout
+from sunspec2.modbus.modbus import REQ_COUNT_MAX
 from sunspec2.smdx import from_smdx_file
 
+from .const import CONF_BAUDRATE
+from .const import CONF_DEVICE
+from .const import CONF_HOST
+from .const import CONF_PARITY
+from .const import CONF_PORT
+from .const import CONF_UNIT_ID
 from .const import GROUP_NAMES
 
 TIMEOUT = 120
@@ -118,20 +127,6 @@ def progress(msg):
     return True
 
 
-def closed_by_device(client) -> bool:
-    """Return True if the device closed the connection between requests."""
-    # A serial port has no socket.
-    sock = getattr(client.client, "socket", None)
-    if sock is None:
-        return False
-    # No answer is due between requests, so a readable socket means the device
-    # closed the connection or sent something nobody asked for. poll() takes
-    # any file descriptor, select() only those below 1024.
-    poller = select.poll()
-    poller.register(sock, select.POLLIN)
-    return bool(poller.poll(0))
-
-
 def read_delay(client) -> float:
     """Return the pause before each model read."""
     common = client.models.get(1)
@@ -167,78 +162,113 @@ class DraftAwareModel(modbus_client.SunSpecModbusClientModel):
         )
 
 
-class SunSpecApiClient:
-    CLIENT_CACHE = {}
-    LOCKS = {}
+def modbus_link(data):
+    """Return the Modbus link and unit ID that connection settings describe."""
+    if data.get(CONF_DEVICE):
+        params = ModbusSerialParams(
+            device=data[CONF_DEVICE],
+            baudrate=data[CONF_BAUDRATE],
+            parity=data[CONF_PARITY],
+        )
+    else:
+        params = ModbusTcpParams(host=data[CONF_HOST], port=data[CONF_PORT])
+    return params, data.get(CONF_UNIT_ID, 1)
 
-    def __init__(
-        self,
-        host: str,
-        port: int,
-        unit_id: int,
-        hass: HomeAssistant,
-        device: str | None = None,
-        baudrate: int | None = None,
-        parity: str | None = None,
-    ) -> None:
-        """Sunspec modbus client, over TCP or, given a device, a serial port."""
 
-        _LOGGER.debug("New SunspecApi Client")
-        self._host = host
-        self._port = port
+@asynccontextmanager
+async def temporary_client(hass: HomeAssistant, data):
+    """Yield a client on a unit held only for the context, as flows need."""
+    async with async_get_temporary_unit(hass, *modbus_link(data)) as unit:
+        yield SunSpecApiClient(hass, data, unit)
+
+
+class UnitDevice(modbus_client.SunSpecModbusClientDevice):
+    """A pysunspec2 device that reads through a Home Assistant Modbus unit."""
+
+    def __init__(self, hass: HomeAssistant, unit) -> None:
+        super().__init__(model_class=DraftAwareModel)
         self._hass = hass
-        self._unit_id = unit_id
-        self._device = device
-        self._baudrate = baudrate
-        self._parity = parity
-        connection = device or f"{host}:{port}"
-        self._client_key = f"{connection}:{unit_id}"
-        # Entries on one host and port, or one serial port, share its connection
-        # and take turns.
-        self._lock = SunSpecApiClient.LOCKS.setdefault(connection, threading.RLock())
-        self._reconnect = False
+        self._unit = unit
+
+    def read(self, addr, count):
+        """Return the registers as bytes, read in requests Modbus allows."""
+        start, end = int(addr), int(addr + count)
+        registers = []
+        for address in range(start, end, REQ_COUNT_MAX):
+            registers += asyncio.run_coroutine_threadsafe(
+                self._unit.read_holding_registers(
+                    address, min(REQ_COUNT_MAX, end - address)
+                ),
+                self._hass.loop,
+            ).result()
+        return b"".join(register.to_bytes(2, "big") for register in registers)
+
+
+class SunSpecApiClient:
+    def __init__(self, hass: HomeAssistant, data, unit) -> None:
+        """Sunspec client on a unit of Home Assistant's Modbus connection."""
+        self._hass = hass
+        self._unit = unit
+        connection = data.get(CONF_DEVICE) or f"{data[CONF_HOST]}:{data[CONF_PORT]}"
+        self._target = f"{connection} unit id {data.get(CONF_UNIT_ID, 1)}"
+        self._address = (
+            None if data.get(CONF_DEVICE) else (data[CONF_HOST], data[CONF_PORT])
+        )
+        unit.require_timeout(SERIAL_TIMEOUT if data.get(CONF_DEVICE) else TIMEOUT)
+        self._client = None
 
     def get_client(self):
-        with self._lock:
-            cached = SunSpecApiClient.CLIENT_CACHE.get(self._client_key, None)
-            if cached is None:
-                _LOGGER.debug("Not using cached connection")
-                cached = self.modbus_connect()
-                SunSpecApiClient.CLIENT_CACHE[self._client_key] = cached
-            if self._reconnect:
-                if self._device:
-                    # The port may have gone with its USB adapter.
-                    cached.client.close()
-                    cached.client.open()
-                    self._reconnect = False
-                elif self.check_port():
-                    cached.connect()
-                    self._reconnect = False
-            return cached
+        if self._client is None:
+            self._client = self.scan()
+        return self._client
 
-    def disconnect(self):
-        """Forget the scanned device and close its connection if no other uses it."""
-        with self._lock:
-            client = SunSpecApiClient.CLIENT_CACHE.pop(self._client_key, None)
-            if client is None:
-                return
-            if all(
-                other.client is not client.client
-                for other in SunSpecApiClient.CLIENT_CACHE.values()
-            ):
-                client.disconnect()
-            # A serial device leaves its port, which closes with the last one.
-            client.close()
+    def scan(self):
+        """Return the device with the models the scan found."""
+        if self._address and not self._unit.connected:
+            # The scan tries three base addresses whatever fails, so a device
+            # that is off would take three connection attempts. One quick one
+            # fails it at once. Some SolarEdge inverters reset a connection
+            # that follows another too closely (#321).
+            try:
+                with socket.create_connection(self._address, timeout=3):
+                    pass
+            except OSError as err:
+                raise ConnectionError(f"Failed to connect to {self._target}") from err
+            time.sleep(0.1)
+        client = UnitDevice(self._hass, self._unit)
+        try:
+            try:
+                client.scan(
+                    connect=False,
+                    progress=progress,
+                    full_model_read=False,
+                    delay=0.5,
+                )
+            except (ModbusExceptionError, ModelError) as err:
+                if not client.models:
+                    raise
+                _LOGGER.warning("Scan stopped early, using the models found: %s", err)
+        except ModbusTimeoutError as err:
+            raise ConnectionTimeoutError(f"Timed out reading {self._target}") from err
+        except ModbusError as err:
+            raise ConnectionError(f"Failed to connect to {self._target}") from err
+        except SunSpecModbusClientError as err:
+            # The scan found no SunSpec map at any base address, or could not
+            # reach the device to look.
+            if not self._unit.connected:
+                raise ConnectionError(f"Failed to connect to {self._target}") from err
+            raise NoSunSpecError(f"No SunSpec data at {self._target}") from err
+        return client
 
     async def async_get_data(self, model_id) -> SunSpecModelWrapper:
         try:
             _LOGGER.debug("Get data for model %s", model_id)
             return await self.read(model_id)
-        except ModbusClientTimeout as err:
+        except ModbusTimeoutError as err:
             raise ConnectionTimeoutError(err) from err
-        except ModbusClientException as err:
+        except ModbusExceptionError as err:
             raise ModelRefusedError(err) from err
-        except ModbusClientError as err:
+        except ModbusError as err:
             raise ConnectionError(err) from err
 
     async def read(self, model_id) -> SunSpecModelWrapper:
@@ -247,174 +277,19 @@ class SunSpecApiClient:
     async def async_get_device_info(self) -> SunSpecModelWrapper:
         return await self.read(1)
 
-    def get_models(self, config=None) -> list:
-        with self._lock:
-            if config is None:
-                client = self.get_client()
-            else:
-                # The entry reloads with changed settings and connects anew, so
-                # their scan neither stays open nor takes the entry's place.
-                client = self.modbus_connect(config)
-                client.disconnect()
-                client.close()
+    def get_models(self) -> list:
+        client = self.get_client()
         return sorted(list(filter(lambda m: type(m) is int, client.models.keys())))
 
-    async def async_get_models(self, config=None) -> list:
+    async def async_get_models(self) -> list:
         _LOGGER.debug("Fetching models")
-        return await self._hass.async_add_executor_job(self.get_models, config)
-
-    def reconnect_next(self):
-        self._reconnect = True
-
-    def check_port(self) -> bool:
-        """Check if port is available"""
-        with self._lock:
-            sock_timeout = float(3)
-            _LOGGER.debug(
-                f"Check_Port: opening socket on {self._host}:{self._port} with a {sock_timeout}s timeout."
-            )
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(sock_timeout)
-            sock_res = sock.connect_ex((self._host, self._port))
-            is_open = sock_res == 0  # True if open, False if not
-            if is_open:
-                sock.shutdown(socket.SHUT_RDWR)
-                _LOGGER.debug(
-                    f"Check_Port (SUCCESS): port open on {self._host}:{self._port}"
-                )
-            else:
-                _LOGGER.debug(
-                    f"Check_Port (ERROR): port not available on {self._host}:{self._port} - error: {sock_res}"
-                )
-            sock.close()
-            time.sleep(0.1)
-        return is_open
-
-    def modbus_connect(self, config=None):
-        use_config = SimpleNamespace(
-            **{
-                "device": None,
-                **(
-                    config
-                    or {
-                        "host": self._host,
-                        "port": self._port,
-                        "unit_id": self._unit_id,
-                        "device": self._device,
-                        "baudrate": self._baudrate,
-                        "parity": self._parity,
-                    }
-                ),
-            }
-        )
-        if use_config.device:
-            target = use_config.device
-            _LOGGER.debug(
-                f"Client connect to serial port {target} unit id {use_config.unit_id}"
-            )
-            try:
-                client = modbus_client.SunSpecModbusClientDeviceRTU(
-                    slave_id=use_config.unit_id,
-                    name=target,
-                    baudrate=use_config.baudrate,
-                    parity=use_config.parity,
-                    timeout=SERIAL_TIMEOUT,
-                    model_class=DraftAwareModel,
-                )
-            except ModbusClientError as err:
-                raise ConnectionError(f"Failed to open {target}: {err}") from err
-        else:
-            target = f"{use_config.host}:{use_config.port}"
-            _LOGGER.debug(
-                f"Client connect to IP {use_config.host} port {use_config.port} unit id {use_config.unit_id} using timeout {TIMEOUT}"
-            )
-            client = modbus_client.SunSpecModbusClientDeviceTCP(
-                slave_id=use_config.unit_id,
-                ipaddr=use_config.host,
-                ipport=use_config.port,
-                timeout=TIMEOUT,
-                model_class=DraftAwareModel,
-            )
-        # A device may accept only one connection, so another entry's open
-        # connection to it is shared. Changed options get one of their own.
-        shared = None
-        if config is None and not use_config.device:
-            shared = next(
-                (
-                    other.client
-                    for other in SunSpecApiClient.CLIENT_CACHE.values()
-                    if (getattr(other, "ipaddr", None), getattr(other, "ipport", None))
-                    == (self._host, self._port)
-                    and other.is_connected()
-                ),
-                None,
-            )
-        if shared is not None:
-            client.client = shared
-        if shared is not None or use_config.device or self.check_port():
-            _LOGGER.debug("Inverter ready for Modbus TCP connection")
-            try:
-                if shared is None:
-                    with self._lock:
-                        client.connect()
-                if not client.is_connected():
-                    raise ConnectionError(
-                        f"Failed to connect to {self._host}:{self._port} unit id {self._unit_id}"
-                    )
-                _LOGGER.debug("Client connected, perform initial scan")
-                client.client.slave_id = client.slave_id
-                try:
-                    client.scan(
-                        connect=False,
-                        progress=progress,
-                        full_model_read=False,
-                        delay=0.5,
-                    )
-                except (ModbusClientException, ModelError) as err:
-                    if not client.models:
-                        raise
-                    _LOGGER.warning(
-                        "Scan stopped early, using the models found: %s", err
-                    )
-                return client
-            except ModbusClientError as err:
-                if shared is None:
-                    client.disconnect()
-                    client.close()
-                if isinstance(err, ModbusClientTimeout):
-                    raise ConnectionTimeoutError(
-                        f"Timed out reading {target} unit id {use_config.unit_id}"
-                    ) from err
-                raise ConnectionError(
-                    f"Failed to connect to {target} unit id {use_config.unit_id}"
-                ) from err
-            except Exception as err:
-                # Garbage collection would close it much later, and a device
-                # accepts only a few connections.
-                if shared is None:
-                    client.disconnect()
-                    client.close()
-                # The scan found no SunSpec map at any base address.
-                if isinstance(err, SunSpecModbusClientError):
-                    raise NoSunSpecError(
-                        f"No SunSpec data at {target} unit id {use_config.unit_id}"
-                    ) from err
-                raise
-        else:
-            _LOGGER.debug("Inverter not ready for Modbus TCP connection")
-            raise ConnectionError(f"Inverter not active on {self._host}:{self._port}")
+        return await self._hass.async_add_executor_job(self.get_models)
 
     def read_model(self, model_id) -> dict:
-        with self._lock:
-            client = self.get_client()
-            if closed_by_device(client):
-                _LOGGER.debug("Device closed the connection, reconnecting")
-                self.reconnect_next()
-                self.get_client()
-            client.client.slave_id = client.slave_id
-            models = client.models[model_id]
-            for model in models:
-                time.sleep(read_delay(client))
-                model.read()
+        client = self.get_client()
+        models = client.models[model_id]
+        for model in models:
+            time.sleep(read_delay(client))
+            model.read()
 
         return SunSpecModelWrapper(models)

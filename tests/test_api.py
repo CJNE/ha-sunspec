@@ -1,28 +1,35 @@
 """Tests for SunSpec api."""
 
-import errno
-import socket
 import struct
 
+from modbus_connection import IllegalDataAddressError
+from modbus_connection import ModbusConnectionError
+from modbus_connection import ModbusSerialParams
+from modbus_connection import ModbusTcpParams
+from modbus_connection import ModbusTimeoutError
 import pytest
 from sunspec2.device import ModelError
 from sunspec2.modbus.client import SunSpecModbusClientError
-from sunspec2.modbus.modbus import ModbusClientError
-from sunspec2.modbus.modbus import ModbusClientException
-from sunspec2.modbus.modbus import ModbusClientTimeout
 
+from custom_components.sunspec.api import SERIAL_TIMEOUT
+from custom_components.sunspec.api import TIMEOUT
 from custom_components.sunspec.api import ConnectionError
 from custom_components.sunspec.api import ConnectionTimeoutError
-from custom_components.sunspec.api import DraftAwareModel
 from custom_components.sunspec.api import NoSunSpecError
 from custom_components.sunspec.api import SunSpecApiClient
+from custom_components.sunspec.api import modbus_link
+from scripts.simulator import load_registers
+
+from . import create_mock_sunspec_client
+from .const import MOCK_CONFIG
+from .const import MOCK_SERIAL_CONFIG
 
 
 async def test_api(hass, sunspec_client_mock):
     """Test API calls."""
 
     # To test the api submodule, we first create an instance of our API client
-    api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
+    api = create_mock_sunspec_client(hass)
 
     models = await api.async_get_models()
     assert models == [
@@ -58,93 +65,23 @@ async def test_api(hass, sunspec_client_mock):
     assert len(keys) == 22
 
 
-async def test_get_client(hass, sunspec_modbus_client_mock):
-    SunSpecApiClient.CLIENT_CACHE = {}
-    """Test API calls."""
-
-    # To test the api submodule, we first create an instance of our API client
-    api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
-    client = api.get_client()
-    client.scan.assert_called_once()
-
-    SunSpecApiClient.CLIENT_CACHE = {}
-
-
-async def test_modbus_connect(hass, sunspec_modbus_client_mock):
-    SunSpecApiClient.CLIENT_CACHE = {}
-    """Test API calls."""
-
-    # To test the api submodule, we first create an instance of our API client
-    api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
-    SunSpecApiClient.CLIENT_CACHE = {}
-    client = api.get_client()
-    client.scan.assert_called_once()
-
-    SunSpecApiClient.CLIENT_CACHE = {}
-
-
-async def test_modbus_connect_fail(hass, mocker):
-    mocker.patch(
-        # api_call is from slow.py but imported to main.py
-        "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.connect",
-        return_value={},
+async def test_reads_through_unit(hass, mocker, mock_modbus_unit):
+    """Test that the scan and model reads go through the unit, in requests Modbus allows."""
+    mocker.patch("custom_components.sunspec.api.socket.create_connection")
+    mocker.patch("custom_components.sunspec.api.time.sleep")
+    registers = load_registers("tests/test_data/inverter.json")
+    mock_modbus_unit.holding[40000] = list(
+        struct.unpack(f">{len(registers) // 2}H", registers)
     )
-    mocker.patch(
-        # api_call is from slow.py but imported to main.py
-        "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.is_connected",
-        return_value=False,
-    )
-    mocker.patch(
-        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
-    )
-    """Test API calls."""
+    api = SunSpecApiClient(hass, MOCK_CONFIG, mock_modbus_unit)
 
-    # To test the api submodule, we first create an instance of our API client
-    api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
+    assert await api.async_get_models() == [1, 103, 160, 304, *range(701, 713)]
+    assert (await api.async_get_data(701)).getValue("W") == 9800
 
-    with pytest.raises(ConnectionError):
-        api.modbus_connect()
-
-
-@pytest.mark.parametrize(
-    ("connect_result", "is_open"), [(0, True), (errno.ECONNREFUSED, False)]
-)
-async def test_check_port(hass, mocker, connect_result, is_open):
-    sock = mocker.patch("custom_components.sunspec.api.socket.socket").return_value
-    sock.connect_ex.return_value = connect_result
-    api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
-
-    assert api.check_port() is is_open
-    sock.settimeout.assert_called_once_with(3)
-    assert socket.getdefaulttimeout() is None
-
-
-@pytest.mark.parametrize(
-    "error",
-    [
-        ModbusClientException("Modbus exception 2"),
-        ModelError("Repeating group count not consistent with model length"),
-    ],
-)
-async def test_modbus_connect_partial_scan(hass, mocker, error):
-    """Test that a scan ended by an exception or a model it cannot parse keeps the models found."""
-
-    def scan(self, **kwargs):
-        self.models[1] = ["common"]
-        raise error
-
-    mocker.patch("sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.connect")
-    mocker.patch(
-        "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.is_connected",
-        return_value=True,
-    )
-    mocker.patch("sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.scan", scan)
-    mocker.patch(
-        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
-    )
-    api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
-
-    assert api.modbus_connect().models == {1: ["common"]}
+    # pysunspec2 reads a model it has no definition for in one piece.
+    device = api.get_client()
+    assert await hass.async_add_executor_job(device.read, 40000, 300) == registers[:600]
+    assert [read.count for read in mock_modbus_unit.read_events[-3:]] == [125, 125, 50]
 
 
 def model(model_id, length, values):
@@ -173,222 +110,129 @@ def model(model_id, length, values):
         ),
     ],
 )
-async def test_battery_model_definitions(hass, mocker, battery, points):
+async def test_battery_model_definitions(
+    hass, mocker, mock_modbus_unit, battery, points
+):
     """Test that 801 to 803 at their 2015 lengths are read with the 2015 definitions."""
     registers = [0x5375, 0x6E53]
     for model_id, body in [model(1, 66, {}), *battery, model(103, 50, {})]:
         registers += [model_id, len(body), *body]
-    registers = dict(enumerate([*registers, 0xFFFF, 0], start=40000))
-
-    def read(self, addr, count, op=None):
-        # pysunspec2 passes floats, which its Modbus client packs as integers.
-        addr, count = int(addr), int(count)
-        return b"".join(registers.get(addr + i, 0).to_bytes(2) for i in range(count))
-
-    mocker.patch("sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.connect")
-    mocker.patch(
-        "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.is_connected",
-        return_value=True,
-    )
-    mocker.patch("sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.read", read)
-    mocker.patch("sunspec2.modbus.client.time.sleep")
+    mock_modbus_unit.holding[40000] = [*registers, 0xFFFF, 0]
+    mocker.patch("custom_components.sunspec.api.socket.create_connection")
     mocker.patch("custom_components.sunspec.api.time.sleep")
-    mocker.patch(
-        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
-    )
-    api = SunSpecApiClient(host="battery", port=123, unit_id=1, hass=hass)
+    api = SunSpecApiClient(hass, MOCK_CONFIG, mock_modbus_unit)
 
     assert await api.async_get_models() == sorted([1, 103, *points])
     for model_id, (point, value) in points.items():
-        assert api.read_model(model_id).getValue(point) == value
-    api.disconnect()
-
-
-@pytest.mark.parametrize("closed", [True, False])
-async def test_read_model_reconnects_closed_connection(hass, mocker, closed):
-    """Test that a connection the device closed is reopened before reading."""
-    sock, device_end = socket.socketpair()
-    if closed:
-        device_end.close()
-    client = mocker.Mock(models={1: []})
-    client.client.socket = sock
-    SunSpecApiClient.CLIENT_CACHE["test:123:1"] = client
-    mocker.patch(
-        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
-    )
-    api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
-
-    api.read_model(1)
-
-    assert client.connect.called is closed
-    sock.close()
-    device_end.close()
-
-
-async def test_entries_share_connection(hass, mocker):
-    """Test that entries on one host and port share its connection."""
-    sock, device_end = socket.socketpair()
-    sent = []
-
-    def connect(self, timeout=None):
-        self.socket = sock
-
-    def scan(self, **kwargs):
-        sent.append(self.client.slave_id)
-        model = mocker.Mock()
-        model.read.side_effect = lambda: sent.append(self.client.slave_id)
-        self.models[103] = [model]
-
-    connect = mocker.patch(
-        "sunspec2.modbus.modbus.ModbusClientTCP.connect",
-        autospec=True,
-        side_effect=connect,
-    )
-    mocker.patch("sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.scan", scan)
-    mocker.patch(
-        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
-    )
-    mocker.patch("custom_components.sunspec.api.time.sleep")
-    inverter = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
-    meter = SunSpecApiClient(host="test", port=123, unit_id=2, hass=hass)
-
-    inverter.read_model(103)
-    meter.read_model(103)
-    inverter.read_model(103)
-
-    assert connect.call_count == 1
-    assert sent == [1, 1, 2, 2, 1]
-    inverter.disconnect()
-    assert sock.fileno() != -1
-    meter.disconnect()
-    assert sock.fileno() == -1
-    device_end.close()
-
-
-async def test_changed_settings_leave_entry_device(hass, mocker):
-    """Test that models read with changed settings leave the entry on its device."""
-
-    def scan(self, **kwargs):
-        self.models[self.slave_id * 100 + 3] = [mocker.Mock()]
-
-    mocker.patch("sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.connect")
-    mocker.patch(
-        "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.is_connected",
-        return_value=True,
-    )
-    disconnect = mocker.patch(
-        "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.disconnect"
-    )
-    mocker.patch("sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.scan", scan)
-    mocker.patch(
-        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
-    )
-    api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
-
-    assert await api.async_get_models() == [103]
-    changed = {"host": "test", "port": 123, "unit_id": 2}
-    assert await api.async_get_models(changed) == [203]
-    assert await api.async_get_models() == [103]
-    disconnect.assert_called_once()
-
-
-@pytest.mark.parametrize("scan_error", [None, ModbusClientTimeout("Response timeout")])
-async def test_serial_connection(hass, mocker, scan_error):
-    """Test that a serial entry reads over its port and then releases the port."""
-    rtu = mocker.patch("sunspec2.modbus.client.SunSpecModbusClientDeviceRTU")
-    rtu.return_value.scan.side_effect = scan_error
-    check_port = mocker.patch("custom_components.sunspec.SunSpecApiClient.check_port")
-    api = SunSpecApiClient(None, None, 1, hass, "/dev/ttyUSB0", 9600, "N")
-
-    if scan_error:
-        with pytest.raises(ConnectionError):
-            api.get_client()
-    else:
-        api.get_client()
-        api.disconnect()
-
-    rtu.assert_called_once_with(
-        slave_id=1,
-        name="/dev/ttyUSB0",
-        baudrate=9600,
-        parity="N",
-        timeout=3,
-        model_class=DraftAwareModel,
-    )
-    check_port.assert_not_called()
-    rtu.return_value.close.assert_called_once()
-
-
-async def test_serial_poll_reopens_port(hass, mocker):
-    """Test that the poll after a failed one reopens the serial port."""
-    rtu = mocker.patch("sunspec2.modbus.client.SunSpecModbusClientDeviceRTU")
-    api = SunSpecApiClient(None, None, 1, hass, "/dev/ttyUSB0", 9600, "N")
-    api.get_client()
-
-    api.reconnect_next()
-    api.get_client()
-
-    rtu.return_value.client.close.assert_called_once()
-    rtu.return_value.client.open.assert_called_once()
+        assert (await api.async_get_data(model_id)).getValue(point) == value
 
 
 @pytest.mark.parametrize(
-    ("error", "raised"),
+    ("data", "params", "timeout"),
     [
-        (ModbusClientTimeout("Response timeout"), ConnectionTimeoutError),
-        (ModbusClientError("Socket write error"), ConnectionError),
+        (MOCK_CONFIG, ModbusTcpParams(host="test_host", port=123), TIMEOUT),
         (
-            SunSpecModbusClientError("Error scanning SunSpec base addresses."),
-            NoSunSpecError,
+            MOCK_SERIAL_CONFIG,
+            ModbusSerialParams(device="/dev/ttyUSB0", baudrate=9600, parity="N"),
+            SERIAL_TIMEOUT,
         ),
-        (struct.error("'H' format requires 0 <= number <= 65535"), struct.error),
     ],
 )
-async def test_modbus_connect_failed_scan_closes(hass, mocker, error, raised):
-    """Test that a failed scan closes its connection."""
-    mocker.patch("sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.connect")
-    mocker.patch(
-        "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.is_connected",
-        return_value=True,
+async def test_connection_settings(hass, mock_modbus_unit, data, params, timeout):
+    """Test that an entry's settings give its link, unit ID and request timeout."""
+    assert modbus_link(data) == (params, 1)
+
+    SunSpecApiClient(hass, data, mock_modbus_unit)
+
+    assert mock_modbus_unit.required_timeout == timeout
+
+
+@pytest.mark.parametrize(
+    ("data", "connected", "reachable", "scanned"),
+    [
+        (MOCK_CONFIG, False, False, False),
+        (MOCK_CONFIG, False, True, True),
+        (MOCK_CONFIG, True, False, True),
+        (MOCK_SERIAL_CONFIG, False, False, True),
+    ],
+)
+async def test_quick_connection_check(
+    hass, mocker, data, connected, reachable, scanned
+):
+    """Test that a TCP device not yet connected gets one quick connection first."""
+    check = mocker.patch(
+        "custom_components.sunspec.api.socket.create_connection",
+        side_effect=None if reachable else OSError("No route to host"),
     )
-    mocker.patch(
-        "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.scan", side_effect=error
-    )
-    disconnect = mocker.patch(
-        "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.disconnect"
-    )
-    mocker.patch(
-        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
-    )
-    api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
+    sleep = mocker.patch("custom_components.sunspec.api.time.sleep")
+    scan = mocker.patch("custom_components.sunspec.api.UnitDevice.scan")
+    api = SunSpecApiClient(hass, data, mocker.Mock(connected=connected))
+
+    if scanned:
+        api.scan()
+    else:
+        with pytest.raises(ConnectionError):
+            api.scan()
+
+    assert scan.called is scanned
+    assert check.called is (data is MOCK_CONFIG and not connected)
+    # Some SolarEdge inverters reset a connection that follows another too
+    # closely (#321).
+    paused = mocker.call(0.1) in sleep.call_args_list
+    assert paused == (check.called and reachable)
+
+
+async def test_scan_once(hass, mocker):
+    """Test that the device is scanned once, not at every read."""
+    scan = mocker.patch("custom_components.sunspec.api.UnitDevice.scan")
+    api = create_mock_sunspec_client(hass)
+
+    api.get_client()
+    api.get_client()
+
+    scan.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        IllegalDataAddressError(),
+        ModelError("Repeating group count not consistent with model length"),
+    ],
+)
+async def test_partial_scan(hass, mocker, error):
+    """Test that a scan ended by an exception or a model it cannot parse keeps the models found."""
+
+    def scan(self, **kwargs):
+        self.models[1] = ["common"]
+        raise error
+
+    mocker.patch("custom_components.sunspec.api.UnitDevice.scan", scan)
+    api = create_mock_sunspec_client(hass)
+
+    assert api.scan().models == {1: ["common"]}
+
+
+@pytest.mark.parametrize(
+    ("error", "connected", "raised"),
+    [
+        (ModbusTimeoutError("Response timeout"), True, ConnectionTimeoutError),
+        (ModbusConnectionError("Connection lost"), True, ConnectionError),
+        (IllegalDataAddressError(), True, ConnectionError),
+        (SunSpecModbusClientError("No SunSpec map"), True, NoSunSpecError),
+        (SunSpecModbusClientError("No SunSpec map"), False, ConnectionError),
+        (struct.error("'H' format requires 0 <= number <= 65535"), True, struct.error),
+    ],
+)
+async def test_scan_error(hass, mocker, error, connected, raised):
+    """Test that a failed scan says why: the connection, a timeout, or no SunSpec."""
+    mocker.patch("custom_components.sunspec.api.socket.create_connection")
+    mocker.patch("custom_components.sunspec.api.time.sleep")
+    mocker.patch("custom_components.sunspec.api.UnitDevice.scan", side_effect=error)
+    api = SunSpecApiClient(hass, MOCK_CONFIG, mocker.Mock(connected=connected))
 
     with pytest.raises(raised):
-        api.modbus_connect()
-
-    disconnect.assert_called_once()
-
-
-async def test_modbus_connect_exception(hass, mocker):
-    mocker.patch(
-        # api_call is from slow.py but imported to main.py
-        "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.connect",
-        side_effect=ModbusClientError,
-    )
-    mocker.patch(
-        # api_call is from slow.py but imported to main.py
-        "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.is_connected",
-        return_value=False,
-    )
-    mocker.patch(
-        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
-    )
-    """Test API calls."""
-
-    # To test the api submodule, we first create an instance of our API client
-    api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
-
-    with pytest.raises(ConnectionError):
-        api.modbus_connect()
+        api.scan()
 
 
 @pytest.mark.parametrize(("manufacturer", "delay"), [("SMA", 1), ("Fronius", 0.6)])
@@ -397,9 +241,10 @@ async def test_read_model_delay(hass, mocker, manufacturer, delay):
     sleep = mocker.patch("custom_components.sunspec.api.time.sleep")
     common = mocker.Mock(points={"Mn": mocker.Mock(value=manufacturer)})
     client = mocker.Mock(models={1: [common], 103: [mocker.Mock()]})
-    client.client.socket = None
-    SunSpecApiClient.CLIENT_CACHE["test:123:1"] = client
-    api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
+    mocker.patch(
+        "custom_components.sunspec.api.SunSpecApiClient.scan", return_value=client
+    )
+    api = create_mock_sunspec_client(hass)
 
     api.read_model(103)
 
@@ -409,9 +254,9 @@ async def test_read_model_delay(hass, mocker, manufacturer, delay):
 async def test_read_model_timeout(hass, mocker):
     mocker.patch(
         "custom_components.sunspec.api.SunSpecApiClient.read_model",
-        side_effect=ModbusClientTimeout("timed out"),
+        side_effect=ModbusTimeoutError("timed out"),
     )
-    api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
+    api = create_mock_sunspec_client(hass)
 
     with pytest.raises(ConnectionTimeoutError):
         await api.async_get_data(1)
@@ -420,9 +265,9 @@ async def test_read_model_timeout(hass, mocker):
 async def test_read_model_error(hass, mocker):
     mocker.patch(
         "custom_components.sunspec.api.SunSpecApiClient.read_model",
-        side_effect=ModbusClientError("Socket write error"),
+        side_effect=ModbusConnectionError("Connection lost"),
     )
-    api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
+    api = create_mock_sunspec_client(hass)
 
     with pytest.raises(ConnectionError):
         await api.async_get_data(1)
