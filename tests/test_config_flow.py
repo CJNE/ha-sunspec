@@ -80,6 +80,13 @@ async def test_successful_config_flow(
     # Check that the config flow is complete and a new entry is created with
     # the input data
     assert result["type"] == FlowResultType.FORM
+    assert list(dict(result["data_schema"].schema)[CONF_ENABLED_MODELS].options) == [
+        1,
+        103,
+        160,
+        304,
+        *range(701, 713),
+    ]
 
     result = await hass.config_entries.flow.async_configure(
         flow_id, user_input=MOCK_SETTINGS
@@ -217,6 +224,13 @@ async def test_options_flow(
     # Verify that the second options step is a user form
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "model_options"
+    assert list(dict(result["data_schema"].schema)[CONF_ENABLED_MODELS].options) == [
+        1,
+        103,
+        160,
+        304,
+        *range(701, 713),
+    ]
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
