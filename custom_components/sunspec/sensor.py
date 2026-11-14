@@ -203,9 +203,6 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
         if self.device_class == SensorDeviceClass.ENUM:
             _LOGGER.debug("Valid options for ENUM: %s", self._options)
 
-    # def async_will_remove_from_hass(self):
-    #    _LOGGER.debug(f"Will remove sensor {self._uniqe_id}")
-
     @property
     def options(self):
         if self.device_class != SensorDeviceClass.ENUM:
@@ -266,9 +263,6 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
     @property
     def native_unit_of_measurement(self):
         """Return the unit of measurement."""
-        # if self.unit == "":
-        #     _LOGGER.debug(f"UNIT IS NONT FOR {self.name}")
-        #    return None
         return self.unit
 
     @property

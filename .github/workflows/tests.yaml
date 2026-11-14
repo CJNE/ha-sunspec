@@ -1,14 +1,15 @@
-name: Linting
+name: Validate
 
 on:
   push:
     branches:
       - main
-      - master
-      - dev
   pull_request:
   schedule:
     - cron: "0 0 * * *"
+
+permissions:
+  contents: read
 
 env:
   DEFAULT_PYTHON: 3.14
@@ -20,20 +21,17 @@ jobs:
     steps:
       - name: Check out the repository
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Set up Python ${{ env.DEFAULT_PYTHON }}
         uses: actions/setup-python@v7.1.0
         with:
           python-version: ${{ env.DEFAULT_PYTHON }}
 
-      - name: Upgrade pip
-        run: |
-          pip install --constraint=.github/workflows/constraints.txt pip
-          pip --version
-
       - name: Install Python modules
         run: |
-          pip install --constraint=.github/workflows/constraints.txt pre-commit black flake8
+          pip install "$(grep '^pre-commit==' requirements_dev.txt)"
 
       - name: Run pre-commit on all files
         run: |
@@ -45,6 +43,8 @@ jobs:
     steps:
       - name: Check out the repository
         uses: "actions/checkout@v7"
+        with:
+          persist-credentials: false
 
       - name: HACS validation
         uses: "hacs/action@22.5.0"
@@ -58,6 +58,8 @@ jobs:
     steps:
       - name: Check out the repository
         uses: "actions/checkout@v7"
+        with:
+          persist-credentials: false
 
       - name: Hassfest validation
         uses: "home-assistant/actions/hassfest@master"
@@ -67,13 +69,14 @@ jobs:
     steps:
       - name: Check out code from GitHub
         uses: "actions/checkout@v7"
+        with:
+          persist-credentials: false
       - name: Setup Python ${{ env.DEFAULT_PYTHON }}
         uses: "actions/setup-python@v7.1.0"
         with:
           python-version: ${{ env.DEFAULT_PYTHON }}
       - name: Install requirements
         run: |
-          pip install --constraint=.github/workflows/constraints.txt pip
           pip install -r requirements_test.txt
       - name: Tests suite
         run: |
