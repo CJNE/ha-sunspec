@@ -16,6 +16,11 @@
           "host": "Hostname/IP",
           "port": "Port",
           "unit_id": "Unit ID"
+        },
+        "data_description": {
+          "host": "IP address or hostname of the device, or of its Modbus TCP gateway.",
+          "port": "Modbus TCP port of the device, usually 502.",
+          "unit_id": "Modbus unit ID of the device, also called slave ID. Most SMA inverters use 126 for SunSpec."
         }
       },
       "serial": {
@@ -26,6 +31,12 @@
           "baudrate": "Baud rate",
           "parity": "Parity",
           "unit_id": "Unit ID"
+        },
+        "data_description": {
+          "device": "Serial port of the RS485 adapter, such as /dev/ttyUSB0.",
+          "baudrate": "Speed set on the device, such as 9600.",
+          "parity": "Parity set on the device; data bits are always 8 and stop bits 1.",
+          "unit_id": "Modbus unit ID of the device, also called slave ID. Most SMA inverters use 126 for SunSpec."
         }
       },
       "settings": {
@@ -35,6 +46,10 @@
           "models_enabled": "Read models",
           "prefix": "Sensors prefix",
           "scan_interval": "Scan interval (seconds)"
+        },
+        "data_description": {
+          "prefix": "Text put in front of every sensor name, to tell devices apart.",
+          "scan_interval": "Seconds between reads of the device."
         }
       }
     },
@@ -44,7 +59,7 @@
       "timeout": "Connection timed out. Check that the device is online and responding on the configured host, port, and Unit ID."
     },
     "abort": {
-      "single_instance_allowed": "Only a single instance is allowed."
+      "already_configured": "This device is already set up. Its entry now uses the connection entered here."
     }
   },
   "options": {
@@ -56,6 +71,11 @@
           "host": "Hostname/IP",
           "port": "Port",
           "unit_id": "Unit ID"
+        },
+        "data_description": {
+          "host": "IP address or hostname of the device, or of its Modbus TCP gateway.",
+          "port": "Modbus TCP port of the device, usually 502.",
+          "unit_id": "Modbus unit ID of the device, also called slave ID. Most SMA inverters use 126 for SunSpec."
         }
       },
       "serial_options": {
@@ -66,17 +86,25 @@
           "baudrate": "Baud rate",
           "parity": "Parity",
           "unit_id": "Unit ID"
+        },
+        "data_description": {
+          "device": "Serial port of the RS485 adapter, such as /dev/ttyUSB0.",
+          "baudrate": "Speed set on the device, such as 9600.",
+          "parity": "Parity set on the device; data bits are always 8 and stop bits 1.",
+          "unit_id": "Modbus unit ID of the device, also called slave ID. Most SMA inverters use 126 for SunSpec."
         }
       },
       "model_options": {
         "title": "Device Options",
         "description": "Select what SunSpec models (data registers) you would like to create sensors for.",
         "data": {
-          "host": "Hostname/IP",
-          "port": "Port",
-          "unit_id": "Unit ID",
+          "prefix": "Sensors prefix",
           "models_enabled": "Read models",
           "scan_interval": "Scan interval (seconds)"
+        },
+        "data_description": {
+          "prefix": "Text put in front of every sensor name, to tell devices apart.",
+          "scan_interval": "Seconds between reads of each model without its own interval below."
         },
         "sections": {
           "model_intervals": {
