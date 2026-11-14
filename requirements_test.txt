@@ -1,5 +1,8 @@
 -r requirements_dev.txt
 pytest-homeassistant
+# Home Assistant's modbus integration, which this one depends on
+modbus-connection[tmodbus]
+pymodbus
 pytest-cov
 pytest-mock
 pytest-timeout

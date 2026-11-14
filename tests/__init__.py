@@ -64,8 +64,7 @@ TEST_INVERTER_PREFIX_SENSOR_DC_ENTITY_ID = (
 
 def create_mock_sunspec_client(hass: HomeAssistant):
     """Create a mock modubs client"""
-    api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
-    return api
+    return SunSpecApiClient(hass, MOCK_CONFIG, Mock())
 
 
 def create_mock_sunspec_config_entry(
@@ -137,7 +136,7 @@ class MockSunSpecDataUpdateCoordinator(DataUpdateCoordinator):
 
     def __init__(self, hass, models) -> None:
         """Initialize."""
-        self.api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
+        self.api = create_mock_sunspec_client(hass)
         self.option_model_filter = set(map(lambda m: int(m), models))
 
     async def _async_update_data(self):

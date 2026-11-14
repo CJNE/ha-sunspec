@@ -9,10 +9,10 @@ import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 
 from . import SCAN_INTERVAL
-from . import api_client
 from .api import ConnectionError
 from .api import ConnectionTimeoutError
 from .api import NoSunSpecError
+from .api import temporary_client
 from .const import CONF_BAUDRATE
 from .const import CONF_DEVICE
 from .const import CONF_ENABLED_MODELS
@@ -44,7 +44,7 @@ def serial_schema(data):
                 CONF_DEVICE, default=data.get(CONF_DEVICE, "/dev/ttyUSB0")
             ): str,
             vol.Required(CONF_BAUDRATE, default=data.get(CONF_BAUDRATE, 9600)): int,
-            # pysunspec2 sends 8 data bits and 1 stop bit, with no or even parity.
+            # The connection sends 8 data bits and 1 stop bit, with no or even parity.
             vol.Required(CONF_PARITY, default=data.get(CONF_PARITY, "N")): vol.In(
                 {"N": "None", "E": "Even"}
             ),
@@ -200,8 +200,8 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Return true if the device answers on the connection."""
         _LOGGER.debug(f"Test connection to {entry_title(connection)}")
         try:
-            self.client = api_client(self.hass, connection)
-            self._device_info = await self.client.async_get_device_info()
+            async with temporary_client(self.hass, connection) as self.client:
+                self._device_info = await self.client.async_get_device_info()
             _LOGGER.info(self._device_info)
             return True
         except Exception as err:
@@ -280,10 +280,12 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
         intervals = self.config_entry.options.get(CONF_MODEL_INTERVALS, {})
         connection = {key: self.config_entry.data.get(key) for key in self.settings}
         try:
-            # The entry's connection serves unchanged settings: a device with one
-            # Modbus TCP slot refuses a second connection while the entry polls.
-            config = None if self.settings == connection else self.settings
-            models = set(await self.coordinator.api.async_get_models(config))
+            # Unchanged settings keep the entry's scan.
+            if self.settings == connection:
+                models = set(await self.coordinator.api.async_get_models())
+            else:
+                async with temporary_client(self.hass, self.settings) as client:
+                    models = set(await client.async_get_models())
             model_filter = sorted(models)
             default_enabled = {model for model in DEFAULT_MODELS if model in models}
             default_models = self.config_entry.options.get(
