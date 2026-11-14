@@ -90,8 +90,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     coordinator = SunSpecDataUpdateCoordinator(hass, client=client, entry=entry)
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
-    await coordinator.async_config_entry_first_refresh()
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    # Scanning a device can take a minute, which Home Assistant need not wait
+    # for: the sensors are added with the first values.
+    entry.async_create_background_task(
+        hass, coordinator.async_refresh(), f"{DOMAIN} first refresh"
+    )
     return True
 
 
@@ -154,6 +158,7 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
             for model in self.option_model_filter
         }
         self.last_read = {}
+        self.device_info = None
         _LOGGER.debug(
             "Setup entry with models %s, scan interval %s. IP: %s Port: %s ID: %s",
             self.option_model_filter,
@@ -184,6 +189,8 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
                 await self.api.async_get_models()
             )
             _LOGGER.debug("SunSpec Update data got models %s", model_ids)
+            if self.device_info is None:
+                self.device_info = await self.api.async_get_device_info()
 
             now = monotonic()
             poll = self.update_interval.total_seconds()

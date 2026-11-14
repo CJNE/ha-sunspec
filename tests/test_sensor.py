@@ -142,7 +142,7 @@ async def test_sensor_added_with_first_value(
     client = SunSpecApiClient.CLIENT_CACHE["test:123:1"]
     client.models[103][0].points["TmpSnk"].value = 45
     await hass.data[DOMAIN][config_entry.entry_id].async_refresh()
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
 
     assert hass.states.get(TEST_INVERTER_SENSOR_TMPSNK_ENTITY_ID).state == "45"
 

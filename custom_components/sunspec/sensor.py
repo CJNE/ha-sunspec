@@ -95,7 +95,6 @@ def float32_decimal(value):
 async def async_setup_entry(hass, entry, async_add_devices):
     """Setup sensor platform."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
-    device_info = await coordinator.api.async_get_device_info()
     prefix = entry.options.get(CONF_PREFIX, entry.data.get(CONF_PREFIX, ""))
     added = set()
 
@@ -105,14 +104,14 @@ async def async_setup_entry(hass, entry, async_add_devices):
     @callback
     def add_sensors():
         sensors = []
-        for model_id, model_wrapper in coordinator.data.items():
+        for model_id, model_wrapper in (coordinator.data or {}).items():
             for key in model_wrapper.getKeys():
                 if (model_id, key) in added:
                     continue
                 added.add((model_id, key))
                 for model_index in range(model_wrapper.num_models):
                     data = {
-                        "device_info": device_info,
+                        "device_info": coordinator.device_info,
                         "key": key,
                         "model_id": model_id,
                         "model_index": model_index,

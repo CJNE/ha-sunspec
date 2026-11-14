@@ -6,14 +6,12 @@ import threading
 
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import STATE_UNAVAILABLE
-from homeassistant.exceptions import ConfigEntryNotReady
 import pytest
 from pytest_homeassistant.common import MockConfigEntry
 from sunspec2.modbus.modbus import ModbusClientException
 from sunspec2.modbus.modbus import ModbusClientTimeout
 
 from custom_components.sunspec import SunSpecDataUpdateCoordinator
-from custom_components.sunspec import async_setup_entry
 from custom_components.sunspec.api import SunSpecApiClient
 from custom_components.sunspec.const import CONF_ENABLED_MODELS
 from custom_components.sunspec.const import CONF_MODEL_INTERVALS
@@ -25,11 +23,6 @@ from . import create_mock_sunspec_config_entry
 from . import setup_mock_sunspec_config_entry
 from .const import MOCK_CONFIG
 from .const import MOCK_CONFIG_STEP_1
-
-
-def set_entry_setup_in_progress(hass, config_entry: MockConfigEntry) -> None:
-    """Mirror the state Home Assistant uses while invoking async_setup_entry directly."""
-    config_entry.mock_state(hass, ConfigEntryState.SETUP_IN_PROGRESS)
 
 
 # We can pass fixtures as defined in conftest.py to tell pytest to use the fixture
@@ -45,7 +38,7 @@ async def test_setup_unload_and_reload_entry(hass, sunspec_client_mock):
 
     # Use the config entries manager so entry state transitions match real setup.
     assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
     assert DOMAIN in hass.data and config_entry.entry_id in hass.data[DOMAIN]
     assert (
         type(hass.data[DOMAIN][config_entry.entry_id]) is SunSpecDataUpdateCoordinator
@@ -53,7 +46,7 @@ async def test_setup_unload_and_reload_entry(hass, sunspec_client_mock):
 
     # Reload the entry and assert that the data from above is still there.
     assert await hass.config_entries.async_reload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
     assert DOMAIN in hass.data and config_entry.entry_id in hass.data[DOMAIN]
     assert (
         type(hass.data[DOMAIN][config_entry.entry_id]) is SunSpecDataUpdateCoordinator
@@ -76,7 +69,7 @@ async def test_options_change_reloads_entry(hass, sunspec_client_mock):
         result["flow_id"],
         user_input={CONF_ENABLED_MODELS: [103], CONF_SCAN_INTERVAL: 20},
     )
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
 
     assert config_entry.state is ConfigEntryState.LOADED
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
@@ -100,43 +93,44 @@ async def test_options_flow_uses_entry_connection(hass, sunspec_client_mock, moc
     assert result["step_id"] == "model_options"
 
 
-async def test_setup_entry_exception(hass, error_on_get_data):
-    """Test ConfigEntryNotReady when API raises an exception during entry setup."""
+async def test_setup_does_not_wait_for_the_device(hass, sunspec_client_mock, mocker):
+    """Setup returns while the device is scanned; the sensors come with its values."""
+    scanned = threading.Event()
+    get_models = SunSpecApiClient.get_models
+
+    def slow_get_models(self, config=None):
+        scanned.wait(5)
+        return get_models(self, config)
+
+    mocker.patch.object(SunSpecApiClient, "get_models", slow_get_models)
     config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG, entry_id="test")
     config_entry.add_to_hass(hass)
 
-    # In this case we are testing the condition where async_setup_entry raises
-    # ConfigEntryNotReady using the `error_on_get_data` fixture which simulates
-    # an error.
-    set_entry_setup_in_progress(hass, config_entry)
-    with pytest.raises(ConfigEntryNotReady):
-        assert await async_setup_entry(hass, config_entry)
+    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    assert config_entry.state is ConfigEntryState.LOADED
+    assert hass.states.get(TEST_INVERTER_SENSOR_POWER_ENTITY_ID) is None
+
+    scanned.set()
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert hass.states.get(TEST_INVERTER_SENSOR_POWER_ENTITY_ID).state == "800"
 
 
-async def test_fetch_data_timeout(hass, timeout_error_on_get_data):
-    """Test ConfigEntryNotReady when API raises an exception during entry setup."""
+@pytest.mark.parametrize(
+    "error",
+    ["error_on_get_data", "timeout_error_on_get_data", "connect_error_on_get_data"],
+)
+async def test_setup_without_the_device(hass, request, error):
+    """A device that cannot be read leaves the entry loaded, and a later poll retries."""
+    request.getfixturevalue(error)
     config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG, entry_id="test")
     config_entry.add_to_hass(hass)
 
-    # In this case we are testing the condition where async_setup_entry raises
-    # ConfigEntryNotReady using the `error_on_get_data` fixture which simulates
-    # an error.
-    set_entry_setup_in_progress(hass, config_entry)
-    with pytest.raises(ConfigEntryNotReady):
-        assert await async_setup_entry(hass, config_entry)
+    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done(wait_background_tasks=True)
 
-
-async def test_fetch_data_connect_error(hass, connect_error_on_get_data):
-    """Test ConfigEntryNotReady when API raises an exception during entry setup."""
-    config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG, entry_id="test")
-    config_entry.add_to_hass(hass)
-
-    # In this case we are testing the condition where async_setup_entry raises
-    # ConfigEntryNotReady using the `error_on_get_data` fixture which simulates
-    # an error.
-    set_entry_setup_in_progress(hass, config_entry)
-    with pytest.raises(ConfigEntryNotReady):
-        assert await async_setup_entry(hass, config_entry)
+    assert config_entry.state is ConfigEntryState.LOADED
+    assert not hass.data[DOMAIN]["test"].last_update_success
+    assert hass.states.get(TEST_INVERTER_SENSOR_POWER_ENTITY_ID) is None
 
 
 async def test_client_reconnect(hass, sunspec_client_mock_not_connected) -> None:
