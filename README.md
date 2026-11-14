@@ -19,7 +19,7 @@
 
 ## How it works
 
-This custom integration for [Home Assistant](https://home-assistant.io/) monitors any device that speaks SunSpec over Modbus, most commonly a solar inverter or an energy meter. The [SunSpec website](https://sunspec.org/sunspec-modbus-certified-products/) lists certified devices and manufacturers.
+This custom integration for [Home Assistant](https://home-assistant.io/) monitors any device that speaks SunSpec over Modbus, most commonly a solar inverter or an energy meter. The [SunSpec website](https://sunspec.org/product-certification-registry/) lists certified devices and manufacturers.
 
 It wraps [pysunspec2](https://github.com/sunspec/pysunspec2), the SunSpec Alliance's Python library:
 
