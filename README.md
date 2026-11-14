@@ -1,5 +1,5 @@
-<p align="center">
-  <img src="logo.png" alt="SunSpec logo" width="300">
+<p align="left">
+  <img src="logo.png" alt="SunSpec logo" width="400">
 </p>
 
 [![GitHub Release][releases-shield]][releases]
