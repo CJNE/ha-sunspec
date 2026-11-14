@@ -12,6 +12,7 @@ from . import SCAN_INTERVAL
 from . import api_client
 from .api import ConnectionError
 from .api import ConnectionTimeoutError
+from .api import NoSunSpecError
 from .const import CONF_BAUDRATE
 from .const import CONF_DEVICE
 from .const import CONF_ENABLED_MODELS
@@ -57,6 +58,11 @@ def set_connection_error(errors, target, err):
     if isinstance(err, ConnectionTimeoutError):
         errors["base"] = "timeout"
         _LOGGER.warning("Timeout while connecting to %s", target)
+        return
+
+    if isinstance(err, NoSunSpecError):
+        errors["base"] = "no_sunspec"
+        _LOGGER.warning("%s: %s", err, err.__cause__)
         return
 
     if isinstance(err, ConnectionError):

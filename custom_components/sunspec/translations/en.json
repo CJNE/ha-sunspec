@@ -20,7 +20,7 @@
         "data_description": {
           "host": "IP address or hostname of the device, or of its Modbus TCP gateway.",
           "port": "Modbus TCP port of the device, usually 502.",
-          "unit_id": "Modbus unit ID of the device, also called slave ID. Most SMA inverters use 126 for SunSpec."
+          "unit_id": "Unit ID, or slave ID, that the device serves SunSpec on, as its Modbus documentation gives it."
         }
       },
       "serial": {
@@ -36,7 +36,7 @@
           "device": "Serial port of the RS485 adapter, such as /dev/ttyUSB0.",
           "baudrate": "Speed set on the device, such as 9600.",
           "parity": "Parity set on the device; data bits are always 8 and stop bits 1.",
-          "unit_id": "Modbus unit ID of the device, also called slave ID. Most SMA inverters use 126 for SunSpec."
+          "unit_id": "Unit ID, or slave ID, that the device serves SunSpec on, as its Modbus documentation gives it."
         }
       },
       "settings": {
@@ -56,7 +56,8 @@
     "error": {
       "connection": "Failed to connect, check the connection settings",
       "device_error": "Connection reached the device, but initialization failed. Check the Home Assistant logs for details.",
-      "timeout": "Connection timed out. Check that the device is online and responding on the configured host, port, and Unit ID."
+      "timeout": "Connection timed out. Check that the device is online and responding on the configured host, port, and Unit ID.",
+      "no_sunspec": "No SunSpec data found at this unit ID. Check which unit ID the device serves SunSpec on."
     },
     "abort": {
       "already_configured": "This device is already set up. Its entry now uses the connection entered here."
@@ -75,7 +76,7 @@
         "data_description": {
           "host": "IP address or hostname of the device, or of its Modbus TCP gateway.",
           "port": "Modbus TCP port of the device, usually 502.",
-          "unit_id": "Modbus unit ID of the device, also called slave ID. Most SMA inverters use 126 for SunSpec."
+          "unit_id": "Unit ID, or slave ID, that the device serves SunSpec on, as its Modbus documentation gives it."
         }
       },
       "serial_options": {
@@ -91,7 +92,7 @@
           "device": "Serial port of the RS485 adapter, such as /dev/ttyUSB0.",
           "baudrate": "Speed set on the device, such as 9600.",
           "parity": "Parity set on the device; data bits are always 8 and stop bits 1.",
-          "unit_id": "Modbus unit ID of the device, also called slave ID. Most SMA inverters use 126 for SunSpec."
+          "unit_id": "Unit ID, or slave ID, that the device serves SunSpec on, as its Modbus documentation gives it."
         }
       },
       "model_options": {
@@ -117,7 +118,8 @@
     "error": {
       "connection": "Failed to connect, check the connection settings",
       "device_error": "Connection reached the device, but initialization failed. Check the Home Assistant logs for details.",
-      "timeout": "Connection timed out. Check that the device is online and responding on the configured host, port, and Unit ID."
+      "timeout": "Connection timed out. Check that the device is online and responding on the configured host, port, and Unit ID.",
+      "no_sunspec": "No SunSpec data found at this unit ID. Check which unit ID the device serves SunSpec on."
     }
   }
 }

@@ -7,6 +7,8 @@ from homeassistant.data_entry_flow import FlowResultType
 import pytest
 from pytest_homeassistant.common import MockConfigEntry
 
+from custom_components.sunspec.api import ConnectionTimeoutError
+from custom_components.sunspec.api import NoSunSpecError
 from custom_components.sunspec.const import CONF_DEVICE
 from custom_components.sunspec.const import CONF_ENABLED_MODELS
 from custom_components.sunspec.const import CONF_MODEL_INTERVALS
@@ -143,22 +145,28 @@ async def test_failed_config_flow(
     assert result["errors"] == {"base": "device_error"}
 
 
-async def test_timeout_config_flow(
-    hass, timeout_on_get_device_info, sunspec_client_mock
-):
-    """Test a failed config flow due to a timeout during validation."""
+@pytest.mark.parametrize(
+    ("error", "base"),
+    [(ConnectionTimeoutError, "timeout"), (NoSunSpecError, "no_sunspec")],
+)
+async def test_config_flow_error(hass, sunspec_client_mock, error, base):
+    """Test that setup names why it cannot read the device."""
 
     result = await start_flow(hass)
 
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "tcp"
 
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], user_input=MOCK_CONFIG_STEP_1
-    )
+    with patch(
+        "custom_components.sunspec.SunSpecApiClient.async_get_device_info",
+        side_effect=error,
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], user_input=MOCK_CONFIG_STEP_1
+        )
 
     assert result["type"] == FlowResultType.FORM
-    assert result["errors"] == {"base": "timeout"}
+    assert result["errors"] == {"base": base}
 
 
 async def test_config_flow_without_serial_number(
