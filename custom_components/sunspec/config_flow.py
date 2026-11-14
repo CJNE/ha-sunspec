@@ -171,7 +171,7 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     async def _show_settings_form(self, user_input):
         """Show the configuration form to edit settings data."""
         models = set(await self.client.async_get_models())
-        model_filter = {model for model in sorted(models)}
+        model_filter = sorted(models)
         default_enabled = {model for model in DEFAULT_MODELS if model in models}
         return self.async_show_form(
             step_id="settings",
@@ -278,7 +278,7 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
             # Modbus TCP slot refuses a second connection while the entry polls.
             config = None if self.settings == connection else self.settings
             models = set(await self.coordinator.api.async_get_models(config))
-            model_filter = {model for model in sorted(models)}
+            model_filter = sorted(models)
             default_enabled = {model for model in DEFAULT_MODELS if model in models}
             default_models = self.config_entry.options.get(
                 CONF_ENABLED_MODELS, default_enabled
