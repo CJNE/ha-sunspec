@@ -50,6 +50,9 @@ yet a proper fix: find the root cause and fix it in the right layer.
 
 - The model definitions bundled with `pysunspec2` are the authority for point
   names, types, units and symbols. Handle what they contain; never copy them.
+  The one exception is `custom_components/sunspec/models/`: SunSpec's 2015
+  definitions of 801-803, which `pysunspec2` dropped and the E3DC S10 still
+  serves. A model at a 2015 length is read with them.
 - Unsupported points hold a "not implemented" value that `pysunspec2` reads as
   None. For accumulators that value is 0.
 - Bitfields (event flags, alarms) can have several bits set at once; they are

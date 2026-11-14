@@ -80,6 +80,10 @@ This project was generated from [@oncleben31](https://github.com/oncleben31)'s [
 
 Code template was mainly taken from [@Ludeeus](https://github.com/ludeeus)'s [integration_blueprint][integration_blueprint] template
 
+## License
+
+MIT, see [LICENSE](LICENSE). The files in `custom_components/sunspec/models/` are SunSpec's 2015 definitions of models 801 to 803, under the Apache License 2.0 in that folder's [LICENSE](custom_components/sunspec/models/LICENSE).
+
 ---
 
 [integration_blueprint]: https://github.com/custom-components/integration_blueprint

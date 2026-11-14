@@ -13,6 +13,7 @@ from sunspec2.modbus.modbus import ModbusClientTimeout
 
 from custom_components.sunspec.api import ConnectionError
 from custom_components.sunspec.api import ConnectionTimeoutError
+from custom_components.sunspec.api import DraftAwareModel
 from custom_components.sunspec.api import NoSunSpecError
 from custom_components.sunspec.api import SunSpecApiClient
 
@@ -146,6 +147,63 @@ async def test_modbus_connect_partial_scan(hass, mocker, error):
     assert api.modbus_connect().models == {1: ["common"]}
 
 
+def model(model_id, length, values):
+    """Return a model of the given length, zero apart from values by offset."""
+    body = [0] * length
+    for offset, value in values.items():
+        body[offset] = value & 0xFFFF
+    return model_id, body
+
+
+@pytest.mark.parametrize(
+    ("battery", "points"),
+    [
+        # An E3DC S10 serves 801 to 803 as defined in 2015 (#62).
+        (
+            [
+                model(801, 22, {9: 55}),
+                model(802, 20, {3: 500}),
+                model(803, 32, {1: 3350, 12: -3}),
+            ],
+            {801: ("SoC", 55), 802: ("CycleCt", 500), 803: ("BMaxCellVol", 3.35)},
+        ),
+        (
+            [model(802, 62, {9: 77}), model(803, 58, {0: 1})],
+            {802: ("SoC", 77), 803: ("NStr", 1)},
+        ),
+    ],
+)
+async def test_battery_model_definitions(hass, mocker, battery, points):
+    """Test that 801 to 803 at their 2015 lengths are read with the 2015 definitions."""
+    registers = [0x5375, 0x6E53]
+    for model_id, body in [model(1, 66, {}), *battery, model(103, 50, {})]:
+        registers += [model_id, len(body), *body]
+    registers = dict(enumerate([*registers, 0xFFFF, 0], start=40000))
+
+    def read(self, addr, count, op=None):
+        # pysunspec2 passes floats, which its Modbus client packs as integers.
+        addr, count = int(addr), int(count)
+        return b"".join(registers.get(addr + i, 0).to_bytes(2) for i in range(count))
+
+    mocker.patch("sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.connect")
+    mocker.patch(
+        "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.is_connected",
+        return_value=True,
+    )
+    mocker.patch("sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.read", read)
+    mocker.patch("sunspec2.modbus.client.time.sleep")
+    mocker.patch("custom_components.sunspec.api.time.sleep")
+    mocker.patch(
+        "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
+    )
+    api = SunSpecApiClient(host="battery", port=123, unit_id=1, hass=hass)
+
+    assert await api.async_get_models() == sorted([1, 103, *points])
+    for model_id, (point, value) in points.items():
+        assert api.read_model(model_id).getValue(point) == value
+    api.disconnect()
+
+
 @pytest.mark.parametrize("closed", [True, False])
 async def test_read_model_reconnects_closed_connection(hass, mocker, closed):
     """Test that a connection the device closed is reopened before reading."""
@@ -250,7 +308,12 @@ async def test_serial_connection(hass, mocker, scan_error):
         api.disconnect()
 
     rtu.assert_called_once_with(
-        slave_id=1, name="/dev/ttyUSB0", baudrate=9600, parity="N", timeout=3
+        slave_id=1,
+        name="/dev/ttyUSB0",
+        baudrate=9600,
+        parity="N",
+        timeout=3,
+        model_class=DraftAwareModel,
     )
     check_port.assert_not_called()
     rtu.return_value.close.assert_called_once()
