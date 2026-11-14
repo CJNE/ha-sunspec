@@ -86,4 +86,5 @@ yet a proper fix: find the root cause and fix it in the right layer.
 - PR: a sentence-case title, and a description that says what now happens and
   why, uses a table where it shows the change better, and ends with one
   sentence on what was verified. No summary or test plan headings, no tool
-  attribution.
+  attribution. The release notes quote the first paragraph of each pull
+  request that changes the integration, so it says what users now see.

@@ -10,10 +10,11 @@ permissions: {}
 
 jobs:
   release:
-    name: Draft the release
+    name: Publish the release
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: read
     steps:
       - uses: actions/checkout@v7
         with:
@@ -29,17 +30,28 @@ jobs:
             exit 1
           fi
 
-      # A draft: users see the release only once the notes are written and it
-      # is published. GitHub's list of the pull requests follows the template.
-      # A version with a suffix, such as 1.2.3-beta.1, is a pre-release, which
-      # Home Assistant offers only to those who ask for it.
-      - name: Draft the release from the template
+      # Each pull request since the last release that changed the integration
+      # gives the first paragraph of its description, which says what now
+      # happens; GitHub's list of the pull requests follows. A version with a
+      # suffix, such as 1.2.3-beta.1, is a pre-release, which Home Assistant
+      # offers only to those who ask for it.
+      - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
         run: |
-          sed "s/{homeassistant}/$(jq -r .homeassistant hacs.json)/" .github/RELEASE_TEMPLATE.md > "$RUNNER_TEMP/notes.md"
-          args=(--verify-tag --draft --title "Version $TAG" --notes-file "$RUNNER_TEMP/notes.md" --generate-notes)
+          changes="$RUNNER_TEMP/changes.md"
+          : > "$changes"
+          for pr in $(gh api --method POST "repos/$GITHUB_REPOSITORY/releases/generate-notes" -f tag_name="$TAG" --jq .body | grep -oE '/pull/[0-9]+' | cut -d/ -f3 | sort -un); do
+            gh pr view "$pr" --repo "$GITHUB_REPOSITORY" --json number,author,title,body,files --jq '
+              select((.author.is_bot | not) and (.title | startswith("Version ") | not)
+                and any(.files[].path; startswith("custom_components/")))
+              | "- " + (.body | gsub("\r"; "") | split("\n\n")[0] | gsub("\n"; " ")) + " (#\(.number))"' >> "$changes"
+          done
+          [ -s "$changes" ] || echo "- None in the integration itself." > "$changes"
+          sed "s/{homeassistant}/$(jq -r .homeassistant hacs.json)/" .github/RELEASE_TEMPLATE.md |
+            awk -v changes="$changes" '$0 == "{changes}" { while ((getline line < changes) > 0) print line; next } { print }' > "$RUNNER_TEMP/notes.md"
+          args=(--verify-tag --title "Version $TAG" --notes-file "$RUNNER_TEMP/notes.md" --generate-notes)
           if [[ "$TAG" == *-* ]]; then
             args+=(--prerelease)
           fi
