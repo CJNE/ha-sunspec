@@ -100,7 +100,7 @@ async def setup_mock_sunspec_config_entry(
         return_value=client,
     ):
         await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await hass.async_block_till_done(wait_background_tasks=True)
     return config_entry
 
 
