@@ -186,21 +186,6 @@ def error_get_device_info_fixture():
         yield
 
 
-@pytest.fixture(name="timeout_on_get_device_info")
-def timeout_get_device_info_fixture():
-    """Simulate timeout when retrieving data from API."""
-    with (
-        patch(
-            "custom_components.sunspec.SunSpecApiClient.async_get_device_info",
-            side_effect=ConnectionTimeoutError,
-        ),
-        patch(
-            "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
-        ),
-    ):
-        yield
-
-
 @pytest.fixture(name="device_info_without_serial")
 def device_info_without_serial_fixture():
     """Return device info without an SN point."""

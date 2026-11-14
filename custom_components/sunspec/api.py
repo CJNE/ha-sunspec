@@ -10,10 +10,10 @@ from types import SimpleNamespace
 from homeassistant.core import HomeAssistant
 from sunspec2.device import ModelError
 import sunspec2.modbus.client as modbus_client
-from sunspec2.modbus.client import SunSpecModbusClientException
-from sunspec2.modbus.client import SunSpecModbusClientTimeout
+from sunspec2.modbus.client import SunSpecModbusClientError
 from sunspec2.modbus.modbus import ModbusClientError
 from sunspec2.modbus.modbus import ModbusClientException
+from sunspec2.modbus.modbus import ModbusClientTimeout
 
 from .const import GROUP_NAMES
 
@@ -26,16 +26,20 @@ SERIAL_TIMEOUT = 3
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
 
-class ConnectionTimeoutError(Exception):
+class ConnectionError(Exception):
     pass
 
 
-class ConnectionError(Exception):
+class ConnectionTimeoutError(ConnectionError):
     pass
 
 
 class ModelRefusedError(Exception):
     """The device answered a model read with a Modbus exception."""
+
+
+class NoSunSpecError(Exception):
+    """The device has no SunSpec map at this unit ID."""
 
 
 class SunSpecModelWrapper:
@@ -199,14 +203,12 @@ class SunSpecApiClient:
         try:
             _LOGGER.debug("Get data for model %s", model_id)
             return await self.read(model_id)
-        except SunSpecModbusClientTimeout as timeout_error:
-            _LOGGER.warning("Async get data timeout")
-            raise ConnectionTimeoutError() from timeout_error
-        except SunSpecModbusClientException as connect_error:
-            _LOGGER.warning("Async get data connect_error")
-            raise ConnectionError() from connect_error
+        except ModbusClientTimeout as err:
+            raise ConnectionTimeoutError(err) from err
         except ModbusClientException as err:
             raise ModelRefusedError(err) from err
+        except ModbusClientError as err:
+            raise ConnectionError(err) from err
 
     async def read(self, model_id) -> SunSpecModelWrapper:
         return await self._hass.async_add_executor_job(self.read_model, model_id)
@@ -342,19 +344,28 @@ class SunSpecApiClient:
                         "Scan stopped early, using the models found: %s", err
                     )
                 return client
-            except ModbusClientError:
+            except ModbusClientError as err:
                 if shared is None:
                     client.disconnect()
                     client.close()
+                if isinstance(err, ModbusClientTimeout):
+                    raise ConnectionTimeoutError(
+                        f"Timed out reading {target} unit id {use_config.unit_id}"
+                    ) from err
                 raise ConnectionError(
                     f"Failed to connect to {target} unit id {use_config.unit_id}"
-                )
-            except Exception:
+                ) from err
+            except Exception as err:
                 # Garbage collection would close it much later, and a device
                 # accepts only a few connections.
                 if shared is None:
                     client.disconnect()
                     client.close()
+                # The scan found no SunSpec map at any base address.
+                if isinstance(err, SunSpecModbusClientError):
+                    raise NoSunSpecError(
+                        f"No SunSpec data at {target} unit id {use_config.unit_id}"
+                    ) from err
                 raise
         else:
             _LOGGER.debug("Inverter not ready for Modbus TCP connection")

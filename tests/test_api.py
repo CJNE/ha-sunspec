@@ -6,14 +6,14 @@ import struct
 
 import pytest
 from sunspec2.device import ModelError
-from sunspec2.modbus.client import SunSpecModbusClientException
-from sunspec2.modbus.client import SunSpecModbusClientTimeout
+from sunspec2.modbus.client import SunSpecModbusClientError
 from sunspec2.modbus.modbus import ModbusClientError
 from sunspec2.modbus.modbus import ModbusClientException
 from sunspec2.modbus.modbus import ModbusClientTimeout
 
 from custom_components.sunspec.api import ConnectionError
 from custom_components.sunspec.api import ConnectionTimeoutError
+from custom_components.sunspec.api import NoSunSpecError
 from custom_components.sunspec.api import SunSpecApiClient
 
 
@@ -272,7 +272,12 @@ async def test_serial_poll_reopens_port(hass, mocker):
 @pytest.mark.parametrize(
     ("error", "raised"),
     [
-        (ModbusClientTimeout("Response timeout"), ConnectionError),
+        (ModbusClientTimeout("Response timeout"), ConnectionTimeoutError),
+        (ModbusClientError("Socket write error"), ConnectionError),
+        (
+            SunSpecModbusClientError("Error scanning SunSpec base addresses."),
+            NoSunSpecError,
+        ),
         (struct.error("'H' format requires 0 <= number <= 65535"), struct.error),
     ],
 )
@@ -341,7 +346,7 @@ async def test_read_model_delay(hass, mocker, manufacturer, delay):
 async def test_read_model_timeout(hass, mocker):
     mocker.patch(
         "custom_components.sunspec.api.SunSpecApiClient.read_model",
-        side_effect=SunSpecModbusClientTimeout,
+        side_effect=ModbusClientTimeout("timed out"),
     )
     api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
 
@@ -352,7 +357,7 @@ async def test_read_model_timeout(hass, mocker):
 async def test_read_model_error(hass, mocker):
     mocker.patch(
         "custom_components.sunspec.api.SunSpecApiClient.read_model",
-        side_effect=SunSpecModbusClientException,
+        side_effect=ModbusClientError("Socket write error"),
     )
     api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
 
