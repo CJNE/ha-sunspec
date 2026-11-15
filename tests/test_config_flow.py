@@ -239,6 +239,11 @@ async def test_options_flow(
         304,
         *range(701, 713),
     ]
+    # The models chosen at setup are ticked, not the default ones.
+    models = next(
+        key for key in result["data_schema"].schema if key == CONF_ENABLED_MODELS
+    )
+    assert models.default() == set(data[CONF_ENABLED_MODELS])
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
