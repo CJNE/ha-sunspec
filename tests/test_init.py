@@ -6,12 +6,14 @@ import threading
 
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import STATE_UNAVAILABLE
+from homeassistant.helpers import device_registry as dr
 import pytest
 from pytest_homeassistant.common import MockConfigEntry
 from sunspec2.modbus.modbus import ModbusClientException
 from sunspec2.modbus.modbus import ModbusClientTimeout
 
 from custom_components.sunspec import SunSpecDataUpdateCoordinator
+from custom_components.sunspec import async_remove_config_entry_device
 from custom_components.sunspec.api import SunSpecApiClient
 from custom_components.sunspec.const import CONF_ENABLED_MODELS
 from custom_components.sunspec.const import CONF_MODEL_INTERVALS
@@ -55,6 +57,28 @@ async def test_setup_unload_and_reload_entry(hass, sunspec_client_mock):
     # Unload the entry and verify that the data has been removed.
     assert await hass.config_entries.async_unload(config_entry.entry_id)
     assert config_entry.entry_id not in hass.data[DOMAIN]
+
+
+@pytest.mark.parametrize(
+    ("group", "loaded", "removable"),
+    [("inverter", True, False), ("ac_meter", True, True), ("ac_meter", False, False)],
+)
+async def test_remove_device(hass, sunspec_client_mock, group, loaded, removable):
+    """A device can be removed once the loaded entry no longer reads its model."""
+    config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG, entry_id="test")
+    config_entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    device = dr.async_get(hass).async_get_or_create(
+        config_entry_id=config_entry.entry_id,
+        identifiers={(DOMAIN, config_entry.entry_id, group)},
+    )
+    if not loaded:
+        assert await hass.config_entries.async_unload(config_entry.entry_id)
+
+    assert (
+        await async_remove_config_entry_device(hass, config_entry, device) is removable
+    )
 
 
 async def test_options_change_reloads_entry(hass, sunspec_client_mock):
