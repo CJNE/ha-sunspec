@@ -10,6 +10,7 @@ from datetime import timedelta
 import logging
 from time import monotonic
 
+from homeassistant.components.modbus import async_get_unit
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
@@ -17,12 +18,10 @@ from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from .api import ModelRefusedError
 from .api import SunSpecApiClient
-from .const import CONF_BAUDRATE
-from .const import CONF_DEVICE
+from .api import modbus_link
 from .const import CONF_ENABLED_MODELS
 from .const import CONF_HOST
 from .const import CONF_MODEL_INTERVALS
-from .const import CONF_PARITY
 from .const import CONF_PORT
 from .const import CONF_SCAN_INTERVAL
 from .const import CONF_UNIT_ID
@@ -33,19 +32,6 @@ from .const import PLATFORMS
 SCAN_INTERVAL = timedelta(seconds=30)
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
-
-
-def api_client(hass: HomeAssistant, data) -> SunSpecApiClient:
-    """Return the API client for an entry's connection settings."""
-    return SunSpecApiClient(
-        data.get(CONF_HOST),
-        data.get(CONF_PORT),
-        data.get(CONF_UNIT_ID, 1),
-        hass,
-        data.get(CONF_DEVICE),
-        data.get(CONF_BAUDRATE),
-        data.get(CONF_PARITY),
-    )
 
 
 async def async_migrate_entry(hass, config_entry: ConfigEntry):
@@ -84,7 +70,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Set up this integration using UI."""
     hass.data.setdefault(DOMAIN, {})
 
-    client = api_client(hass, entry.data)
+    unit = async_get_unit(hass, entry, *modbus_link(entry.data))
+    client = SunSpecApiClient(hass, entry.data, unit)
 
     _LOGGER.debug("Setup conifg entry for SunSpec")
     coordinator = SunSpecDataUpdateCoordinator(hass, client=client, entry=entry)
@@ -115,12 +102,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data[DOMAIN].pop(entry.entry_id)
 
     return True  # unloaded
-
-
-async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Close a removed entry's connection, which a device may allow only one of."""
-    client = api_client(hass, entry.data)
-    await hass.async_add_executor_job(client.disconnect)
 
 
 def get_sunspec_unique_id(
@@ -221,5 +202,4 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
             return data
         except Exception as exception:
             _LOGGER.warning(exception)
-            self.api.reconnect_next()
             raise UpdateFailed() from exception
