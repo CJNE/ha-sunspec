@@ -57,4 +57,5 @@ GROUP_NAMES = {
     **dict.fromkeys((201, 202, 203, 204, 211, 212, 213, 214, 220), "ac_meter"),
     **dict.fromkeys((401, 402, 403, 404), "string_combiner"),
     501: "solar_module",
+    803: "lithium_ion_bank",
 }
