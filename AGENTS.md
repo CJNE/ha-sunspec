@@ -1,7 +1,8 @@
 # SunSpec for Home Assistant - agent instructions
 
-Custom integration (domain `sunspec`) that reads SunSpec devices over Modbus TCP
-through `pysunspec2`. Upstream: CJNE/ha-sunspec. Read this before writing code.
+Custom integration (domain `sunspec`) that reads SunSpec devices through
+`pysunspec2`, over Modbus TCP or a serial port (Modbus RTU). Upstream:
+CJNE/ha-sunspec. Read this before writing code.
 
 **Core principle:** a small codebase that stays small. Minimal, KISS and DRY,
 yet a proper fix: find the root cause and fix it in the right layer.
@@ -41,7 +42,8 @@ yet a proper fix: find the root cause and fix it in the right layer.
 - One implementation of each thing; delete code that can no longer run.
 - Use Home Assistant's mechanisms the way current core does. Never copy a
   deprecated pattern or change process-wide state.
-- The integration only reads. Writing to a device needs a maintainer decision.
+- Writing is decided for every SunSpec device the integration supports (#116);
+  nothing writes yet.
 - Comments explain a decision the code cannot show, as the code is now.
   History belongs in commits. No debug logging or leftover prints.
 - Docs and PR bodies state only what the code does and what was verified.
