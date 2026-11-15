@@ -24,12 +24,9 @@ from homeassistant.const import UnitOfReactivePower
 from homeassistant.const import UnitOfSpeed
 from homeassistant.const import UnitOfTemperature
 from homeassistant.const import UnitOfTime
-from homeassistant.core import callback
 
-from . import get_sunspec_unique_id
-from .const import CONF_PREFIX
-from .const import DOMAIN
 from .entity import SunSpecEntity
+from .entity import async_add_point_entities
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
@@ -94,62 +91,28 @@ def float32_decimal(value):
 
 async def async_setup_entry(hass, entry, async_add_devices):
     """Setup sensor platform."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
-    prefix = entry.options.get(CONF_PREFIX, entry.data.get(CONF_PREFIX, ""))
-    added = set()
+    async_add_point_entities(
+        hass, entry, async_add_devices, lambda model_id, model: model.getKeys(), sensors
+    )
 
-    # A point gets its sensor with its first value, which can come after setup:
-    # a device reports "not implemented" for a point it cannot measure yet, such
-    # as at night, the same as for a point it does not have.
-    @callback
-    def add_sensors():
-        if not coordinator.data:
-            return
-        sensors = []
-        for model_id, model_wrapper in coordinator.data.items():
-            for key in model_wrapper.getKeys():
-                if (model_id, key) in added:
-                    continue
-                added.add((model_id, key))
-                for model_index in range(model_wrapper.num_models):
-                    data = {
-                        "device_info": coordinator.device_info,
-                        "key": key,
-                        "model_id": model_id,
-                        "model_index": model_index,
-                        "model": model_wrapper,
-                        "prefix": prefix,
-                    }
 
-                    meta = model_wrapper.getMeta(key)
-                    sunspec_unit = meta.get("units", "")
-                    ha_meta = HA_META.get(sunspec_unit, [sunspec_unit, None, None])
-                    device_class = ha_meta[2]
-                    if device_class == SensorDeviceClass.ENERGY:
-                        _LOGGER.debug("Adding energy sensor")
-                        sensors.append(SunSpecEnergySensor(coordinator, entry, data))
-                    else:
-                        sensors.append(SunSpecSensor(coordinator, entry, data))
-        if sensors:
-            async_add_devices(sensors)
-
-    add_sensors()
-    entry.async_on_unload(coordinator.async_add_listener(add_sensors))
+def sensors(coordinator, entry, data):
+    """Return the sensor of a point."""
+    meta = data["model"].getMeta(data["key"])
+    sunspec_unit = meta.get("units", "")
+    ha_meta = HA_META.get(sunspec_unit, [sunspec_unit, None, None])
+    device_class = ha_meta[2]
+    if device_class == SensorDeviceClass.ENERGY:
+        _LOGGER.debug("Adding energy sensor")
+        return [SunSpecEnergySensor(coordinator, entry, data)]
+    return [SunSpecSensor(coordinator, entry, data)]
 
 
 class SunSpecSensor(SunSpecEntity, SensorEntity):
     """sunspec Sensor class."""
 
     def __init__(self, coordinator, config_entry, data):
-        super().__init__(
-            coordinator, config_entry, data["device_info"], data["model"].getGroupMeta()
-        )
-        self.model_id = data["model_id"]
-        self.model_index = data["model_index"]
-        self.model_wrapper = data["model"]
-        self.key = data["key"]
-        self._meta = self.model_wrapper.getMeta(self.key)
-        self._group_meta = self.model_wrapper.getGroupMeta()
+        super().__init__(coordinator, config_entry, data)
         self._point_meta = self.model_wrapper.getPoint(self.key).pdef
         sunspec_unit = self._meta.get("units", self._meta.get("type", ""))
         ha_meta = HA_META.get(sunspec_unit, [sunspec_unit, ICON_DEFAULT, None])
@@ -162,10 +125,6 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
         self.lastKnown = None
         self._assumed_state = False
 
-        self._uniqe_id = get_sunspec_unique_id(
-            config_entry.entry_id, self.key, self.model_id, self.model_index
-        )
-
         vtype = self._meta["type"]
         if vtype == "enum16":
             self._options = self._point_meta.get("symbols", None)
@@ -176,21 +135,11 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
                 self._options = [item["name"] for item in self._options]
 
         self._device_id = config_entry.entry_id
-        name = self._group_meta.get("name", str(self.model_id))
-        if self.model_index > 0:
-            name = f"{name} {self.model_index}"
-        key_parts = self.key.split(":")
-        if len(key_parts) > 1:
-            name = f"{name} {key_parts[0]} {key_parts[1]}"
 
         desc = self._meta.get("label", self.key)
         if self.unit == UnitOfElectricCurrent.AMPERE and "DC" in desc:
             self.use_icon = ICON_DC_AMPS
 
-        if data["prefix"] != "":
-            name = f"{data['prefix']} {name}"
-
-        self._name = f"{name.capitalize()} {desc}"
         _LOGGER.debug(
             "Created sensor for %s in model %s using prefix %s: %s uid %s, device class %s unit %s",
             self.key,
@@ -209,16 +158,6 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
         if self.device_class != SensorDeviceClass.ENUM:
             return None
         return self._options
-
-    @property
-    def name(self):
-        """Return the name of the sensor."""
-        return self._name
-
-    @property
-    def unique_id(self):
-        """Return a unique ID to use for this entity."""
-        return self._uniqe_id
 
     @property
     def assumed_state(self):
@@ -284,24 +223,6 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
         if self.device_class == SensorDeviceClass.ENERGY:
             return SensorStateClass.TOTAL_INCREASING
         return SensorStateClass.MEASUREMENT
-
-    @property
-    def extra_state_attributes(self):
-        """Return the state attributes."""
-        attrs = {
-            "integration": DOMAIN,
-            "sunspec_key": self.key,
-        }
-        label = self._meta.get("label", None)
-        if label is not None:
-            attrs["label"] = label
-
-        vtype = self._meta["type"]
-        if vtype in ("enum16", "bitfield32"):
-            attrs["raw"] = self.coordinator.data[self.model_id].getValue(
-                self.key, self.model_index
-            )
-        return attrs
 
 
 class SunSpecEnergySensor(SunSpecSensor, RestoreSensor):

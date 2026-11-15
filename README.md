@@ -23,14 +23,17 @@ This custom integration for [Home Assistant](https://home-assistant.io/) monitor
 
 It wraps [pysunspec2](https://github.com/sunspec/pysunspec2), the SunSpec Alliance's Python library:
 
-- pysunspec2 talks Modbus TCP, or Modbus RTU over a serial port, to the device, finds the SunSpec models the device has, and decodes their registers with the SunSpec model definitions it ships with: point names, units, scale factors, and the names of states and flags.
+- pysunspec2 finds the SunSpec models the device has, and decodes their registers with the SunSpec model definitions it ships with: point names, units, scale factors, and the names of states and flags. It reads and writes them through Home Assistant's Modbus connection, over TCP or a serial port, which other integrations reading the same device share.
 - The integration adds the Home Assistant side: setup and options in the UI, reading each selected model at its interval, a device per model, and a sensor for each measurement, state and flag the device reports, with Home Assistant units, device classes and state classes. Its energy sensors work with the energy dashboard out of the box.
 
-Setup finds the device's models and selects the most common ones; Configure chooses exactly which models to read, and how often.
+Setup finds the device's models and selects the most common ones; Configure chooses exactly which models to read, and how often, and whether Home Assistant may write to the device.
 
-| Platform | Description                                 |
-| -------- | ------------------------------------------- |
-| `sensor` | A sensor for each value the device reports. |
+| Platform | Description                                                                         |
+| -------- | ----------------------------------------------------------------------------------- |
+| `sensor` | A sensor for each value the device reports.                                         |
+| `number` | With Allow writing, a number for each writable value that takes a number.           |
+| `select` | With Allow writing, a select for each writable state that is not on or off.         |
+| `switch` | With Allow writing, a switch for each writable on/off state and each bit of a flag. |
 
 It reads any device that implements the SunSpec models, whatever the brand, with the definitions that come with pysunspec2. New and corrected models come with new pysunspec2 versions; each release of this integration uses the pysunspec2 version pinned in its `manifest.json`.
 
@@ -62,13 +65,37 @@ custom_components/sunspec/config_flow.py
 custom_components/sunspec/const.py
 custom_components/sunspec/entity.py
 custom_components/sunspec/manifest.json
+custom_components/sunspec/number.py
 custom_components/sunspec/recorder.py
+custom_components/sunspec/select.py
 custom_components/sunspec/sensor.py
+custom_components/sunspec/services.py
+custom_components/sunspec/services.yaml
+custom_components/sunspec/switch.py
 ```
 
 ## Configuration is done in the UI
 
 <!---->
+
+## Writing to the device
+
+Writing is off by default. Turn on **Allow writing** in an entry's Configure to get entities for the writable points of models 123 (immediate controls), 124 (storage) and 704 (DER AC controls) that the device reports, among the models the entry reads. Modbus has no authentication, and wrong values can break grid rules; the device must allow control in its own settings.
+
+Each entity writes its own point, then shows what the device reports. Nothing writes on its own: a revert time, such as `WMaxLimPct_RvrtTms`, is a point like the others, and a setpoint written with revert time 0 stays until it is changed.
+
+SunSpec wants an enable, such as `WMaxLim_Ena`, written ENABLED again after its setpoint changes. The `sunspec.write` action writes several points of one model at once:
+
+```yaml
+action: sunspec.write
+data:
+  device_id: <the model's device, such as Immediate Controls>
+  points:
+    WMaxLimPct: 50
+    WMaxLim_Ena: ENABLED
+```
+
+Values are numbers in the units the entities show, and enum points by name. A point's name is the `sunspec_key` attribute of its entities.
 
 ## Contributions are welcome!
 
@@ -79,6 +106,10 @@ If you want to contribute to this please read the [Contribution guidelines](CONT
 This project was generated from [@oncleben31](https://github.com/oncleben31)'s [Home Assistant Custom Component Cookiecutter](https://github.com/oncleben31/cookiecutter-homeassistant-custom-component) template.
 
 Code template was mainly taken from [@Ludeeus](https://github.com/ludeeus)'s [integration_blueprint][integration_blueprint] template
+
+## License
+
+MIT, see [LICENSE](LICENSE). The files in `custom_components/sunspec/models/` are SunSpec's 2015 definitions of models 801 to 803, under the Apache License 2.0 in that folder's [LICENSE](custom_components/sunspec/models/LICENSE).
 
 ---
 

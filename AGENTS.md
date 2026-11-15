@@ -15,6 +15,8 @@ yet a proper fix: find the root cause and fix it in the right layer.
 - `config_flow.py` - config and options flow.
 - `entity.py` - `SunSpecEntity`, the base for every entity.
 - `sensor.py` - `SunSpecSensor`, `SunSpecEnergySensor`.
+- `number.py`, `select.py`, `switch.py` - the entities that write a point.
+- `services.py` - the `sunspec.write` action.
 - `tests/` - pytest with a mocked device (`tests/test_data/*.json`).
 - `scripts/simulator.py` - serves a fixture over Modbus TCP on 127.0.0.1:5020.
 
@@ -42,8 +44,10 @@ yet a proper fix: find the root cause and fix it in the right layer.
 - One implementation of each thing; delete code that can no longer run.
 - Use Home Assistant's mechanisms the way current core does. Never copy a
   deprecated pattern or change process-wide state.
-- Writing is decided for every SunSpec device the integration supports (#116);
-  nothing writes yet.
+- Writing is decided for every SunSpec device the integration supports (#116).
+  It covers the writable points of models 123, 124 and 704, only with Allow
+  writing on, never model 1's `DA` or a scale factor, and it writes only what a
+  user or automation sets, once per change.
 - Comments explain a decision the code cannot show, as the code is now.
   History belongs in commits. No debug logging or leftover prints.
 - Docs and PR bodies state only what the code does and what was verified.
