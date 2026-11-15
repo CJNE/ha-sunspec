@@ -287,7 +287,8 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
             model_filter = sorted(models)
             default_enabled = {model for model in DEFAULT_MODELS if model in models}
             default_models = self.config_entry.options.get(
-                CONF_ENABLED_MODELS, default_enabled
+                CONF_ENABLED_MODELS,
+                self.config_entry.data.get(CONF_ENABLED_MODELS, default_enabled),
             )
 
             default_models = {model for model in default_models if model in models}
