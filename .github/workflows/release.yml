@@ -1,7 +1,13 @@
 name: Release
 
+# Merging a new version into main publishes it; pushing a version tag
+# publishes the commit it names, such as a pre-release on another branch.
 on:
   push:
+    branches:
+      - main
+    paths:
+      - custom_components/sunspec/manifest.json
     tags:
       - "[0-9]+.[0-9]+.[0-9]+"
       - "[0-9]+.[0-9]+.[0-9]+-*"
@@ -20,14 +26,20 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Check that the tag is the version
+      # A version that is already released is left alone, as when a merge
+      # changes only the requirements in manifest.json.
+      - name: Read the version
+        id: version
         env:
-          TAG: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           version=$(jq -r .version custom_components/sunspec/manifest.json)
-          if [ "$version" != "$TAG" ]; then
-            echo "::error::Tag $TAG, but manifest.json has version $version"
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME, but manifest.json has version $version"
             exit 1
+          fi
+          if ! gh release view "$version" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "tag=$version" >> "$GITHUB_OUTPUT"
           fi
 
       # Each pull request since the last release that changed the integration
@@ -36,13 +48,14 @@ jobs:
       # suffix, such as 1.2.3-beta.1, is a pre-release, which Home Assistant
       # offers only to those who ask for it.
       - name: Publish the release
+        if: steps.version.outputs.tag
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
           changes="$RUNNER_TEMP/changes.md"
           : > "$changes"
-          for pr in $(gh api --method POST "repos/$GITHUB_REPOSITORY/releases/generate-notes" -f tag_name="$TAG" --jq .body | grep -oE '/pull/[0-9]+' | cut -d/ -f3 | sort -un); do
+          for pr in $(gh api --method POST "repos/$GITHUB_REPOSITORY/releases/generate-notes" -f tag_name="$TAG" -f target_commitish="$GITHUB_SHA" --jq .body | grep -oE '/pull/[0-9]+' | cut -d/ -f3 | sort -un); do
             gh pr view "$pr" --repo "$GITHUB_REPOSITORY" --json number,author,title,body,files --jq '
               select((.author.is_bot | not) and (.title | startswith("Version ") | not)
                 and any(.files[].path; startswith("custom_components/")))
@@ -51,7 +64,7 @@ jobs:
           [ -s "$changes" ] || echo "- None in the integration itself." > "$changes"
           sed "s/{homeassistant}/$(jq -r .homeassistant hacs.json)/" .github/RELEASE_TEMPLATE.md |
             awk -v changes="$changes" '$0 == "{changes}" { while ((getline line < changes) > 0) print line; next } { print }' > "$RUNNER_TEMP/notes.md"
-          args=(--verify-tag --title "Version $TAG" --notes-file "$RUNNER_TEMP/notes.md" --generate-notes)
+          args=(--target "$GITHUB_SHA" --title "Version $TAG" --notes-file "$RUNNER_TEMP/notes.md" --generate-notes)
           if [[ "$TAG" == *-* ]]; then
             args+=(--prerelease)
           fi
