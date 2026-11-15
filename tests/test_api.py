@@ -3,6 +3,7 @@
 import errno
 import socket
 import struct
+import threading
 
 import pytest
 from sunspec2.device import ModelError
@@ -168,7 +169,7 @@ async def test_read_model_reconnects_closed_connection(hass, mocker, closed):
 
 
 async def test_entries_share_connection(hass, mocker):
-    """Test that entries on one host and port share its connection."""
+    """Test that entries on one host and port share its connection, each its unit."""
     sock, device_end = socket.socketpair()
     sent = []
 
@@ -177,8 +178,9 @@ async def test_entries_share_connection(hass, mocker):
 
     def scan(self, **kwargs):
         sent.append(self.client.slave_id)
-        model = mocker.Mock()
+        model = mocker.MagicMock()
         model.read.side_effect = lambda: sent.append(self.client.slave_id)
+        model.write.side_effect = lambda: sent.append(self.client.slave_id)
         self.models[103] = [model]
 
     connect = mocker.patch(
@@ -197,9 +199,10 @@ async def test_entries_share_connection(hass, mocker):
     inverter.read_model(103)
     meter.read_model(103)
     inverter.read_model(103)
+    meter.write_model(103, 0, {"W": 5})
 
     assert connect.call_count == 1
-    assert sent == [1, 1, 2, 2, 1]
+    assert sent == [1, 1, 2, 2, 1, 2, 2, 2]
     inverter.disconnect()
     assert sock.fileno() != -1
     meter.disconnect()
@@ -341,6 +344,36 @@ async def test_read_model_delay(hass, mocker, manufacturer, delay):
     api.read_model(103)
 
     sleep.assert_called_once_with(delay)
+
+
+async def test_poll_waits_for_write(hass, mocker):
+    """Test that a poll does not read a model while a write to it is under way."""
+    mocker.patch("custom_components.sunspec.api.time.sleep")
+    order = []
+    writing, done = threading.Event(), threading.Event()
+    model = mocker.MagicMock()
+    model.read.side_effect = lambda: order.append("read")
+    model.write.side_effect = lambda: (
+        writing.set(),
+        done.wait(5),
+        order.append("write"),
+    )
+    client = mocker.Mock(models={1: [], 704: [model]})
+    client.client.socket = None
+    SunSpecApiClient.CLIENT_CACHE["test:123:1"] = client
+    api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
+    write = threading.Thread(target=api.write_model, args=(704, 0, {"WMaxLimPct": 5}))
+    poll = threading.Thread(target=api.read_model, args=(704,))
+
+    write.start()
+    writing.wait(5)
+    poll.start()
+    poll.join(0.2)
+    done.set()
+    write.join(5)
+    poll.join(5)
+
+    assert order == ["read", "write", "read", "read"]
 
 
 async def test_read_model_timeout(hass, mocker):

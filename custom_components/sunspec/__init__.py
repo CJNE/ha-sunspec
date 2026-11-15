@@ -12,11 +12,17 @@ from time import monotonic
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
+from .api import ConnectionError
 from .api import ModelRefusedError
 from .api import SunSpecApiClient
+from .const import CONF_ALLOW_WRITING
 from .const import CONF_BAUDRATE
 from .const import CONF_DEVICE
 from .const import CONF_ENABLED_MODELS
@@ -28,11 +34,22 @@ from .const import CONF_SCAN_INTERVAL
 from .const import CONF_UNIT_ID
 from .const import DEFAULT_MODELS
 from .const import DOMAIN
+from .const import NUMBER
 from .const import PLATFORMS
+from .const import SELECT
+from .const import SWITCH
+from .services import async_setup_services
 
 SCAN_INTERVAL = timedelta(seconds=30)
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
+
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Register the write action, also while no entry is loaded."""
+    async_setup_services(hass)
+    return True
 
 
 def api_client(hass: HomeAssistant, data) -> SunSpecApiClient:
@@ -89,6 +106,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     _LOGGER.debug("Setup conifg entry for SunSpec")
     coordinator = SunSpecDataUpdateCoordinator(hass, client=client, entry=entry)
     hass.data[DOMAIN][entry.entry_id] = coordinator
+
+    if not entry.options.get(CONF_ALLOW_WRITING):
+        # Writing turned off takes the write entities with it.
+        registry = er.async_get(hass)
+        for entity in er.async_entries_for_config_entry(registry, entry.entry_id):
+            if entity.domain in (NUMBER, SELECT, SWITCH):
+                registry.async_remove(entity.entity_id)
 
     # The first refresh scans the device, which can take long or time out, so
     # it runs in the background instead of holding up Home Assistant's start.
@@ -223,3 +247,24 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
             _LOGGER.warning(exception)
             self.api.reconnect_next()
             raise UpdateFailed() from exception
+
+    async def async_write(self, model_id, model_index, values):
+        """Write points of a model, then show what the device reports."""
+        try:
+            await self.api.async_write(model_id, model_index, values)
+        except ModelRefusedError as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="write_refused",
+                translation_placeholders={"error": str(err)},
+            ) from err
+        except ConnectionError as err:
+            # A late answer to the write must not be taken for the next one.
+            self.api.reconnect_next()
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="write_failed",
+                translation_placeholders={"error": str(err)},
+            ) from err
+        finally:
+            self.async_update_listeners()

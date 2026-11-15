@@ -13,6 +13,7 @@ from . import api_client
 from .api import ConnectionError
 from .api import ConnectionTimeoutError
 from .api import NoSunSpecError
+from .const import CONF_ALLOW_WRITING
 from .const import CONF_BAUDRATE
 from .const import CONF_DEVICE
 from .const import CONF_ENABLED_MODELS
@@ -303,6 +304,12 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
                             CONF_ENABLED_MODELS,
                             default=default_models,
                         ): cv.multi_select(model_filter),
+                        vol.Optional(
+                            CONF_ALLOW_WRITING,
+                            default=self.config_entry.options.get(
+                                CONF_ALLOW_WRITING, False
+                            ),
+                        ): bool,
                         vol.Optional(CONF_MODEL_INTERVALS, default={}): section(
                             vol.Schema(
                                 {

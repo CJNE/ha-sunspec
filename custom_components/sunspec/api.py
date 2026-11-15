@@ -35,7 +35,7 @@ class ConnectionTimeoutError(ConnectionError):
 
 
 class ModelRefusedError(Exception):
-    """The device answered a model read with a Modbus exception."""
+    """The device refused a model read or write."""
 
 
 class NoSunSpecError(Exception):
@@ -58,8 +58,13 @@ class SunSpecModelWrapper:
             return False
         return True
 
-    def getKeys(self):
-        keys = list(filter(self.isValidPoint, self._models[0].points.keys()))
+    def isWritablePoint(self, point_name):
+        point = self.getPoint(point_name)
+        return point.value is not None and point.pdef.get("access") == "RW"
+
+    def getKeys(self, valid=None):
+        valid = valid or self.isValidPoint
+        keys = list(filter(valid, self._models[0].points.keys()))
         for group_name in self._models[0].groups:
             model_group = self._models[0].groups[group_name]
             if type(model_group) is list:
@@ -68,14 +73,32 @@ class SunSpecModelWrapper:
                     group_keys = map(
                         lambda gp: f"{key_prefix}:{gp}", group.points.keys()
                     )
-                    keys.extend(filter(self.isValidPoint, group_keys))
+                    keys.extend(filter(valid, group_keys))
             else:
                 key_prefix = f"{group_name}:0"
                 group_keys = map(
                     lambda gp: f"{key_prefix}:{gp}", model_group.points.keys()
                 )
-                keys.extend(filter(self.isValidPoint, group_keys))
+                keys.extend(filter(valid, group_keys))
         return keys
+
+    def getRange(self, point_name, model_index=0):
+        """Return the lowest and highest value to write to a point, and its step."""
+        point = self.getPoint(point_name, model_index)
+        # Reading the value looks up the scale factor the device reports now.
+        point.cvalue
+        step = 10 ** (point.sf_value or 0)
+        units = (point.pdef.get("units") or "").strip()
+        signed = point.pdef["type"].startswith("int")
+        if units == "cos()":
+            return -1, 1, step
+        if units == "Pct" or (units.startswith("%") and "/" not in units):
+            return -100 if signed else 0, 100, step
+        # The value past the highest, or below the lowest if signed, means
+        # "not implemented".
+        bits = 16 * point.len
+        highest = 2 ** (bits - 1) - 1 if signed else 2**bits - 2
+        return (-highest if signed else 0) * step, highest * step, step
 
     def getValue(self, point_name, model_index=0):
         point = self.getPoint(point_name, model_index)
@@ -200,10 +223,22 @@ class SunSpecApiClient:
             client.close()
 
     async def async_get_data(self, model_id) -> SunSpecModelWrapper:
+        _LOGGER.debug("Get data for model %s", model_id)
+        return await self.run(self.read_model, model_id)
+
+    async def async_write(self, model_id, model_index, values) -> None:
         try:
-            _LOGGER.debug("Get data for model %s", model_id)
-            return await self.read(model_id)
-        except ModbusClientTimeout as err:
+            await self.run(self.write_model, model_id, model_index, values)
+        except ModelError as err:
+            # The point or its scale factor reads "not implemented" now.
+            raise ModelRefusedError(err) from err
+
+    async def run(self, job, *args):
+        """Run a Modbus job in the executor and raise the integration's errors."""
+        try:
+            return await self._hass.async_add_executor_job(job, *args)
+        # pysunspec2's TCP client lets a write's socket timeout through as it is.
+        except (ModbusClientTimeout, TimeoutError) as err:
             raise ConnectionTimeoutError(err) from err
         except ModbusClientException as err:
             raise ModelRefusedError(err) from err
@@ -371,17 +406,59 @@ class SunSpecApiClient:
             _LOGGER.debug("Inverter not ready for Modbus TCP connection")
             raise ConnectionError(f"Inverter not active on {self._host}:{self._port}")
 
+    def unit_client(self):
+        """Return the client, ready to send to this entry's unit."""
+        client = self.get_client()
+        if closed_by_device(client):
+            _LOGGER.debug("Device closed the connection, reconnecting")
+            self.reconnect_next()
+            self.get_client()
+        client.client.slave_id = client.slave_id
+        return client
+
     def read_model(self, model_id) -> dict:
         with self._lock:
-            client = self.get_client()
-            if closed_by_device(client):
-                _LOGGER.debug("Device closed the connection, reconnecting")
-                self.reconnect_next()
-                self.get_client()
-            client.client.slave_id = client.slave_id
+            client = self.unit_client()
             models = client.models[model_id]
             for model in models:
                 time.sleep(read_delay(client))
                 model.read()
 
         return SunSpecModelWrapper(models)
+
+    def write_model(self, model_id, model_index, values) -> None:
+        """Write points of a model and read it back.
+
+        A value can also be a function of the point's value as read first.
+        """
+        with self._lock:
+            client = self.unit_client()
+            model = client.models[model_id][model_index]
+            point = SunSpecModelWrapper([model]).getPoint
+            # The scale factors can change while the device runs.
+            time.sleep(read_delay(client))
+            model.read()
+            before = {key: point(key).value for key in values}
+            try:
+                for key, value in values.items():
+                    if before[key] is None:
+                        raise ModelError(f"{key} is not implemented")
+                    if callable(value):
+                        value = value(before[key])
+                    scaled = point(key).sf_required
+                    point(key).cvalue = value if scaled else round(value)
+                time.sleep(read_delay(client))
+                model.write()
+            except ModbusClientException:
+                # The device may have taken the points before the one it refused.
+                time.sleep(read_delay(client))
+                model.read()
+                raise
+            except Exception:
+                # The entities show the device's values, not the ones it did not
+                # take.
+                for key, value in before.items():
+                    point(key).set_value(value, dirty=False)
+                raise
+            time.sleep(read_delay(client))
+            model.read()

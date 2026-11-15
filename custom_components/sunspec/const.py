@@ -4,7 +4,10 @@ DOMAIN = "sunspec"
 
 # Platforms
 SENSOR = "sensor"
-PLATFORMS = [SENSOR]
+NUMBER = "number"
+SELECT = "select"
+SWITCH = "switch"
+PLATFORMS = [SENSOR, NUMBER, SELECT, SWITCH]
 
 
 # Configuration and options
@@ -18,6 +21,11 @@ CONF_PREFIX = "prefix"
 CONF_SCAN_INTERVAL = "scan_interval"
 CONF_ENABLED_MODELS = "models_enabled"
 CONF_MODEL_INTERVALS = "model_intervals"
+CONF_ALLOW_WRITING = "allow_writing"
+
+# Models whose writable points get write entities: immediate controls, storage
+# and DER AC controls.
+WRITE_MODELS = {123, 124, 704}
 
 DEFAULT_MODELS = set(
     [
