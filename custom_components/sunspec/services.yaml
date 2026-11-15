@@ -1,0 +1,17 @@
+write:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          entity:
+            - integration: sunspec
+              domain:
+                - number
+                - select
+                - switch
+    points:
+      required: true
+      example: '{"WMaxLimPct": 50, "WMaxLim_Ena": "ENABLED"}'
+      selector:
+        object:

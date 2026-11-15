@@ -9,6 +9,7 @@ from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.sunspec.api import ConnectionTimeoutError
 from custom_components.sunspec.api import NoSunSpecError
+from custom_components.sunspec.const import CONF_ALLOW_WRITING
 from custom_components.sunspec.const import CONF_DEVICE
 from custom_components.sunspec.const import CONF_ENABLED_MODELS
 from custom_components.sunspec.const import CONF_MODEL_INTERVALS
@@ -251,6 +252,7 @@ async def test_options_flow(
             CONF_ENABLED_MODELS: [],
             CONF_SCAN_INTERVAL: 10,
             CONF_MODEL_INTERVALS: {"103": 5},
+            CONF_ALLOW_WRITING: True,
         },
     )
 
@@ -259,6 +261,7 @@ async def test_options_flow(
     assert result["title"] == ""
     assert entry.title == title
     assert entry.options[CONF_MODEL_INTERVALS] == {"103": 5}
+    assert entry.options[CONF_ALLOW_WRITING] is True
 
 
 # Test faild connection in options flow

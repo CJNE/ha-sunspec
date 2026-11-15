@@ -1,6 +1,7 @@
 """Tests for SunSpec api."""
 
 import struct
+import threading
 
 from modbus_connection import IllegalDataAddressError
 from modbus_connection import ModbusConnectionError
@@ -66,7 +67,7 @@ async def test_api(hass, sunspec_client_mock):
 
 
 async def test_reads_through_unit(hass, mocker, mock_modbus_unit):
-    """Test that the scan and model reads go through the unit, in requests Modbus allows."""
+    """Test that the scan, model reads and writes go through the unit, in requests Modbus allows."""
     mocker.patch("custom_components.sunspec.api.socket.create_connection")
     mocker.patch("custom_components.sunspec.api.time.sleep")
     registers = load_registers("tests/test_data/inverter.json")
@@ -82,6 +83,16 @@ async def test_reads_through_unit(hass, mocker, mock_modbus_unit):
     device = api.get_client()
     assert await hass.async_add_executor_job(device.read, 40000, 300) == registers[:600]
     assert [read.count for read in mock_modbus_unit.read_events[-3:]] == [125, 125, 50]
+
+    writes = []
+    mock_modbus_unit.on_write(writes.append)
+    await api.async_write(704, 0, {"PFWInjEna": 1})
+    await api.async_write(705, 0, {"RvrtTms": 300})
+    assert [(write.function_code, write.values) for write in writes] == [
+        (6, [1]),
+        (16, [0, 300]),
+    ]
+    assert (await api.async_get_data(705)).getValue("RvrtTms") == 300
 
 
 def model(model_id, length, values):
@@ -249,6 +260,37 @@ async def test_read_model_delay(hass, mocker, manufacturer, delay):
     api.read_model(103)
 
     sleep.assert_called_once_with(delay)
+
+
+async def test_poll_waits_for_write(hass, mocker):
+    """Test that a poll does not read a model while a write to it is under way."""
+    mocker.patch("custom_components.sunspec.api.time.sleep")
+    order = []
+    writing, done = threading.Event(), threading.Event()
+    model = mocker.MagicMock()
+    model.read.side_effect = lambda: order.append("read")
+    model.write.side_effect = lambda: (
+        writing.set(),
+        done.wait(5),
+        order.append("write"),
+    )
+    client = mocker.Mock(models={1: [], 704: [model]})
+    mocker.patch(
+        "custom_components.sunspec.api.SunSpecApiClient.scan", return_value=client
+    )
+    api = create_mock_sunspec_client(hass)
+    write = threading.Thread(target=api.write_model, args=(704, 0, {"WMaxLimPct": 5}))
+    poll = threading.Thread(target=api.read_model, args=(704,))
+
+    write.start()
+    writing.wait(5)
+    poll.start()
+    poll.join(0.2)
+    done.set()
+    write.join(5)
+    poll.join(5)
+
+    assert order == ["read", "write", "read", "read"]
 
 
 async def test_read_model_timeout(hass, mocker):
