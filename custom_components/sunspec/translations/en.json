@@ -101,11 +101,13 @@
         "data": {
           "prefix": "Sensors prefix",
           "models_enabled": "Read models",
-          "scan_interval": "Scan interval (seconds)"
+          "scan_interval": "Scan interval (seconds)",
+          "allow_writing": "Allow writing"
         },
         "data_description": {
           "prefix": "Text put in front of every sensor name, to tell devices apart.",
-          "scan_interval": "Seconds between reads of each model without its own interval below."
+          "scan_interval": "Seconds between reads of each model without its own interval below.",
+          "allow_writing": "Lets Home Assistant change device settings over Modbus, which has no authentication. Wrong values can break grid rules, and the device must allow control in its own settings. Applies to models 123, 124 and 704 among those read."
         },
         "sections": {
           "model_intervals": {
@@ -120,6 +122,39 @@
       "device_error": "Connection reached the device, but initialization failed. Check the Home Assistant logs for details.",
       "timeout": "Connection timed out. Check that the device is online and responding on the configured host, port, and Unit ID.",
       "no_sunspec": "No SunSpec data found at this unit ID. Check which unit ID the device serves SunSpec on."
+    }
+  },
+  "services": {
+    "write": {
+      "name": "Write",
+      "description": "Writes points of a SunSpec model to the device in one go, then reads the model back.",
+      "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "The model's device, such as Immediate Controls, Storage or DER AC Controls, of an entry with Allow writing on."
+        },
+        "points": {
+          "name": "Points",
+          "description": "Point names, as an entity's sunspec_key attribute shows them, with their values: numbers in the units the entities show, enum points by name."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "not_writable_device": {
+      "message": "This device has no points to write: it must be the device of model 123, 124 or 704 in a loaded entry with Allow writing on."
+    },
+    "not_writable_point": {
+      "message": "{point} is not a writable point of this model that the device reports."
+    },
+    "invalid_value": {
+      "message": "{value} is not a valid value for {point}."
+    },
+    "write_refused": {
+      "message": "The device refused the write: {error}"
+    },
+    "write_failed": {
+      "message": "Writing to the device failed: {error}"
     }
   }
 }
