@@ -14,6 +14,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
@@ -145,6 +146,21 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Close a removed entry's connection, which a device may allow only one of."""
     client = api_client(hass, entry.data)
     await hass.async_add_executor_job(client.disconnect)
+
+
+async def async_remove_config_entry_device(
+    hass: HomeAssistant, entry: ConfigEntry, device: dr.DeviceEntry
+) -> bool:
+    """Allow removing a device once the entry no longer reads its model."""
+    coordinator = hass.data.get(DOMAIN, {}).get(entry.entry_id)
+    if coordinator is None or not coordinator.data:
+        return False
+    names = {model.getGroupMeta()["name"] for model in coordinator.data.values()}
+    return not any(
+        identifier[2] in names
+        for identifier in device.identifiers
+        if identifier[0] == DOMAIN
+    )
 
 
 def get_sunspec_unique_id(
