@@ -86,6 +86,9 @@ yet a proper fix: find the root cause and fix it in the right layer.
 ## Git and PRs
 
 - Never commit, push or open a PR unless asked.
+- Post final PR reviews inside a collapsible `<details>` block. Start with
+  `Review by [model]`, then the review. Keep it brief, on point and specific
+  enough to explain exactly what is wrong.
 - Branch from upstream `main` and open the PR against CJNE/ha-sunspec `main`.
 - One clean commit per PR, complete enough to need no follow-up fix. Rebase on
   upstream `main` and rerun the full suite before updating a PR branch.
