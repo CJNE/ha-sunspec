@@ -19,6 +19,6 @@ repos:
         name: prettier
         entry: prettier --write --list-different --ignore-unknown
         language: node
-        language_version: "22.19.0"
+        language_version: "26.13.1"
         types: [text]
         additional_dependencies: ["prettier@3.10.1"]
