@@ -6,6 +6,8 @@ from unittest.mock import patch
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.data_entry_flow import InvalidData
+import homeassistant.helpers.config_validation as cv
+import probatio
 import pytest
 from pytest_homeassistant.common import MockConfigEntry
 
@@ -14,9 +16,11 @@ from custom_components.sunspec.api import ConnectionTimeoutError
 from custom_components.sunspec.api import NoSunSpecError
 from custom_components.sunspec.api import SunSpecApiClient
 from custom_components.sunspec.const import CONF_ALLOW_WRITING
+from custom_components.sunspec.const import CONF_BAUDRATE
 from custom_components.sunspec.const import CONF_DEVICE
 from custom_components.sunspec.const import CONF_ENABLED_MODELS
 from custom_components.sunspec.const import CONF_MODEL_INTERVALS
+from custom_components.sunspec.const import CONF_PORT
 from custom_components.sunspec.const import CONF_PREFIX
 from custom_components.sunspec.const import CONF_SCAN_INTERVAL
 from custom_components.sunspec.const import CONF_UNIT_ID
@@ -323,6 +327,38 @@ async def test_fields_left_out(hass, bypass_get_data, sunspec_client_mock):
     )
     assert entry.options[CONF_PREFIX] == ""
     assert entry.options[CONF_SCAN_INTERVAL] == 30
+
+
+@pytest.mark.parametrize(
+    ("form", "fields"),
+    [
+        ("tcp", {CONF_PORT, CONF_UNIT_ID}),
+        ("serial", {CONF_BAUDRATE, CONF_UNIT_ID}),
+        ("host_options", {CONF_PORT, CONF_UNIT_ID}),
+    ],
+)
+async def test_number_fields(hass, sunspec_client_mock, form, fields):
+    """Test that the number fields are number boxes, which ask for a number."""
+    if form == "host_options":
+        entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG, entry_id="test")
+        entry.add_to_hass(hass)
+        hass.data[DOMAIN] = {
+            entry.entry_id: MockSunSpecDataUpdateCoordinator(hass, [1])
+        }
+        result = await hass.config_entries.options.async_init(entry.entry_id)
+    else:
+        result = await start_flow(hass, form)
+
+    # Serialized as Home Assistant sends the form to the frontend.
+    schema = probatio.to_field_list(
+        result["data_schema"], custom_serializer=cv.custom_serializer
+    )
+    boxes = {
+        field["name"]
+        for field in schema
+        if field.get("selector", {}).get("number", {}).get("mode") == "box"
+    }
+    assert boxes == fields
 
 
 # Our config flow also has an options flow, so we must test it as well.
