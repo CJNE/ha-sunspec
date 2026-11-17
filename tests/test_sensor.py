@@ -1,5 +1,6 @@
 """Test SunSpec sensor."""
 
+from homeassistant.const import STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
 from homeassistant.core import State
 import pytest
@@ -166,14 +167,20 @@ async def test_sensor_float32(
     assert hass.states.get(entity_id).state == state
 
 
-async def test_sensor_bitfield(hass: HomeAssistant, sunspec_client_mock) -> None:
-    """Verify a bitfield with several flags set reports all of them."""
+@pytest.mark.parametrize(
+    ("value", "state"), [(3, "GROUND_FAULT,DC_OVER_VOLT"), (None, STATE_UNKNOWN)]
+)
+async def test_sensor_bitfield(
+    hass: HomeAssistant, sunspec_client_mock, value, state
+) -> None:
+    """Verify a bitfield reports every flag set, and unknown once it reads "not implemented"."""
 
-    await setup_mock_sunspec_config_entry(hass)
+    config_entry = await setup_mock_sunspec_config_entry(hass)
+    client = SunSpecApiClient.CLIENT_CACHE["test:123:1"]
+    client.models[103][0].points["Evt1"].value = value
+    await hass.data[DOMAIN][config_entry.entry_id].async_refresh()
 
-    entity_state = hass.states.get(TEST_INVERTER_SENSOR_EVENT_ENTITY_ID)
-    assert entity_state
-    assert entity_state.state == "GROUND_FAULT,DC_OVER_VOLT"
+    assert hass.states.get(TEST_INVERTER_SENSOR_EVENT_ENTITY_ID).state == state
 
 
 async def test_sensor_state_mm(hass: HomeAssistant, sunspec_client_mock) -> None:
