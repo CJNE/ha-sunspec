@@ -41,6 +41,8 @@ yet a proper fix: find the root cause and fix it in the right layer.
 
 - Only what is needed. No verbose comments or code, no new abstraction,
   dependency or option the change does not require. Never vendor a dependency.
+- The integration wraps `pysunspec2` and produces what the library produces.
+  What is wrong in the library is fixed upstream, in sunspec/pysunspec2.
 - One implementation of each thing; delete code that can no longer run.
 - Use Home Assistant's mechanisms the way current core does. Never copy a
   deprecated pattern or change process-wide state.
