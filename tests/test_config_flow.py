@@ -1,5 +1,6 @@
 """Test SunSpec config flow."""
 
+import socket
 from unittest.mock import patch
 
 from homeassistant import config_entries
@@ -206,6 +207,20 @@ async def test_config_flow_error(hass, sunspec_client_mock, error, base):
 
     assert result["type"] == FlowResultType.FORM
     assert result["errors"] == {"base": base}
+
+
+async def test_config_flow_unknown_host(hass, mocker):
+    """Test that setup reports a host name that does not resolve as no connection."""
+    sock = mocker.patch("custom_components.sunspec.api.socket.socket").return_value
+    sock.connect_ex.side_effect = socket.gaierror(
+        socket.EAI_NONAME, "Name or service not known"
+    )
+    result = await start_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input=MOCK_CONFIG_STEP_1
+    )
+
+    assert result["errors"] == {"base": "connection"}
 
 
 async def test_config_flow_without_serial_number(
