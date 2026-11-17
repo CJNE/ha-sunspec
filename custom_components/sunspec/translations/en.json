@@ -155,6 +155,9 @@
     },
     "write_failed": {
       "message": "Writing to the device failed: {error}"
+    },
+    "write_unconfirmed": {
+      "message": "The write is not confirmed: {error}. The device may hold all or part of it, so the written points are unavailable until the next read."
     }
   }
 }

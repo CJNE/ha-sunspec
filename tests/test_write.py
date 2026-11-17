@@ -1,5 +1,6 @@
 """Test writing to SunSpec devices."""
 
+from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import device_registry as dr
@@ -14,6 +15,7 @@ from custom_components.sunspec.api import SunSpecApiClient
 from custom_components.sunspec.api import SunSpecModelWrapper
 from custom_components.sunspec.const import CONF_ALLOW_WRITING
 from custom_components.sunspec.const import CONF_ENABLED_MODELS
+from custom_components.sunspec.const import CONF_MODEL_INTERVALS
 from custom_components.sunspec.const import CONF_SCAN_INTERVAL
 from custom_components.sunspec.const import DOMAIN
 
@@ -236,28 +238,61 @@ async def test_write_ignored(hass, sunspec_client_mock, mocker):
     assert hass.states.get(entity).state == "100.0"
 
 
+REFUSED = ModbusClientException("Modbus exception: 3")
+NO_ANSWER = ModbusClientTimeout("Response timeout")
+
+
 @pytest.mark.parametrize(
-    ("error", "key", "reconnects", "state"),
+    ("errors", "key", "reconnects", "state"),
     [
         # The device took the value before it refused, and answers the read.
-        (ModbusClientException("Modbus exception: 3"), "write_refused", False, "50.0"),
-        (ModbusClientTimeout("Response timeout"), "write_failed", True, "100.0"),
-        (TimeoutError("timed out"), "write_failed", True, "100.0"),
-        (ModbusClientError("Socket write error"), "write_failed", True, "100.0"),
+        ({"write": REFUSED}, "write_refused", False, "50.0"),
+        # Nothing was sent.
+        ({"read": NO_ANSWER}, "write_failed", True, "100.0"),
+        # The write was sent, and the device was not read after it.
+        ({"write": NO_ANSWER}, "write_unconfirmed", True, STATE_UNAVAILABLE),
+        (
+            {"write": TimeoutError("timed out")},
+            "write_unconfirmed",
+            True,
+            STATE_UNAVAILABLE,
+        ),
+        (
+            {"write": ModbusClientError("Socket write error")},
+            "write_unconfirmed",
+            True,
+            STATE_UNAVAILABLE,
+        ),
+        ({"read back": NO_ANSWER}, "write_unconfirmed", True, STATE_UNAVAILABLE),
+        ({"read back": REFUSED}, "write_unconfirmed", False, STATE_UNAVAILABLE),
+        (
+            {"write": REFUSED, "read back": NO_ANSWER},
+            "write_unconfirmed",
+            True,
+            STATE_UNAVAILABLE,
+        ),
     ],
 )
 async def test_write_error(
-    hass, sunspec_client_mock, mocker, error, key, reconnects, state
+    hass, sunspec_client_mock, mocker, errors, key, reconnects, state
 ):
-    """Test that a failed write says why and shows the device's value, read again if it answered."""
+    """Test that a failed write says why, and shows the value only if the device was read after it."""
     await setup_controls(hass)
     model = device_model(mocker, 123, {"WMaxLimPct": 10000})
-    take = model.write.side_effect
+    read, take = model.read.side_effect, model.write.side_effect
+    reads = iter(("read", "read back"))
+
+    def read_or_fail():
+        if error := errors.get(next(reads)):
+            raise error
+        read()
 
     def take_and_fail():
         take()
-        raise error
+        if "write" in errors:
+            raise errors["write"]
 
+    model.read.side_effect = read_or_fail
     model.write.side_effect = take_and_fail
     reconnect = mocker.spy(SunSpecApiClient, "reconnect_next")
     entity = entity_id(hass, "number", 123, "WMaxLimPct")
@@ -270,6 +305,91 @@ async def test_write_error(
     assert err.value.translation_key == key
     assert reconnect.called is reconnects
     assert hass.states.get(entity).state == state
+
+
+async def test_unconfirmed_write(hass, sunspec_client_mock, mocker):
+    """Test that only the points of a write not read back are unavailable, until a read."""
+    mocker.patch("custom_components.sunspec.monotonic", return_value=0)
+    entry = create_mock_sunspec_config_entry(
+        hass,
+        MOCK_CONFIG_CONTROLS,
+        {CONF_ALLOW_WRITING: True, CONF_MODEL_INTERVALS: {"123": 3600}},
+    )
+    await setup_mock_sunspec_config_entry(hass, config_entry=entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    device = {"WMaxLimPct": 10000}
+    model = device_model(mocker, 123, device)
+    read = model.read.side_effect
+    written = [
+        entity_id(hass, domain, 123, "WMaxLimPct") for domain in ("number", "sensor")
+    ]
+    others = [
+        entity_id(hass, "switch", 123, "WMaxLim_Ena"),
+        entity_id(hass, "number", 704, "WMaxLimPct"),
+    ]
+    get_data = coordinator.api.async_get_data
+
+    def states(entities):
+        return [hass.states.get(entity).state for entity in entities]
+
+    async def write_during_poll(model_id):
+        # This poll has passed model 123, which is not due, when the write fails.
+        if model_id == 124 and not model.write.called:
+            model.read.side_effect = [read(), NO_ANSWER]
+            with pytest.raises(HomeAssistantError):
+                await hass.services.async_call(
+                    "number",
+                    "set_value",
+                    {"entity_id": written[0], "value": 50},
+                    blocking=True,
+                )
+        return await get_data(model_id)
+
+    mocker.patch.object(
+        coordinator.api, "async_get_data", side_effect=write_during_poll
+    )
+    await coordinator.async_refresh()
+    assert states(written) == [STATE_UNAVAILABLE, STATE_UNAVAILABLE]
+    assert STATE_UNAVAILABLE not in states(others)
+
+    # A write that is then not even sent is not called unconfirmed.
+    model.read.side_effect = NO_ANSWER
+    with pytest.raises(HomeAssistantError) as err:
+        await hass.services.async_call(
+            DOMAIN,
+            "write",
+            {"device_id": device_id(hass, "controls"), "points": {"WMaxLimPct": 50}},
+            blocking=True,
+        )
+    assert err.value.translation_key == "write_failed"
+
+    # A poll the device refuses the model in leaves both as they are.
+    model.read.side_effect = REFUSED
+    await coordinator.async_refresh()
+    assert states(written) == [STATE_UNAVAILABLE, STATE_UNAVAILABLE]
+    assert STATE_UNAVAILABLE not in states(others)
+
+    # The next read shows what the device holds, and nothing is written again.
+    device["WMaxLimPct"] = 7500
+    model.read.side_effect = read
+    await coordinator.async_refresh()
+    assert states(written) == ["75.0", "75.0"]
+    model.write.assert_called_once()
+
+    # So does the read before a later write, even one refused before it is sent.
+    model.read.side_effect = [read(), NO_ANSWER]
+    with pytest.raises(HomeAssistantError):
+        await hass.services.async_call(
+            "number", "set_value", {"entity_id": written[0], "value": 60}, blocking=True
+        )
+    device["WMaxLim_Ena"] = None
+    model.read.side_effect = read
+    with pytest.raises(HomeAssistantError) as err:
+        await hass.services.async_call(
+            "switch", "turn_on", {"entity_id": others[0]}, blocking=True
+        )
+    assert err.value.translation_key == "write_refused"
+    assert states(written) == ["60.0", "60.0"]
 
 
 @pytest.mark.parametrize(

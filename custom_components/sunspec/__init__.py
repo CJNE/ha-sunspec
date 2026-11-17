@@ -268,18 +268,19 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
         """Write points of a model, then show what the device reports."""
         try:
             await self.api.async_write(model_id, model_index, values)
-        except ModelRefusedError as err:
+        except (ModelRefusedError, ConnectionError) as err:
+            key = "write_refused"
+            if isinstance(err, ConnectionError):
+                # A late answer to the write must not be taken for the next one.
+                self.api.reconnect_next()
+                key = "write_failed"
+            if self.api.unconfirmed.get((model_id, model_index)) is values:
+                # It was sent: the next poll reads the model, whatever its interval.
+                self.last_read.pop(model_id, None)
+                key = "write_unconfirmed"
             raise HomeAssistantError(
                 translation_domain=DOMAIN,
-                translation_key="write_refused",
-                translation_placeholders={"error": str(err)},
-            ) from err
-        except ConnectionError as err:
-            # A late answer to the write must not be taken for the next one.
-            self.api.reconnect_next()
-            raise HomeAssistantError(
-                translation_domain=DOMAIN,
-                translation_key="write_failed",
+                translation_key=key,
                 translation_placeholders={"error": str(err)},
             ) from err
         finally:

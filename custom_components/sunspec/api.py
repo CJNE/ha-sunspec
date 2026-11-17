@@ -189,6 +189,8 @@ class SunSpecApiClient:
         # and take turns.
         self._lock = SunSpecApiClient.LOCKS.setdefault(connection, threading.RLock())
         self._reconnect = False
+        # The write sent to a model, by its ID and index, and not read back.
+        self.unconfirmed = {}
 
     def get_client(self):
         with self._lock:
@@ -420,9 +422,10 @@ class SunSpecApiClient:
         with self._lock:
             client = self.unit_client()
             models = client.models[model_id]
-            for model in models:
+            for model_index, model in enumerate(models):
                 time.sleep(read_delay(client))
                 model.read()
+                self.unconfirmed.pop((model_id, model_index), None)
 
         return SunSpecModelWrapper(models)
 
@@ -438,6 +441,7 @@ class SunSpecApiClient:
             # The scale factors can change while the device runs.
             time.sleep(read_delay(client))
             model.read()
+            self.unconfirmed.pop((model_id, model_index), None)
             before = {key: point(key).value for key in values}
             try:
                 for key, value in values.items():
@@ -448,11 +452,14 @@ class SunSpecApiClient:
                     scaled = point(key).sf_required
                     point(key).cvalue = value if scaled else round(value)
                 time.sleep(read_delay(client))
+                # Until the model is read, nobody knows which of these it took.
+                self.unconfirmed[model_id, model_index] = values
                 model.write()
             except ModbusClientException:
                 # The device may have taken the points before the one it refused.
                 time.sleep(read_delay(client))
                 model.read()
+                self.unconfirmed.pop((model_id, model_index), None)
                 raise
             except Exception:
                 # The entities show the device's values, not the ones it did not
@@ -462,3 +469,4 @@ class SunSpecApiClient:
                 raise
             time.sleep(read_delay(client))
             model.read()
+            self.unconfirmed.pop((model_id, model_index), None)
