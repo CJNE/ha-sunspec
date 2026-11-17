@@ -281,6 +281,24 @@ async def test_serial_connection(hass, mocker, scan_error):
     rtu.return_value.close.assert_called_once()
 
 
+@pytest.mark.parametrize("changed", [{"baudrate": 19200}, {"parity": "E"}])
+async def test_serial_settings_changed(hass, mocker, changed):
+    """Test that a loaded serial entry's port is read with other settings, then its own."""
+    mocker.patch("sunspec2.modbus.modbus.serial.Serial")
+    mocker.patch(
+        "sunspec2.modbus.client.SunSpecModbusClientDeviceRTU.scan",
+        lambda self, **kwargs: self.models.update({103: []}),
+    )
+    api = SunSpecApiClient(None, None, 1, hass, "/dev/ttyUSB0", 9600, "N")
+    api.get_client()
+    config = {"device": "/dev/ttyUSB0", "baudrate": 9600, "parity": "N", "unit_id": 1}
+
+    assert await api.async_get_models({**config, **changed}) == [103]
+    port = api.get_client().client
+    assert (port.baudrate, port.parity) == (9600, "N")
+    api.disconnect()
+
+
 async def test_serial_poll_reopens_port(hass, mocker):
     """Test that the poll after a failed one reopens the serial port."""
     rtu = mocker.patch("sunspec2.modbus.client.SunSpecModbusClientDeviceRTU")
