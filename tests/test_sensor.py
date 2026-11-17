@@ -200,6 +200,31 @@ async def test_sensor_instances(
     assert (entity_id and hass.states.get(entity_id).state) == state
 
 
+@pytest.mark.parametrize("sunspec_fixture", ["gps.json"])
+@pytest.mark.parametrize(
+    ("key", "state"),
+    [
+        # Text, with a format as its unit: YYYYMMDD, hhmmss.sssZ, text.
+        ("Date", None),
+        ("Tm", None),
+        ("Loc", None),
+        ("Alt", "12"),
+    ],
+)
+async def test_sensor_text(
+    hass: HomeAssistant, sunspec_client_mock, key, state
+) -> None:
+    """Verify text points get no sensor, whatever their definition gives as unit."""
+
+    await setup_mock_sunspec_config_entry(
+        hass, {**MOCK_CONFIG, CONF_ENABLED_MODELS: [305]}
+    )
+
+    unique_id = get_sunspec_unique_id(TEST_CONFIG_ENTRY_ID, key, 305, 0)
+    entity_id = er.async_get(hass).async_get_entity_id("sensor", DOMAIN, unique_id)
+    assert (entity_id and hass.states.get(entity_id).state) == state
+
+
 @pytest.mark.parametrize("sunspec_fixture", ["meter_float.json"])
 @pytest.mark.parametrize(
     ("entity_id", "state"),
