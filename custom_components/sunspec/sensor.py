@@ -75,6 +75,8 @@ HA_META = {
     "Pct": [PERCENTAGE, ICON_DEFAULT, None],
     "Secs": [UnitOfTime.SECONDS, ICON_DEFAULT, None],
     "enum16": [None, ICON_DEFAULT, SensorDeviceClass.ENUM],
+    "enum32": [None, ICON_DEFAULT, SensorDeviceClass.ENUM],
+    "bitfield16": [None, ICON_DEFAULT, None],
     "bitfield32": [None, ICON_DEFAULT, None],
 }
 
@@ -131,7 +133,7 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
         self._assumed_state = False
 
         vtype = self._meta["type"]
-        if vtype == "enum16":
+        if vtype.startswith("enum"):
             self._options = self._point_meta.get("symbols", None)
             if self._options is None:
                 self.use_device_class = None
@@ -184,11 +186,11 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
             )
             return None
         vtype = self._meta["type"]
-        if vtype in ("enum16", "bitfield32"):
+        if vtype.startswith(("enum", "bitfield")):
             symbols = self._point_meta.get("symbols", None)
             if symbols is None:
                 return val
-            if vtype == "enum16":
+            if vtype.startswith("enum"):
                 symbol = list(filter(lambda s: s["value"] == val, symbols))
                 if len(symbol) == 1:
                     return symbol[0]["name"][:255]

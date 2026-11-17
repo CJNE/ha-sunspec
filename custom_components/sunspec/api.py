@@ -57,7 +57,7 @@ class SunSpecModelWrapper:
         point = self.getPoint(point_name, model_index)
         if point.value is None:
             return False
-        if point.pdef["type"] in ("enum16", "bitfield32"):
+        if point.pdef["type"].startswith(("enum", "bitfield")):
             return True
         if point.pdef.get("units", None) is None:
             return False
