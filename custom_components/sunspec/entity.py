@@ -107,6 +107,14 @@ class SunSpecEntity(CoordinatorEntity):
         self._name = f"{name.capitalize()} {self._meta.get('label', self.key)}"
 
     @property
+    def available(self):
+        """Return whether the device was read since the point was written."""
+        unconfirmed = self.coordinator.api.unconfirmed
+        return super().available and self.key not in unconfirmed.get(
+            (self.model_id, self.model_index), ()
+        )
+
+    @property
     def name(self):
         """Return the name of the entity."""
         return self._name
