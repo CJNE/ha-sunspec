@@ -187,7 +187,7 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Optional(CONF_PREFIX, default=""): str,
                     vol.Optional(
                         CONF_SCAN_INTERVAL, default=SCAN_INTERVAL.total_seconds()
-                    ): int,
+                    ): vol.All(int, vol.Range(min=1)),
                     vol.Optional(
                         CONF_ENABLED_MODELS,
                         default=default_enabled,
@@ -299,7 +299,9 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
                 data_schema=vol.Schema(
                     {
                         vol.Optional(CONF_PREFIX, default=prefix): str,
-                        vol.Optional(CONF_SCAN_INTERVAL, default=scan_interval): int,
+                        vol.Optional(
+                            CONF_SCAN_INTERVAL, default=scan_interval
+                        ): vol.All(int, vol.Range(min=1)),
                         vol.Optional(
                             CONF_ENABLED_MODELS,
                             default=default_models,

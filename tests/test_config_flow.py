@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.data_entry_flow import InvalidData
 import pytest
 from pytest_homeassistant.common import MockConfigEntry
 
@@ -196,6 +197,33 @@ async def test_config_flow_without_serial_number(
 
         assert result["type"] == FlowResultType.CREATE_ENTRY
         assert result["title"] == "test_host:123:1"
+
+
+@pytest.mark.parametrize("scan_interval", [0, -5])
+async def test_scan_interval_at_least_one(hass, sunspec_client_mock, scan_interval):
+    """Test that setup and Configure refuse a scan interval below one second."""
+    result = await start_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input=MOCK_CONFIG_STEP_1
+    )
+    with pytest.raises(InvalidData):
+        await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            user_input={**MOCK_SETTINGS, CONF_SCAN_INTERVAL: scan_interval},
+        )
+
+    entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG, entry_id="test")
+    entry.add_to_hass(hass)
+    hass.data[DOMAIN] = {entry.entry_id: MockSunSpecDataUpdateCoordinator(hass, [1])}
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input=MOCK_CONFIG_STEP_1
+    )
+    with pytest.raises(InvalidData):
+        await hass.config_entries.options.async_configure(
+            result["flow_id"],
+            user_input={CONF_ENABLED_MODELS: [], CONF_SCAN_INTERVAL: scan_interval},
+        )
 
 
 # Our config flow also has an options flow, so we must test it as well.
