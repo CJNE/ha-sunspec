@@ -105,8 +105,12 @@ class SunSpecEntity(CoordinatorEntity):
         if len(key_parts) > 1:
             name = f"{name} {key_parts[0]} {key_parts[1]}"
         if data["prefix"] != "":
-            name = f"{data['prefix']} {name}"
-        self._name = f"{name.capitalize()} {self._meta.get('label', self.key)}"
+            # The prefix keeps the letters it was entered with.
+            prefix = data["prefix"]
+            name = f"{prefix[:1].upper()}{prefix[1:]} {name.lower()}"
+        else:
+            name = name.capitalize()
+        self._name = f"{name} {self._meta.get('label', self.key)}"
 
     @property
     def available(self):

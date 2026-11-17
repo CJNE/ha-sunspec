@@ -87,13 +87,26 @@ async def test_sensor_unit(
     assert entity_state.attributes.get("device_class") == device_class
 
 
-async def test_sensor_with_prefix(hass: HomeAssistant, sunspec_client_mock) -> None:
-    """Verify device information includes expected details."""
+@pytest.mark.parametrize(
+    ("prefix", "name"),
+    [
+        ("test", "Test mppt module 0 DC Current"),
+        ("SE7600", "SE7600 mppt module 0 DC Current"),
+    ],
+)
+async def test_sensor_with_prefix(
+    hass: HomeAssistant, sunspec_client_mock, prefix, name
+) -> None:
+    """Verify the prefix leads the sensor names with the letters it was entered with."""
 
-    await setup_mock_sunspec_config_entry(hass, MOCK_CONFIG_PREFIX)
+    await setup_mock_sunspec_config_entry(
+        hass, {**MOCK_CONFIG_PREFIX, "prefix": prefix}
+    )
 
-    entity_state = hass.states.get(TEST_INVERTER_PREFIX_SENSOR_DC_ENTITY_ID)
-    assert entity_state
+    entity_id = TEST_INVERTER_PREFIX_SENSOR_DC_ENTITY_ID.replace("test", prefix.lower())
+    assert hass.states.get(entity_id).attributes["friendly_name"] == (
+        f"Multiple MPPT Inverter Extension Model {name}"
+    )
 
 
 async def test_sensor_state(hass: HomeAssistant, sunspec_client_mock) -> None:
