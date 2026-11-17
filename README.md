@@ -97,6 +97,8 @@ data:
 
 Values are numbers in the units the entities show, and enum points by name. A point's name is the `sunspec_key` attribute of its entities.
 
+A device that reports a model more than once has one device in Home Assistant for all of them. The action writes the first; each instance's entities write their own points.
+
 ## Contributions are welcome!
 
 If you want to contribute to this please read the [Contribution guidelines](CONTRIBUTING.md)
