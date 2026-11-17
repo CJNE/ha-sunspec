@@ -162,7 +162,7 @@ async def test_poll_while_probe_refused(hass, sunspec_client_mock, mocker):
     config_entry = await setup_mock_sunspec_config_entry(hass)
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
 
-    def check_port():
+    def check_port(host, port):
         # The probe connects and sleeps, so it must stay out of the event loop.
         assert threading.get_ident() != hass.loop_thread_id
         return False
