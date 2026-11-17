@@ -21,19 +21,21 @@
 
 This custom integration for [Home Assistant](https://home-assistant.io/) monitors any device that speaks SunSpec over Modbus, most commonly a solar inverter or an energy meter. The [SunSpec website](https://sunspec.org/product-certification-registry/) lists certified devices and manufacturers.
 
-It wraps [pysunspec2](https://github.com/sunspec/pysunspec2), the SunSpec Alliance's Python library:
+This project is not affiliated with the SunSpec Alliance. It wraps [pysunspec2](https://github.com/sunspec/pysunspec2), the Alliance's Python library:
 
 - pysunspec2 talks Modbus TCP, or Modbus RTU over a serial port, to the device, finds the SunSpec models the device has, and decodes their registers with the SunSpec model definitions it ships with: point names, units, scale factors, and the names of states and flags.
-- The integration adds the Home Assistant side: setup and options in the UI, reading each selected model at its interval, a device per model, and a sensor for each measurement, state and flag the device reports, with Home Assistant units, device classes and state classes. Its energy sensors work with the energy dashboard out of the box.
+- The integration adds the Home Assistant side: setup and options in the UI, reading each selected model at its interval, a device per model, and a sensor for each measurement with a unit and each state and flag the device reports, with Home Assistant units, device classes and state classes. Its energy sensors work with the energy dashboard out of the box.
 
 Setup finds the device's models and selects the most common ones; Configure chooses exactly which models to read, and how often, and whether Home Assistant may write to the device.
 
 | Platform | Description                                                                         |
 | -------- | ----------------------------------------------------------------------------------- |
-| `sensor` | A sensor for each value the device reports.                                         |
+| `sensor` | A sensor for each measurement with a unit, and each state and flag.                 |
 | `number` | With Allow writing, a number for each writable value that takes a number.           |
 | `select` | With Allow writing, a select for each writable state that is not on or off.         |
 | `switch` | With Allow writing, a switch for each writable on/off state and each bit of a flag. |
+
+Numbers without a unit and the points of the curves in models 705 to 712 get no sensor.
 
 It reads any device that implements the SunSpec models, whatever the brand, with the definitions that come with pysunspec2. New and corrected models come with new pysunspec2 versions; each release of this integration uses the pysunspec2 version pinned in its `manifest.json`.
 
@@ -76,7 +78,7 @@ custom_components/sunspec/switch.py
 
 ## Configuration is done in the UI
 
-<!---->
+Add the integration under Settings > Devices & services > Add integration > SunSpec. Configure, on its entry, changes the connection, the models read and how often, and Allow writing.
 
 ## Writing to the device
 
