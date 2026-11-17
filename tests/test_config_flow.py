@@ -9,6 +9,7 @@ from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.sunspec.api import ConnectionTimeoutError
 from custom_components.sunspec.api import NoSunSpecError
+from custom_components.sunspec.api import SunSpecApiClient
 from custom_components.sunspec.const import CONF_ALLOW_WRITING
 from custom_components.sunspec.const import CONF_DEVICE
 from custom_components.sunspec.const import CONF_ENABLED_MODELS
@@ -99,6 +100,29 @@ async def test_successful_config_flow(
     assert result["title"] == title
     assert result["data"] == data
     assert result["result"]
+
+
+@pytest.mark.parametrize(("finish", "closed"), [(True, False), (False, True)])
+async def test_config_flow_connection(
+    hass, sunspec_client_mock, mocker, finish, closed
+):
+    """Test that setup leaves its connection to the entry, and closes it otherwise."""
+    disconnect = mocker.spy(SunSpecApiClient.modbus_connect.return_value, "disconnect")
+    result = await start_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input=MOCK_CONFIG_STEP_1
+    )
+
+    if finish:
+        await hass.config_entries.flow.async_configure(
+            result["flow_id"], user_input=MOCK_SETTINGS
+        )
+    else:
+        # The dialog is closed.
+        hass.config_entries.flow.async_abort(result["flow_id"])
+    await hass.async_block_till_done()
+
+    assert disconnect.called is closed
 
 
 @pytest.mark.parametrize(

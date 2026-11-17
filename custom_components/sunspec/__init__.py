@@ -137,15 +137,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
     )
     if unloaded:
-        hass.data[DOMAIN].pop(entry.entry_id)
+        coordinator = hass.data[DOMAIN].pop(entry.entry_id)
+        # A device may allow only one connection, and the entry may come back
+        # disabled, removed or with other connection settings.
+        await hass.async_add_executor_job(coordinator.api.disconnect)
 
     return True  # unloaded
-
-
-async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Close a removed entry's connection, which a device may allow only one of."""
-    client = api_client(hass, entry.data)
-    await hass.async_add_executor_job(client.disconnect)
 
 
 async def async_remove_config_entry_device(

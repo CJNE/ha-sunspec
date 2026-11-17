@@ -4,6 +4,7 @@ from collections import Counter
 from datetime import timedelta
 import threading
 
+from homeassistant.config_entries import ConfigEntryDisabler
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.helpers import device_registry as dr
@@ -14,8 +15,10 @@ from sunspec2.modbus.modbus import ModbusClientTimeout
 
 from custom_components.sunspec import SunSpecDataUpdateCoordinator
 from custom_components.sunspec import async_remove_config_entry_device
+from custom_components.sunspec.api import ConnectionError
 from custom_components.sunspec.api import SunSpecApiClient
 from custom_components.sunspec.const import CONF_ENABLED_MODELS
+from custom_components.sunspec.const import CONF_HOST
 from custom_components.sunspec.const import CONF_MODEL_INTERVALS
 from custom_components.sunspec.const import CONF_SCAN_INTERVAL
 from custom_components.sunspec.const import DOMAIN
@@ -344,12 +347,29 @@ async def test_migrate_entry_version_2_no_migration_needed(hass):
     assert config_entry.data["unit_id"] == 5
 
 
-async def test_remove_entry_closes_connection(hass, mocker):
-    """Test that removing an entry closes its connection."""
-    config_entry = create_mock_sunspec_config_entry(hass)
-    client = mocker.Mock()
-    SunSpecApiClient.CLIENT_CACHE["test_host:123:1"] = client
+@pytest.mark.parametrize(
+    "unload",
+    [
+        lambda hass, entry_id: hass.config_entries.async_remove(entry_id),
+        lambda hass, entry_id: hass.config_entries.async_set_disabled_by(
+            entry_id, ConfigEntryDisabler.USER
+        ),
+        # As after Configure, which can also move the entry to another address.
+        lambda hass, entry_id: hass.config_entries.async_reload(entry_id),
+    ],
+    ids=["removed", "disabled", "reloaded"],
+)
+async def test_unload_closes_connection(hass, sunspec_client_mock, mocker, unload):
+    """Test that an entry closes its connection for good when it unloads."""
+    # The settings of the client that the entry is set up with.
+    data = {**MOCK_CONFIG, CONF_HOST: "test"}
+    config_entry = await setup_mock_sunspec_config_entry(hass, data)
+    api = hass.data[DOMAIN][config_entry.entry_id].api
+    disconnect = mocker.spy(SunSpecApiClient.modbus_connect.return_value, "disconnect")
 
-    await hass.config_entries.async_remove(config_entry.entry_id)
+    await unload(hass, config_entry.entry_id)
 
-    client.disconnect.assert_called_once()
+    disconnect.assert_called_once()
+    # A poll still under way does not connect again.
+    with pytest.raises(ConnectionError):
+        api.get_client()
