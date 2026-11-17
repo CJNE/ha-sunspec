@@ -116,6 +116,25 @@ async def test_successful_config_flow(
     assert result["result"]
 
 
+@pytest.mark.parametrize(
+    ("models", "ticked"), [([1, 213], {213}), ([1, 203, 213], {203})]
+)
+async def test_config_flow_ticks_float_models(
+    hass, sunspec_client_mock, mocker, models, ticked
+):
+    """Test that setup ticks a float model for a device without its integer one."""
+    mocker.patch.object(SunSpecApiClient, "async_get_models", return_value=models)
+    result = await start_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input=MOCK_CONFIG_STEP_1
+    )
+
+    enabled = next(
+        key for key in result["data_schema"].schema if key == CONF_ENABLED_MODELS
+    )
+    assert enabled.default() == ticked
+
+
 @pytest.mark.parametrize(("finish", "closed"), [(True, False), (False, True)])
 async def test_config_flow_connection(
     hass, sunspec_client_mock, mocker, finish, closed

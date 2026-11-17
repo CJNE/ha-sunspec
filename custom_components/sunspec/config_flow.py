@@ -26,6 +26,7 @@ from .const import CONF_SCAN_INTERVAL
 from .const import CONF_UNIT_ID
 from .const import DEFAULT_MODELS
 from .const import DOMAIN
+from .const import FLOAT_MODELS
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
@@ -180,6 +181,13 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         models = set(await self.client.async_get_models())
         model_filter = sorted(models)
         default_enabled = {model for model in DEFAULT_MODELS if model in models}
+        # A float model is ticked only for a device without its integer version:
+        # both carry the same readings.
+        default_enabled |= {
+            model
+            for model, integer in FLOAT_MODELS.items()
+            if model in models and integer not in models
+        }
         return self.async_show_form(
             step_id="settings",
             data_schema=vol.Schema(

@@ -57,6 +57,8 @@ DEFAULT_MODELS = set(
         809,
     ]
 )
+# Float versions of default models, with the integer model each repeats.
+FLOAT_MODELS = {111: 101, 112: 102, 113: 103, 211: 201, 212: 202, 213: 203, 214: 204}
 # Group names these models had up to pysunspec2 1.1.5. Device identifiers and
 # entity names are built from them, so they must not change.
 GROUP_NAMES = {
