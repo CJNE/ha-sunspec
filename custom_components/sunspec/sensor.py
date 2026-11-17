@@ -190,6 +190,9 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
                 else:
                     return None
             else:
+                # The point reads "not implemented".
+                if val is None:
+                    return None
                 symbols = list(
                     filter(lambda s: (val >> int(s["value"])) & 1 == 1, symbols)
                 )
