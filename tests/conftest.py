@@ -18,17 +18,6 @@ pytest_plugins = "pytest_homeassistant"
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
 
-class MockFileClientDeviceNotConnected(modbus_client.FileClientDevice):
-    client = SimpleNamespace(socket=None)
-    slave_id = 1
-
-    def is_connected(self):
-        return False
-
-    def connect(self):
-        return True
-
-
 class MockFileClientDevice(modbus_client.FileClientDevice):
     client = SimpleNamespace(socket=None)
     slave_id = 1
@@ -37,7 +26,6 @@ class MockFileClientDevice(modbus_client.FileClientDevice):
         return True
 
     def scan(self, progress=None):
-        print(progress)
         if progress is not None:
             if not progress("Mock scan"):
                 return
@@ -79,17 +67,6 @@ def clear_sunspec_client_cache():
     SunSpecApiClient.CLIENT_CACHE = {}
 
 
-# This fixture, when used, will result in calls to async_get_data to return None. To have the call
-# return a value, we would add the `return_value=<VALUE_TO_RETURN>` parameter to the patch call.
-@pytest.fixture(name="bypass_get_device_info")
-def bypass_get_device_info_fixture():
-    """Skip calls to get data from API."""
-    with patch("custom_components.sunspec.SunSpecApiClient.async_get_device_info"):
-        yield
-
-
-# This fixture, when used, will result in calls to async_get_data to return None. To have the call
-# return a value, we would add the `return_value=<VALUE_TO_RETURN>` parameter to the patch call.
 @pytest.fixture(name="bypass_get_data")
 def bypass_get_data_fixture():
     """Skip calls to get data from API."""
@@ -105,7 +82,7 @@ def sunspec_fixture():
 
 @pytest.fixture
 def sunspec_client_mock(sunspec_fixture):
-    """Skip calls to get data from API."""
+    """Serve the sunspec_fixture file through a mocked device."""
     client = MockFileClientDevice(f"./tests/test_data/{sunspec_fixture}")
     client.scan()
     with (
@@ -120,11 +97,9 @@ def sunspec_client_mock(sunspec_fixture):
         yield
 
 
-# In this fixture, we are forcing calls to async_get_data to raise an Exception. This is useful
-# for exception handling.
 @pytest.fixture
 def sunspec_client_mock_connect_error():
-    """Simulate connection error when retrieving data from API."""
+    """Simulate a connection error when the models are read."""
     client = MockFileClientDevice("./tests/test_data/inverter.json")
     with (
         patch(
@@ -142,26 +117,9 @@ def sunspec_client_mock_connect_error():
         yield
 
 
-@pytest.fixture
-def sunspec_client_mock_not_connected():
-    """Skip calls to get data from API."""
-    client = MockFileClientDeviceNotConnected("./tests/test_data/inverter.json")
-    client.scan()
-    with (
-        patch(
-            "custom_components.sunspec.SunSpecApiClient.modbus_connect",
-            return_value=client,
-        ),
-        patch(
-            "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
-        ),
-    ):
-        yield
-
-
 @pytest.fixture(name="sunspec_modbus_client_mock")
 def sunspec_modbus_client_mock():
-    """Skip calls to get data from API."""
+    """Replace pysunspec2's Modbus TCP device with a mock."""
     mock = Mock()
     with (
         patch("sunspec2.modbus.client.SunSpecModbusClientDeviceTCP", return_value=mock),
@@ -172,11 +130,9 @@ def sunspec_modbus_client_mock():
         yield
 
 
-# In this fixture, we are forcing calls to async_get_data to raise an Exception. This is useful
-# for exception handling.
 @pytest.fixture(name="error_on_get_device_info")
 def error_get_device_info_fixture():
-    """Simulate error when retrieving data from API."""
+    """Simulate an error when the common model is read."""
     with (
         patch(
             "custom_components.sunspec.SunSpecApiClient.async_get_device_info",

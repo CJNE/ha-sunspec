@@ -157,10 +157,6 @@ async def test_setup_without_the_device(hass, request, error):
     assert hass.states.get(TEST_INVERTER_SENSOR_POWER_ENTITY_ID) is None
 
 
-async def test_client_reconnect(hass, sunspec_client_mock_not_connected) -> None:
-    await setup_mock_sunspec_config_entry(hass, MOCK_CONFIG)
-
-
 async def test_poll_while_probe_refused(hass, sunspec_client_mock, mocker):
     """Test that polls succeed while the device refuses the reconnect probe."""
     config_entry = await setup_mock_sunspec_config_entry(hass)

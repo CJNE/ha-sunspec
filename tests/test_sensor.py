@@ -41,7 +41,7 @@ from .const import MOCK_CONFIG_PREFIX
 async def test_sensor_overflow_error(
     hass: HomeAssistant, sunspec_client_mock, overflow_error_dca
 ) -> None:
-    """Verify device information includes expected details."""
+    """Verify a value that overflows leaves the sensor in place."""
 
     await setup_mock_sunspec_config_entry(hass)
 
@@ -50,7 +50,7 @@ async def test_sensor_overflow_error(
 
 
 async def test_sensor_dc(hass: HomeAssistant, sunspec_client_mock) -> None:
-    """Verify device information includes expected details."""
+    """Verify a DC current sensor gets the DC icon."""
 
     await setup_mock_sunspec_config_entry(hass)
 
@@ -110,7 +110,7 @@ async def test_sensor_with_prefix(
 
 
 async def test_sensor_state(hass: HomeAssistant, sunspec_client_mock) -> None:
-    """Verify device information includes expected details."""
+    """Verify the operating state shows its symbol."""
 
     await setup_mock_sunspec_config_entry(hass)
 
@@ -120,7 +120,7 @@ async def test_sensor_state(hass: HomeAssistant, sunspec_client_mock) -> None:
 
 
 async def test_sensor_power(hass: HomeAssistant, sunspec_client_mock) -> None:
-    """Verify device information includes expected details."""
+    """Verify the power sensor shows the device's value."""
 
     await setup_mock_sunspec_config_entry(hass)
 
@@ -130,7 +130,7 @@ async def test_sensor_power(hass: HomeAssistant, sunspec_client_mock) -> None:
 
 
 async def test_sensor_energy(hass: HomeAssistant, sunspec_client_mock) -> None:
-    """Verify device information includes expected details."""
+    """Verify the energy sensor shows the device's value."""
 
     await setup_mock_sunspec_config_entry(hass)
 
@@ -236,7 +236,7 @@ async def test_sensor_bitfield(
 
 
 async def test_sensor_state_mm(hass: HomeAssistant, sunspec_client_mock) -> None:
-    """Verify device information includes expected details."""
+    """Verify the operating state of model 701 shows its symbol."""
 
     await setup_mock_sunspec_config_entry(hass, MOCK_CONFIG_MM)
 
@@ -246,7 +246,7 @@ async def test_sensor_state_mm(hass: HomeAssistant, sunspec_client_mock) -> None
 
 
 async def test_sensor_power_mm(hass: HomeAssistant, sunspec_client_mock) -> None:
-    """Verify device information includes expected details."""
+    """Verify the power sensor of model 701 shows the device's value."""
 
     await setup_mock_sunspec_config_entry(hass, MOCK_CONFIG_MM)
 

@@ -8,18 +8,15 @@ from unittest.mock import patch
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.sunspec import DOMAIN
-from custom_components.sunspec import get_sunspec_unique_id
 from custom_components.sunspec.api import SunSpecApiClient
 
 from .const import MOCK_CONFIG
 
 TEST_CONFIG_ENTRY_ID = "77889900aa"
-TEST_SERIAL_NO = "abc123"
 TEST_INVERTER_SENSOR_STATE_ENTITY_ID = (
     "sensor.inverter_three_phase_inverter_operating_state"
 )
@@ -50,9 +47,6 @@ TEST_METER_FLOAT_VOLTAGE_ENTITY_ID = (
 )
 TEST_METER_FLOAT_ENERGY_ENTITY_ID = (
     "sensor.wye_connect_three_phase_abcn_meter_ac_meter_total_watt_hours_imported"
-)
-TEST_INVERTER_RG_SENSOR_INCLX_ENTITY_ID = (
-    "sensor.inclinometer_incl_2_x_axis_inclination"
 )
 TEST_INVERTER_SENSOR_DC_ENTITY_ID = (
     "sensor.multiple_mppt_inverter_extension_model_mppt_module_0_dc_current"
@@ -102,34 +96,6 @@ async def setup_mock_sunspec_config_entry(
         await hass.config_entries.async_setup(config_entry.entry_id)
         await hass.async_block_till_done(wait_background_tasks=True)
     return config_entry
-
-
-def register_test_entity(
-    hass: HomeAssistant,
-    platform: str,
-    entity_id: str,
-    key: str,
-    model_id: str,
-    model_index: int,
-) -> None:
-    """Register a test entity."""
-
-    unique_id = get_sunspec_unique_id(TEST_CONFIG_ENTRY_ID, key, model_id, model_index)
-    entity_id = entity_id.split(".")[1]
-
-    entity_registry = er.async_get(hass)
-    entity_registry.async_get_or_create(
-        platform,
-        DOMAIN,
-        unique_id,
-        suggested_object_id=entity_id,
-        disabled_by=None,
-    )
-
-
-def get_sunspec_device_identifier(serial_no: str) -> tuple[str, str]:
-    """Get the identifiers for a SunSpec device."""
-    return (DOMAIN, serial_no)
 
 
 class MockSunSpecDataUpdateCoordinator(DataUpdateCoordinator):
