@@ -46,7 +46,9 @@ jobs:
       # gives the first paragraph of its description, which says what now
       # happens; GitHub's list of the pull requests follows. A version with a
       # suffix, such as 1.2.3-beta.1, is a pre-release, which Home Assistant
-      # offers only to those who ask for it.
+      # offers only to those who ask for it. HACS installs the release from
+      # sunspec.zip, the integration's files, and shows how often that file
+      # was downloaded.
       - name: Publish the release
         if: steps.version.outputs.tag
         env:
@@ -68,4 +70,5 @@ jobs:
           if [[ "$TAG" == *-* ]]; then
             args+=(--prerelease)
           fi
-          gh release create "$TAG" "${args[@]}"
+          git archive --output "$RUNNER_TEMP/sunspec.zip" HEAD:custom_components/sunspec
+          gh release create "$TAG" "$RUNNER_TEMP/sunspec.zip" "${args[@]}"

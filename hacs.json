@@ -2,5 +2,7 @@
   "name": "SunSpec",
   "hacs": "1.6.0",
   "render_readme": true,
+  "zip_release": true,
+  "filename": "sunspec.zip",
   "homeassistant": "2025.6.0"
 }
