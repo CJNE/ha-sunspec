@@ -247,11 +247,8 @@ class SunSpecApiClient:
         except ModbusClientError as err:
             raise ConnectionError(err) from err
 
-    async def read(self, model_id) -> SunSpecModelWrapper:
-        return await self._hass.async_add_executor_job(self.read_model, model_id)
-
     async def async_get_device_info(self) -> SunSpecModelWrapper:
-        return await self.read(1)
+        return await self.async_get_data(1)
 
     def get_models(self, config=None) -> list:
         with self._lock:

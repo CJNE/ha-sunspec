@@ -376,7 +376,15 @@ async def test_poll_waits_for_write(hass, mocker):
     assert order == ["read", "write", "read", "read"]
 
 
-async def test_read_model_timeout(hass, mocker):
+@pytest.mark.parametrize(
+    "read",
+    [
+        lambda api: api.async_get_data(103),
+        # The common model, which setup reads first.
+        lambda api: api.async_get_device_info(),
+    ],
+)
+async def test_read_model_timeout(hass, mocker, read):
     mocker.patch(
         "custom_components.sunspec.api.SunSpecApiClient.read_model",
         side_effect=ModbusClientTimeout("timed out"),
@@ -384,7 +392,7 @@ async def test_read_model_timeout(hass, mocker):
     api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
 
     with pytest.raises(ConnectionTimeoutError):
-        await api.async_get_data(1)
+        await read(api)
 
 
 async def test_read_model_error(hass, mocker):
