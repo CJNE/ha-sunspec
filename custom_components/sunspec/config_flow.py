@@ -110,7 +110,7 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             host = user_input[CONF_HOST]
             port = user_input[CONF_PORT]
-            unit_id = user_input.get(CONF_UNIT_ID) or user_input.get("slave_id", 1)
+            unit_id = user_input.get(CONF_UNIT_ID, user_input.get("slave_id", 1))
             connection = {CONF_HOST: host, CONF_PORT: port, CONF_UNIT_ID: unit_id}
             if await self._test_connection(connection):
                 return await self._add_device(connection, user_input)
@@ -252,7 +252,7 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
             )
         host = settings.get(CONF_HOST)
         port = settings.get(CONF_PORT)
-        unit_id = settings.get(CONF_UNIT_ID) or settings.get("slave_id", 1)
+        unit_id = settings.get(CONF_UNIT_ID, settings.get("slave_id", 1))
 
         return self.async_show_form(
             step_id="host_options",

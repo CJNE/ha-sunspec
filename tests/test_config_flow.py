@@ -7,6 +7,7 @@ from homeassistant.data_entry_flow import FlowResultType
 import pytest
 from pytest_homeassistant.common import MockConfigEntry
 
+from custom_components.sunspec import config_flow
 from custom_components.sunspec.api import ConnectionTimeoutError
 from custom_components.sunspec.api import NoSunSpecError
 from custom_components.sunspec.const import CONF_ALLOW_WRITING
@@ -14,6 +15,7 @@ from custom_components.sunspec.const import CONF_DEVICE
 from custom_components.sunspec.const import CONF_ENABLED_MODELS
 from custom_components.sunspec.const import CONF_MODEL_INTERVALS
 from custom_components.sunspec.const import CONF_SCAN_INTERVAL
+from custom_components.sunspec.const import CONF_UNIT_ID
 from custom_components.sunspec.const import DOMAIN
 
 from . import MockSunSpecDataUpdateCoordinator
@@ -55,6 +57,12 @@ async def start_flow(hass, connection="tcp"):
     ("connection", "user_input", "title", "data"),
     [
         ("tcp", MOCK_CONFIG_STEP_1, "test_host:123:1", MOCK_CONFIG),
+        (
+            "tcp",
+            {**MOCK_CONFIG_STEP_1, CONF_UNIT_ID: 0},
+            "test_host:123:0",
+            {**MOCK_CONFIG, CONF_UNIT_ID: 0},
+        ),
         ("serial", MOCK_SERIAL_STEP_1, "/dev/ttyUSB0:1", MOCK_SERIAL_CONFIG),
     ],
 )
@@ -63,12 +71,14 @@ async def test_successful_config_flow(
     bypass_get_data,
     enable_custom_integrations,
     sunspec_client_mock,
+    mocker,
     connection,
     user_input,
     title,
     data,
 ):
     """Test a successful config flow."""
+    api_client = mocker.spy(config_flow, "api_client")
     result = await start_flow(hass, connection)
 
     # Check that the config flow shows the connection form
@@ -79,6 +89,9 @@ async def test_successful_config_flow(
     result = await hass.config_entries.flow.async_configure(
         flow_id, user_input=user_input
     )
+
+    # The device was read at the unit ID entered.
+    assert api_client.call_args.args[1][CONF_UNIT_ID] == user_input[CONF_UNIT_ID]
 
     # Check that the config flow is complete and a new entry is created with
     # the input data
@@ -203,6 +216,12 @@ async def test_config_flow_without_serial_number(
     ("data", "step_id", "user_input", "title"),
     [
         (MOCK_CONFIG, "host_options", MOCK_CONFIG_STEP_1, "test_host:123:1"),
+        (
+            {**MOCK_CONFIG, CONF_UNIT_ID: 0},
+            "host_options",
+            {**MOCK_CONFIG_STEP_1, CONF_UNIT_ID: 0},
+            "test_host:123:0",
+        ),
         (MOCK_SERIAL_CONFIG, "serial_options", MOCK_SERIAL_STEP_1, "/dev/ttyUSB0:1"),
     ],
 )
@@ -224,6 +243,9 @@ async def test_options_flow(
     # Verify that the first options step is a user form
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == step_id
+    # It shows the entry's unit ID.
+    unit_id = next(key for key in result["data_schema"].schema if key == CONF_UNIT_ID)
+    assert unit_id.default() == data[CONF_UNIT_ID]
 
     # Enter some fake data into the form
     result = await hass.config_entries.options.async_configure(
