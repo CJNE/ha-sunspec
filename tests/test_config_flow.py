@@ -16,6 +16,7 @@ from custom_components.sunspec.const import CONF_ALLOW_WRITING
 from custom_components.sunspec.const import CONF_DEVICE
 from custom_components.sunspec.const import CONF_ENABLED_MODELS
 from custom_components.sunspec.const import CONF_MODEL_INTERVALS
+from custom_components.sunspec.const import CONF_PREFIX
 from custom_components.sunspec.const import CONF_SCAN_INTERVAL
 from custom_components.sunspec.const import CONF_UNIT_ID
 from custom_components.sunspec.const import DOMAIN
@@ -280,6 +281,33 @@ async def test_scan_interval_at_least_one(hass, sunspec_client_mock, scan_interv
             result["flow_id"],
             user_input={CONF_ENABLED_MODELS: [], CONF_SCAN_INTERVAL: scan_interval},
         )
+
+
+async def test_fields_left_out(hass, bypass_get_data, sunspec_client_mock):
+    """Test that setup and Configure take the values an entry runs with for fields left out."""
+    result = await start_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input=MOCK_CONFIG_STEP_1
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input={CONF_ENABLED_MODELS: [103]}
+    )
+    assert result["data"][CONF_SCAN_INTERVAL] == 30
+
+    # An entry from before the prefix and the scan interval were settings.
+    entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG_STEP_1, entry_id="old")
+    entry.add_to_hass(hass)
+    coordinator = MockSunSpecDataUpdateCoordinator(hass, [1])
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input=MOCK_CONFIG_STEP_1
+    )
+    await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input={CONF_ENABLED_MODELS: []}
+    )
+    assert entry.options[CONF_PREFIX] == ""
+    assert entry.options[CONF_SCAN_INTERVAL] == 30
 
 
 # Our config flow also has an options flow, so we must test it as well.

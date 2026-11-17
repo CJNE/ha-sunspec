@@ -194,7 +194,7 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 {
                     vol.Optional(CONF_PREFIX, default=""): str,
                     vol.Optional(
-                        CONF_SCAN_INTERVAL, default=SCAN_INTERVAL.total_seconds()
+                        CONF_SCAN_INTERVAL, default=int(SCAN_INTERVAL.total_seconds())
                     ): vol.All(int, vol.Range(min=1)),
                     vol.Optional(
                         CONF_ENABLED_MODELS,
@@ -292,11 +292,15 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
             self.options.update(user_input)
             return await self._update_options()
 
+        # An entry from before these settings existed runs with their defaults.
         prefix = self.config_entry.options.get(
-            CONF_PREFIX, self.config_entry.data.get(CONF_PREFIX)
+            CONF_PREFIX, self.config_entry.data.get(CONF_PREFIX, "")
         )
         scan_interval = self.config_entry.options.get(
-            CONF_SCAN_INTERVAL, self.config_entry.data.get(CONF_SCAN_INTERVAL)
+            CONF_SCAN_INTERVAL,
+            self.config_entry.data.get(
+                CONF_SCAN_INTERVAL, int(SCAN_INTERVAL.total_seconds())
+            ),
         )
         intervals = self.config_entry.options.get(CONF_MODEL_INTERVALS, {})
         connection = {key: self.config_entry.data.get(key) for key in self.settings}
