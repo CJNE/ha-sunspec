@@ -12,6 +12,7 @@ from homeassistant.core import HomeAssistant
 from sunspec2.device import ModelError
 import sunspec2.modbus.client as modbus_client
 from sunspec2.modbus.client import SunSpecModbusClientError
+from sunspec2.modbus.client import SunSpecModbusValueError
 from sunspec2.modbus.modbus import ModbusClientError
 from sunspec2.modbus.modbus import ModbusClientException
 from sunspec2.modbus.modbus import ModbusClientTimeout
@@ -245,9 +246,13 @@ class SunSpecApiClient:
     async def async_write(self, model_id, model_index, values) -> None:
         try:
             await self.run(self.write_model, model_id, model_index, values)
-        except ModelError as err:
-            # The point or its scale factor reads "not implemented" now.
+        except (ModelError, SunSpecModbusValueError) as err:
+            # The point or its scale factor reads "not implemented" now, or the
+            # value does not fit the point at the scale factor it has now.
             raise ModelRefusedError(err) from err
+        except OSError as err:
+            # pysunspec2 lets a failed receive through as it is.
+            raise ConnectionError(err) from err
 
     async def run(self, job, *args):
         """Run a Modbus job in the executor and raise the integration's errors."""
