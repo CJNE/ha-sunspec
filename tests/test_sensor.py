@@ -60,6 +60,13 @@ async def test_sensor_dc(hass: HomeAssistant, sunspec_client_mock) -> None:
         (None, TEST_INVERTER_SENSOR_PF_ID, "%", None),
         (MOCK_CONFIG_MM, TEST_INVERTER_MM_SENSOR_VAR_ID, "var", "reactive_power"),
         (MOCK_CONFIG_MM, TEST_INVERTER_MM_SENSOR_VARH_ID, "varh", None),
+        # An angle, not a temperature.
+        (
+            {**MOCK_CONFIG_MM, "models_enabled": [304]},
+            "sensor.inclinometer_model_inclinometer_incl_0_x",
+            "°",
+            None,
+        ),
     ],
 )
 async def test_sensor_unit(
