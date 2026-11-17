@@ -34,6 +34,10 @@ class ConnectionTimeoutError(ConnectionError):
     pass
 
 
+class ModelMovedError(ConnectionError):
+    """The device no longer has a model where the scan found it."""
+
+
 class ModelRefusedError(Exception):
     """The device refused a model read or write."""
 
@@ -420,13 +424,28 @@ class SunSpecApiClient:
         client.client.slave_id = client.slave_id
         return client
 
+    def read_scanned(self, model):
+        """Read a model where the scan found it, if the device still has it there."""
+        before = model.get_mb()
+        model.read()
+        # A device can change its layout while it runs, such as after a firmware
+        # update. The registers read are then another model's: the model keeps
+        # its values, and the device is scanned again when it is next connected.
+        point = model.points.get("ID")
+        if point is not None and point.value != model.model_id:
+            model.set_mb(before, dirty=False)
+            self.disconnect()
+            raise ModelMovedError(
+                f"The device no longer has model {model.model_id} where it was found"
+            )
+
     def read_model(self, model_id) -> dict:
         with self._lock:
             client = self.unit_client()
             models = client.models[model_id]
             for model_index, model in enumerate(models):
                 time.sleep(read_delay(client))
-                model.read()
+                self.read_scanned(model)
                 self.unconfirmed.pop((model_id, model_index), None)
 
         return SunSpecModelWrapper(models)
@@ -442,7 +461,7 @@ class SunSpecApiClient:
             point = SunSpecModelWrapper([model]).getPoint
             # The scale factors can change while the device runs.
             time.sleep(read_delay(client))
-            model.read()
+            self.read_scanned(model)
             self.unconfirmed.pop((model_id, model_index), None)
             before = {key: point(key).value for key in values}
             try:
