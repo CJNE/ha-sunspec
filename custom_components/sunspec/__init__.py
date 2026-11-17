@@ -208,7 +208,7 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
         super().__init__(
             hass,
             _LOGGER,
-            name=DOMAIN,
+            name=entry.title,
             update_interval=timedelta(
                 seconds=min(
                     self.model_intervals.values(),
@@ -258,10 +258,10 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
                     data[model_id] = self.data[model_id]
             return data
         except Exception as exception:
-            _LOGGER.warning(exception)
+            # The coordinator logs the first failed poll and the recovery.
             self.api.reconnect_next()
             self.reload_if_moved(exception)
-            raise UpdateFailed() from exception
+            raise UpdateFailed(exception) from exception
 
     def reload_if_moved(self, err):
         """Set the entry up anew after the device moved a model."""

@@ -2,6 +2,7 @@
 
 from collections import Counter
 from datetime import timedelta
+import logging
 import threading
 
 from homeassistant.config_entries import ConfigEntryDisabler
@@ -147,14 +148,30 @@ async def test_setup_does_not_wait_for_the_device(hass, sunspec_client_mock, moc
     "error",
     ["error_on_get_data", "timeout_error_on_get_data", "connect_error_on_get_data"],
 )
-async def test_setup_without_the_device(hass, request, error):
-    """A device that cannot be read leaves the entry loaded, and a later poll retries."""
+async def test_setup_without_the_device(hass, request, caplog, error):
+    """A device that cannot be read leaves the entry loaded, and later polls retry."""
     request.getfixturevalue(error)
-    config_entry = await setup_mock_sunspec_config_entry(hass)
+    config_entry = create_mock_sunspec_config_entry(hass)
+    hass.config_entries.async_update_entry(config_entry, title="test_host:123:1")
+    await setup_mock_sunspec_config_entry(hass, config_entry=config_entry)
+    coordinator = hass.data[DOMAIN][config_entry.entry_id]
+    await coordinator.async_refresh()
 
     assert config_entry.state is ConfigEntryState.LOADED
-    assert not hass.data[DOMAIN][config_entry.entry_id].last_update_success
+    assert not coordinator.last_update_success
     assert hass.states.get(TEST_INVERTER_SENSOR_POWER_ENTITY_ID) is None
+    # The log names the device and the cause once, not at every failed poll.
+    failures = [
+        record.getMessage()
+        for record in caplog.records
+        if record.name.startswith("custom_components.sunspec")
+        and record.levelno >= logging.WARNING
+    ]
+    cause = str(coordinator.last_exception.__cause__)
+    assert len(failures) == 1
+    assert config_entry.title in failures[0]
+    assert cause
+    assert cause in failures[0]
 
 
 async def test_client_reconnect(hass, sunspec_client_mock_not_connected) -> None:
