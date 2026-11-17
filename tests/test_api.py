@@ -179,6 +179,7 @@ async def test_entries_share_connection(hass, mocker):
     def scan(self, **kwargs):
         sent.append(self.client.slave_id)
         model = mocker.MagicMock()
+        model.points.get.return_value.value = model.model_id
         model.read.side_effect = lambda: sent.append(self.client.slave_id)
         model.write.side_effect = lambda: sent.append(self.client.slave_id)
         self.models[103] = [model]
@@ -336,7 +337,7 @@ async def test_read_model_delay(hass, mocker, manufacturer, delay):
     """Test that an SMA device gets a second before each model read."""
     sleep = mocker.patch("custom_components.sunspec.api.time.sleep")
     common = mocker.Mock(points={"Mn": mocker.Mock(value=manufacturer)})
-    client = mocker.Mock(models={1: [common], 103: [mocker.Mock()]})
+    client = mocker.Mock(models={1: [common], 103: [mocker.Mock(points={})]})
     client.client.socket = None
     SunSpecApiClient.CLIENT_CACHE["test:123:1"] = client
     api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
@@ -352,6 +353,7 @@ async def test_poll_waits_for_write(hass, mocker):
     order = []
     writing, done = threading.Event(), threading.Event()
     model = mocker.MagicMock()
+    model.points.get.return_value.value = model.model_id
     model.read.side_effect = lambda: order.append("read")
     model.write.side_effect = lambda: (
         writing.set(),

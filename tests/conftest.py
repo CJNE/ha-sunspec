@@ -46,6 +46,9 @@ class MockFileClientDevice(modbus_client.FileClientDevice):
     def connect(self):
         return True
 
+    def disconnect(self):
+        pass
+
 
 # This fixture is used to prevent HomeAssistant from attempting to create and dismiss persistent
 # notifications. These calls would fail without this fixture since the persistent_notification

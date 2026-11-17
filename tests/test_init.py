@@ -21,6 +21,7 @@ from custom_components.sunspec.const import CONF_SCAN_INTERVAL
 from custom_components.sunspec.const import DOMAIN
 
 from . import TEST_INVERTER_SENSOR_POWER_ENTITY_ID
+from . import TEST_INVERTER_SENSOR_TMPSNK_ENTITY_ID
 from . import create_mock_sunspec_config_entry
 from . import setup_mock_sunspec_config_entry
 from .const import MOCK_CONFIG
@@ -196,6 +197,38 @@ async def test_refused_model_keeps_last_values(
     await coordinator.async_refresh()
 
     assert hass.states.get(TEST_INVERTER_SENSOR_POWER_ENTITY_ID).state == state
+
+
+async def test_moved_model_scanned_again(hass, sunspec_client_mock, mocker):
+    """Test that a model the device moved is not read where it was, and the entry is set up anew."""
+    config_entry = await setup_mock_sunspec_config_entry(hass)
+    coordinator = hass.data[DOMAIN][config_entry.entry_id]
+    connect = SunSpecApiClient.modbus_connect
+    model = connect.return_value.models[103][0]
+    # After a firmware update other registers sit where the scan found model
+    # 103, which give values to points the device does not have.
+    read = mocker.patch.object(
+        model,
+        "read",
+        side_effect=lambda: [
+            model.points[key].set_value(value, dirty=False)
+            for key, value in {"ID": 701, "W": 12345, "TmpSnk": 45}.items()
+        ],
+    )
+    await coordinator.async_refresh()
+
+    assert hass.states.get(TEST_INVERTER_SENSOR_POWER_ENTITY_ID).state == (
+        STATE_UNAVAILABLE
+    )
+    assert "test:123:1" not in SunSpecApiClient.CLIENT_CACHE
+
+    # The new scan finds model 103 where it is now.
+    read.side_effect = None
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    assert connect.call_count == 2
+    assert hass.states.get(TEST_INVERTER_SENSOR_POWER_ENTITY_ID).state == "800"
+    assert hass.states.get(TEST_INVERTER_SENSOR_TMPSNK_ENTITY_ID) is None
 
 
 async def test_model_intervals(hass, sunspec_client_mock, mocker):

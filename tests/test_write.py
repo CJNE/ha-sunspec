@@ -307,6 +307,31 @@ async def test_write_error(
     assert hass.states.get(entity).state == state
 
 
+async def test_write_to_moved_model(hass, sunspec_client_mock, mocker):
+    """Test that nothing is written or shown where the device no longer has the model."""
+    await setup_controls(hass)
+    # Model 124 now sits where the scan found model 123.
+    device = {"ID": 124, "WMaxLimPct": 3000}
+    model = device_model(mocker, 123, device)
+    entity = entity_id(hass, "number", 123, "WMaxLimPct")
+
+    with pytest.raises(HomeAssistantError) as err:
+        await hass.services.async_call(
+            "number", "set_value", {"entity_id": entity, "value": 50}, blocking=True
+        )
+
+    assert err.value.translation_key == "write_failed"
+    model.write.assert_not_called()
+    assert hass.states.get(entity).state == "100.0"
+
+    # The entry is set up anew, and its new scan finds model 123 where it is now.
+    device["ID"] = 123
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    assert SunSpecApiClient.modbus_connect.call_count == 2
+    assert hass.states.get(entity).state == "30.0"
+
+
 async def test_unconfirmed_write(hass, sunspec_client_mock, mocker):
     """Test that only the points of a write not read back are unavailable, until a read."""
     mocker.patch("custom_components.sunspec.monotonic", return_value=0)

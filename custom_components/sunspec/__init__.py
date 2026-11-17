@@ -21,6 +21,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from .api import ConnectionError
+from .api import ModelMovedError
 from .api import ModelRefusedError
 from .api import SunSpecApiClient
 from .const import CONF_ALLOW_WRITING
@@ -262,7 +263,14 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
         except Exception as exception:
             _LOGGER.warning(exception)
             self.api.reconnect_next()
+            self.reload_if_moved(exception)
             raise UpdateFailed() from exception
+
+    def reload_if_moved(self, err):
+        """Set the entry up anew after the device moved a model."""
+        # Its entities and their last reads belong to the models of the old scan.
+        if isinstance(err, ModelMovedError):
+            self.hass.config_entries.async_schedule_reload(self.entry.entry_id)
 
     async def async_write(self, model_id, model_index, values):
         """Write points of a model, then show what the device reports."""
@@ -273,6 +281,7 @@ class SunSpecDataUpdateCoordinator(DataUpdateCoordinator):
             if isinstance(err, ConnectionError):
                 # A late answer to the write must not be taken for the next one.
                 self.api.reconnect_next()
+                self.reload_if_moved(err)
                 key = "write_failed"
             if self.api.unconfirmed.get((model_id, model_index)) is values:
                 # It was sent: the next poll reads the model, whatever its interval.
