@@ -62,8 +62,9 @@ HA_META = {
     "Wh": [UnitOfEnergy.WATT_HOUR, ICON_ENERGY, SensorDeviceClass.ENERGY],
     "WH": [UnitOfEnergy.WATT_HOUR, ICON_ENERGY, SensorDeviceClass.ENERGY],
     "bps": [UnitOfDataRate.BITS_PER_SECOND, ICON_DEFAULT, None],
-    "deg": [DEGREE, ICON_TEMP, SensorDeviceClass.TEMPERATURE],
-    "Degrees": [DEGREE, ICON_TEMP, SensorDeviceClass.TEMPERATURE],
+    # Angles, such as an inclination, a position or a wind direction.
+    "deg": [DEGREE, ICON_DEFAULT, None],
+    "Degrees": [DEGREE, ICON_DEFAULT, None],
     "C": [UnitOfTemperature.CELSIUS, ICON_TEMP, SensorDeviceClass.TEMPERATURE],
     "kWh": [UnitOfEnergy.KILO_WATT_HOUR, ICON_ENERGY, SensorDeviceClass.ENERGY],
     "m/s": [UnitOfSpeed.METERS_PER_SECOND, ICON_DEFAULT, None],
