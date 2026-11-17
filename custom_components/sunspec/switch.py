@@ -15,7 +15,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 def switches(coordinator, entry, data):
     """Return the switch of an on/off point, or one for each bit of a bitfield."""
-    meta = data["model"].getMeta(data["key"])
+    meta = data["model"].getMeta(data["key"], data["model_index"])
     if meta["type"].startswith("bitfield"):
         return [
             SunSpecBitSwitch(coordinator, entry, data, symbol)

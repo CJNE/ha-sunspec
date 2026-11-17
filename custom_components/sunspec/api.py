@@ -1,5 +1,6 @@
 """Read SunSpec devices over Modbus with pysunspec2."""
 
+from functools import partial
 import logging
 import select
 import socket
@@ -48,8 +49,8 @@ class SunSpecModelWrapper:
         self._models = models
         self.num_models = len(models)
 
-    def isValidPoint(self, point_name):
-        point = self.getPoint(point_name)
+    def isValidPoint(self, point_name, model_index=0):
+        point = self.getPoint(point_name, model_index)
         if point.value is None:
             return False
         if point.pdef["type"] in ("enum16", "bitfield32"):
@@ -58,15 +59,16 @@ class SunSpecModelWrapper:
             return False
         return True
 
-    def isWritablePoint(self, point_name):
-        point = self.getPoint(point_name)
+    def isWritablePoint(self, point_name, model_index=0):
+        point = self.getPoint(point_name, model_index)
         return point.value is not None and point.pdef.get("access") == "RW"
 
-    def getKeys(self, valid=None):
-        valid = valid or self.isValidPoint
-        keys = list(filter(valid, self._models[0].points.keys()))
-        for group_name in self._models[0].groups:
-            model_group = self._models[0].groups[group_name]
+    def getKeys(self, valid=None, model_index=0):
+        valid = partial(valid or self.isValidPoint, model_index=model_index)
+        model = self._models[model_index]
+        keys = list(filter(valid, model.points.keys()))
+        for group_name in model.groups:
+            model_group = model.groups[group_name]
             if type(model_group) is list:
                 for idx, group in enumerate(model_group):
                     key_prefix = f"{group_name}:{idx}"
@@ -104,8 +106,8 @@ class SunSpecModelWrapper:
         point = self.getPoint(point_name, model_index)
         return point.cvalue
 
-    def getMeta(self, point_name):
-        return self.getPoint(point_name).pdef
+    def getMeta(self, point_name, model_index=0):
+        return self.getPoint(point_name, model_index).pdef
 
     def getGroupMeta(self):
         gdef = self._models[0].gdef

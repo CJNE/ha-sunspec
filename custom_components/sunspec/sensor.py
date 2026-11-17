@@ -92,13 +92,17 @@ def float32_decimal(value):
 async def async_setup_entry(hass, entry, async_add_devices):
     """Setup sensor platform."""
     async_add_point_entities(
-        hass, entry, async_add_devices, lambda model_id, model: model.getKeys(), sensors
+        hass,
+        entry,
+        async_add_devices,
+        lambda model_id, model, model_index: model.getKeys(model_index=model_index),
+        sensors,
     )
 
 
 def sensors(coordinator, entry, data):
     """Return the sensor of a point."""
-    meta = data["model"].getMeta(data["key"])
+    meta = data["model"].getMeta(data["key"], data["model_index"])
     sunspec_unit = meta.get("units", "")
     ha_meta = HA_META.get(sunspec_unit, [sunspec_unit, None, None])
     device_class = ha_meta[2]
@@ -113,7 +117,7 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
 
     def __init__(self, coordinator, config_entry, data):
         super().__init__(coordinator, config_entry, data)
-        self._point_meta = self.model_wrapper.getPoint(self.key).pdef
+        self._point_meta = self.model_wrapper.getPoint(self.key, self.model_index).pdef
         sunspec_unit = self._meta.get("units", self._meta.get("type", ""))
         ha_meta = HA_META.get(sunspec_unit, [sunspec_unit, ICON_DEFAULT, None])
         self.unit = ha_meta[0]
