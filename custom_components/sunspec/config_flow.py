@@ -197,10 +197,22 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             errors=self._errors,
         )
 
+    @callback
+    def async_remove(self):
+        """Close the connection the device was read through, unless an entry uses it."""
+        if not hasattr(self, "client"):
+            return
+        loaded = self.hass.config_entries.async_loaded_entries(DOMAIN)
+        if entry_title(self.connection) not in {
+            entry_title(entry.data) for entry in loaded
+        }:
+            self.hass.async_add_executor_job(self.client.disconnect)
+
     async def _test_connection(self, connection):
         """Return true if the device answers on the connection."""
         _LOGGER.debug(f"Test connection to {entry_title(connection)}")
         try:
+            self.connection = connection
             self.client = api_client(self.hass, connection)
             self._device_info = await self.client.async_get_device_info()
             _LOGGER.info(self._device_info)

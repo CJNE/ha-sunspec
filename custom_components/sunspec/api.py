@@ -195,11 +195,16 @@ class SunSpecApiClient:
         # and take turns.
         self._lock = SunSpecApiClient.LOCKS.setdefault(connection, threading.RLock())
         self._reconnect = False
+        # A disconnected client stays closed: a poll or a setup step still
+        # under way must not connect again.
+        self._closed = False
         # The write sent to a model, by its ID and index, and not read back.
         self.unconfirmed = {}
 
     def get_client(self):
         with self._lock:
+            if self._closed:
+                raise ConnectionError(f"The connection to {self._client_key} is closed")
             cached = SunSpecApiClient.CLIENT_CACHE.get(self._client_key, None)
             if cached is None:
                 _LOGGER.debug("Not using cached connection")
@@ -219,6 +224,7 @@ class SunSpecApiClient:
     def disconnect(self):
         """Forget the scanned device and close its connection if no other uses it."""
         with self._lock:
+            self._closed = True
             client = SunSpecApiClient.CLIENT_CACHE.pop(self._client_key, None)
             if client is None:
                 return
