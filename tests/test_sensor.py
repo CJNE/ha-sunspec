@@ -194,3 +194,24 @@ async def test_sensor_power_mm(hass: HomeAssistant, sunspec_client_mock) -> None
     entity_state = hass.states.get(TEST_INVERTER_MM_SENSOR_POWER_ENTITY_ID)
     assert entity_state
     assert entity_state.state == "9700"
+
+
+@pytest.mark.parametrize("sunspec_fixture", ["status.json"])
+@pytest.mark.parametrize(
+    ("entity_id", "state"),
+    [
+        # A 16-bit bitfield.
+        ("sensor.measurements_status_status_pvconn", "CONNECTED,AVAILABLE,OPERATING"),
+        # A 32-bit enum, without symbols in its definition.
+        ("sensor.basic_aggregator_aggregator_vendor_control", "5"),
+    ],
+)
+async def test_sensor_flags_and_enums(
+    hass: HomeAssistant, sunspec_client_mock, entity_id, state
+) -> None:
+    """Verify bitfields and enums of each size get their sensors."""
+
+    config = {**MOCK_CONFIG_MM, "models_enabled": [2, 122]}
+    await setup_mock_sunspec_config_entry(hass, config)
+
+    assert hass.states.get(entity_id).state == state

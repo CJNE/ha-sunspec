@@ -1,0 +1,51 @@
+{
+  "name": "status",
+  "models": [
+    {
+      "ID": 1,
+      "Mn": "SunSpecTest",
+      "Md": "Test-Status",
+      "Opt": "o",
+      "Vr": "1.2.3",
+      "SN": "sn-status",
+      "DA": 1,
+      "Pad": 0
+    },
+    {
+      "ID": 2,
+      "AID": 1,
+      "N": 1,
+      "UN": 1,
+      "St": 1,
+      "StVnd": 0,
+      "Evt": 0,
+      "EvtVnd": 0,
+      "Ctl": 0,
+      "CtlVnd": 5,
+      "CtlVl": 0
+    },
+    {
+      "ID": 122,
+      "PVConn": 7,
+      "StorConn": 0,
+      "ECPConn": 1,
+      "ActWh": 0,
+      "ActVAh": 0,
+      "ActVArhQ1": 0,
+      "ActVArhQ2": 0,
+      "ActVArhQ3": 0,
+      "ActVArhQ4": 0,
+      "VArAval": 0,
+      "VArAval_SF": 0,
+      "WAval": 0,
+      "WAval_SF": 0,
+      "StSetLimMsk": 0,
+      "StActCtl": 0,
+      "TmSrc": "",
+      "Tms": 0,
+      "RtSt": 0,
+      "Ris": 0,
+      "Ris_SF": 0
+    }
+  ]
+}

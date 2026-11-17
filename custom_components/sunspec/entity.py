@@ -148,7 +148,7 @@ class SunSpecEntity(CoordinatorEntity):
             attrs["label"] = label
 
         vtype = self._meta["type"]
-        if vtype in ("enum16", "bitfield32"):
+        if vtype.startswith(("enum", "bitfield")):
             attrs["raw"] = self.coordinator.data[self.model_id].getValue(
                 self.key, self.model_index
             )
