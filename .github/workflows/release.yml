@@ -44,11 +44,11 @@ jobs:
 
       # Each pull request since the last release that changed the integration
       # gives the first paragraph of its description, which says what now
-      # happens; GitHub's list of the pull requests follows. A version with a
-      # suffix, such as 1.2.3-beta.1, is a pre-release, which Home Assistant
-      # offers only to those who ask for it. HACS installs the release from
-      # sunspec.zip, the integration's files, and shows how often that file
-      # was downloaded.
+      # happens, or its title when it has none; GitHub's list of the pull
+      # requests follows. A version with a suffix, such as 1.2.3-beta.1, is a
+      # pre-release, which Home Assistant offers only to those who ask for it.
+      # HACS installs the release from sunspec.zip, the integration's files,
+      # and shows how often that file was downloaded.
       - name: Publish the release
         if: steps.version.outputs.tag
         env:
@@ -61,7 +61,8 @@ jobs:
             gh pr view "$pr" --repo "$GITHUB_REPOSITORY" --json number,author,title,body,files --jq '
               select((.author.is_bot | not) and (.title | startswith("Version ") | not)
                 and any(.files[].path; startswith("custom_components/")))
-              | "- " + (.body | gsub("\r"; "") | split("\n\n")[0] | gsub("\n"; " ")) + " (#\(.number))"' >> "$changes"
+              | .title as $title
+              | "- " + (((.body // "") | gsub("\r"; "") | split("\n\n") | map(select(test("\\S"))) | .[0]) // $title | gsub("\n"; " ")) + " (#\(.number))"' >> "$changes"
           done
           [ -s "$changes" ] || echo "- None in the integration itself." > "$changes"
           sed "s/{homeassistant}/$(jq -r .homeassistant hacs.json)/" .github/RELEASE_TEMPLATE.md |
