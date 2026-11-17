@@ -114,7 +114,7 @@ async def test_check_port(hass, mocker, connect_result, is_open):
     sock.connect_ex.return_value = connect_result
     api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
 
-    assert api.check_port() is is_open
+    assert api.check_port("test", 123) is is_open
     sock.settimeout.assert_called_once_with(3)
     assert socket.getdefaulttimeout() is None
 
@@ -235,6 +235,27 @@ async def test_changed_settings_leave_entry_device(hass, mocker):
     assert await api.async_get_models(changed) == [203]
     assert await api.async_get_models() == [103]
     disconnect.assert_called_once()
+
+
+async def test_changed_settings_reach_moved_device(hass, mocker):
+    """Test that changed settings reach a device at its new address while the old one is dead."""
+    sock = mocker.patch("custom_components.sunspec.api.socket.socket").return_value
+    sock.connect_ex.side_effect = lambda address: (
+        0 if address == ("new", 124) else errno.ECONNREFUSED
+    )
+    mocker.patch("sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.connect")
+    mocker.patch(
+        "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.is_connected",
+        return_value=True,
+    )
+    mocker.patch(
+        "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.scan",
+        lambda self, **kwargs: self.models.update({103: []}),
+    )
+    api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
+
+    moved = {"host": "new", "port": 124, "unit_id": 1}
+    assert await api.async_get_models(moved) == [103]
 
 
 @pytest.mark.parametrize("scan_error", [None, ModbusClientTimeout("Response timeout")])

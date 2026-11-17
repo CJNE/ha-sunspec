@@ -205,7 +205,7 @@ class SunSpecApiClient:
                     cached.client.close()
                     cached.client.open()
                     self._reconnect = False
-                elif self.check_port():
+                elif self.check_port(self._host, self._port):
                     cached.connect()
                     self._reconnect = False
             return cached
@@ -272,25 +272,23 @@ class SunSpecApiClient:
     def reconnect_next(self):
         self._reconnect = True
 
-    def check_port(self) -> bool:
+    def check_port(self, host, port) -> bool:
         """Check if port is available"""
         with self._lock:
             sock_timeout = float(3)
             _LOGGER.debug(
-                f"Check_Port: opening socket on {self._host}:{self._port} with a {sock_timeout}s timeout."
+                f"Check_Port: opening socket on {host}:{port} with a {sock_timeout}s timeout."
             )
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(sock_timeout)
-            sock_res = sock.connect_ex((self._host, self._port))
+            sock_res = sock.connect_ex((host, port))
             is_open = sock_res == 0  # True if open, False if not
             if is_open:
                 sock.shutdown(socket.SHUT_RDWR)
-                _LOGGER.debug(
-                    f"Check_Port (SUCCESS): port open on {self._host}:{self._port}"
-                )
+                _LOGGER.debug(f"Check_Port (SUCCESS): port open on {host}:{port}")
             else:
                 _LOGGER.debug(
-                    f"Check_Port (ERROR): port not available on {self._host}:{self._port} - error: {sock_res}"
+                    f"Check_Port (ERROR): port not available on {host}:{port} - error: {sock_res}"
                 )
             sock.close()
             time.sleep(0.1)
@@ -355,7 +353,11 @@ class SunSpecApiClient:
             )
         if shared is not None:
             client.client = shared
-        if shared is not None or use_config.device or self.check_port():
+        if (
+            shared is not None
+            or use_config.device
+            or self.check_port(use_config.host, use_config.port)
+        ):
             _LOGGER.debug("Inverter ready for Modbus TCP connection")
             try:
                 if shared is None:
@@ -363,7 +365,7 @@ class SunSpecApiClient:
                         client.connect()
                 if not client.is_connected():
                     raise ConnectionError(
-                        f"Failed to connect to {self._host}:{self._port} unit id {self._unit_id}"
+                        f"Failed to connect to {target} unit id {use_config.unit_id}"
                     )
                 _LOGGER.debug("Client connected, perform initial scan")
                 client.client.slave_id = client.slave_id
@@ -406,7 +408,7 @@ class SunSpecApiClient:
                 raise
         else:
             _LOGGER.debug("Inverter not ready for Modbus TCP connection")
-            raise ConnectionError(f"Inverter not active on {self._host}:{self._port}")
+            raise ConnectionError(f"Inverter not active on {target}")
 
     def unit_client(self):
         """Return the client, ready to send to this entry's unit."""
