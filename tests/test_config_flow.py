@@ -400,6 +400,31 @@ async def test_options_flow(
     assert entry.options[CONF_ALLOW_WRITING] is True
 
 
+async def test_options_flow_clears_prefix(hass, sunspec_client_mock):
+    """Test that Configure shows the prefix and drops it when the field is emptied."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data=MOCK_CONFIG,
+        options={**MOCK_SETTINGS, CONF_PREFIX: "SE7600"},
+        entry_id="test",
+    )
+    entry.add_to_hass(hass)
+    hass.data[DOMAIN] = {entry.entry_id: MockSunSpecDataUpdateCoordinator(hass, [1])}
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input=MOCK_CONFIG_STEP_1
+    )
+    prefix = next(key for key in result["data_schema"].schema if key == CONF_PREFIX)
+    assert prefix.description == {"suggested_value": "SE7600"}
+
+    # The form leaves an emptied field out.
+    await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input={CONF_ENABLED_MODELS: []}
+    )
+
+    assert entry.options[CONF_PREFIX] == ""
+
+
 # Test faild connection in options flow
 async def test_options_flow_connect_error(hass, sunspec_client_mock_connect_error):
     """Test an options flow."""

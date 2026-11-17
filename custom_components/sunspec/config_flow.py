@@ -322,7 +322,13 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
                 step_id="model_options",
                 data_schema=vol.Schema(
                     {
-                        vol.Optional(CONF_PREFIX, default=prefix): str,
+                        # A prefix cleared in the form is left out, so the
+                        # default must be no prefix, not the current one.
+                        vol.Optional(
+                            CONF_PREFIX,
+                            default="",
+                            description={"suggested_value": prefix},
+                        ): str,
                         vol.Optional(
                             CONF_SCAN_INTERVAL, default=scan_interval
                         ): vol.All(int, vol.Range(min=1)),
