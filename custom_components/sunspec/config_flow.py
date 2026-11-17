@@ -136,9 +136,21 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Continue with the settings of a device that answered."""
         uid = self._get_unique_id(entry_title(connection))
         _LOGGER.debug(f"Sunspec device unique id: {uid}")
-        await self.async_set_unique_id(uid)
+        entry = await self.async_set_unique_id(uid)
 
-        # Adding a configured device again moves it to this connection.
+        # Adding a configured device again moves it to this connection, and a
+        # title that names the old connection then names the new one. An
+        # ignored entry keeps its title, and so does one not set up since its
+        # unit ID was slave_id, which entry_title() cannot read.
+        if (
+            entry
+            and entry.source != config_entries.SOURCE_IGNORE
+            and CONF_UNIT_ID in entry.data
+            and entry.title == entry_title(entry.data)
+        ):
+            self.hass.config_entries.async_update_entry(
+                entry, title=entry_title(connection)
+            )
         self._abort_if_unique_id_configured(updates={CONF_DEVICE: None, **connection})
         self.init_info = user_input
         return await self.async_step_settings()
