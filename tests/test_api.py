@@ -272,6 +272,16 @@ async def test_serial_poll_reopens_port(hass, mocker):
     rtu.return_value.client.open.assert_called_once()
 
 
+async def test_new_connection_after_failed_poll(hass, sunspec_modbus_client_mock):
+    """Test that the poll that connects anew after a failed poll connects once."""
+    api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
+    api.reconnect_next()
+
+    client = api.get_client()
+
+    client.connect.assert_called_once()
+
+
 @pytest.mark.parametrize(
     ("error", "raised"),
     [

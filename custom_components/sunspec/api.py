@@ -199,6 +199,8 @@ class SunSpecApiClient:
                 _LOGGER.debug("Not using cached connection")
                 cached = self.modbus_connect()
                 SunSpecApiClient.CLIENT_CACHE[self._client_key] = cached
+                # A new connection needs no reconnect after a failed poll.
+                self._reconnect = False
             if self._reconnect:
                 if self._device:
                     # The port may have gone with its USB adapter.
