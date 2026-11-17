@@ -3,13 +3,17 @@
 from homeassistant.const import STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
 from homeassistant.core import State
+from homeassistant.helpers import entity_registry as er
 import pytest
 from pytest_homeassistant.common import mock_restore_cache_with_extra_data
 
+from custom_components.sunspec import get_sunspec_unique_id
 from custom_components.sunspec.api import SunSpecApiClient
+from custom_components.sunspec.const import CONF_ENABLED_MODELS
 from custom_components.sunspec.const import DOMAIN
 from custom_components.sunspec.sensor import ICON_DC_AMPS
 
+from . import TEST_CONFIG_ENTRY_ID
 from . import TEST_INVERTER_MM_SENSOR_ENERGY_ENTITY_ID
 from . import TEST_INVERTER_MM_SENSOR_POWER_ENTITY_ID
 from . import TEST_INVERTER_MM_SENSOR_STATE_ENTITY_ID
@@ -28,6 +32,7 @@ from . import TEST_METER_FLOAT_ENERGY_ENTITY_ID
 from . import TEST_METER_FLOAT_HZ_ENTITY_ID
 from . import TEST_METER_FLOAT_VOLTAGE_ENTITY_ID
 from . import setup_mock_sunspec_config_entry
+from .const import MOCK_CONFIG
 from .const import MOCK_CONFIG_METER_FLOAT
 from .const import MOCK_CONFIG_MM
 from .const import MOCK_CONFIG_PREFIX
@@ -146,6 +151,33 @@ async def test_sensor_added_with_first_value(
     await hass.async_block_till_done(wait_background_tasks=True)
 
     assert hass.states.get(TEST_INVERTER_SENSOR_TMPSNK_ENTITY_ID).state == "45"
+
+
+@pytest.mark.parametrize("sunspec_fixture", ["two_instances.json"])
+@pytest.mark.parametrize(
+    ("key", "model_id", "model_index", "state"),
+    [
+        ("TotWhExp", 203, 0, "1000"),
+        # Only the second meter implements it.
+        ("TotWhImp", 203, 1, "7000"),
+        # Only the first meter implements it.
+        ("AphA", 203, 1, None),
+        # The second instance of 160 has one module, the first two.
+        ("module:1:DCA", 160, 0, "92"),
+        ("module:1:DCA", 160, 1, None),
+    ],
+)
+async def test_sensor_instances(
+    hass: HomeAssistant, sunspec_client_mock, key, model_id, model_index, state
+) -> None:
+    """Verify each instance of a model gets the sensors of the points it has."""
+
+    config = {**MOCK_CONFIG, CONF_ENABLED_MODELS: [160, 203]}
+    await setup_mock_sunspec_config_entry(hass, config)
+
+    unique_id = get_sunspec_unique_id(TEST_CONFIG_ENTRY_ID, key, model_id, model_index)
+    entity_id = er.async_get(hass).async_get_entity_id("sensor", DOMAIN, unique_id)
+    assert (entity_id and hass.states.get(entity_id).state) == state
 
 
 @pytest.mark.parametrize("sunspec_fixture", ["meter_float.json"])

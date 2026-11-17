@@ -1,0 +1,71 @@
+{
+  "name": "two_instances",
+  "models": [
+    {
+      "ID": 1,
+      "Mn": "SunSpecTest",
+      "Md": "Test-Instances",
+      "Opt": "o",
+      "Vr": "1.2.3",
+      "SN": "sn-instances",
+      "DA": 1,
+      "Pad": 0
+    },
+    {
+      "ID": 203,
+      "A": 100,
+      "AphA": 30,
+      "A_SF": -1,
+      "W": 1500,
+      "W_SF": 0,
+      "TotWhExp": 1000,
+      "TotWhImp": null,
+      "TotWh_SF": 0,
+      "Evt": 0
+    },
+    {
+      "ID": 203,
+      "A": 200,
+      "AphA": null,
+      "A_SF": -1,
+      "W": 2500,
+      "W_SF": 0,
+      "TotWhExp": null,
+      "TotWhImp": 7000,
+      "TotWh_SF": 0,
+      "Evt": 0
+    },
+    {
+      "ID": 160,
+      "Evt": 0,
+      "N": 2,
+      "module": [
+        {
+          "ID": 1,
+          "DCA": 90,
+          "DCV": 900,
+          "DCW": 900
+        },
+        {
+          "ID": 2,
+          "DCA": 92,
+          "DCV": 920,
+          "DCW": 920
+        }
+      ]
+    },
+    {
+      "ID": 160,
+      "Evt": 0,
+      "N": 1,
+      "module": [
+        {
+          "ID": 1,
+          "DCA": 70,
+          "DCV": 700,
+          "DCW": 700
+        }
+      ]
+    }
+  ]
+}

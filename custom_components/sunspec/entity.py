@@ -32,11 +32,13 @@ def async_add_point_entities(hass, entry, async_add_entities, keys, entities):
             return
         new = []
         for model_id, model_wrapper in coordinator.data.items():
-            for key in keys(model_id, model_wrapper):
-                if (model_id, key) in added:
-                    continue
-                added.add((model_id, key))
-                for model_index in range(model_wrapper.num_models):
+            # Instances of a model can implement different points, and hold
+            # different numbers of a repeating group.
+            for model_index in range(model_wrapper.num_models):
+                for key in keys(model_id, model_wrapper, model_index):
+                    if (model_id, key, model_index) in added:
+                        continue
+                    added.add((model_id, key, model_index))
                     data = {
                         "device_info": coordinator.device_info,
                         "key": key,
@@ -69,13 +71,13 @@ def async_add_write_entities(hass, entry, async_add_entities, platform, entities
     if not entry.options.get(CONF_ALLOW_WRITING):
         return
 
-    def keys(model_id, model_wrapper):
+    def keys(model_id, model_wrapper, model_index):
         if model_id not in WRITE_MODELS:
             return []
         return [
             key
-            for key in model_wrapper.getKeys(model_wrapper.isWritablePoint)
-            if write_platform(model_wrapper.getMeta(key)) == platform
+            for key in model_wrapper.getKeys(model_wrapper.isWritablePoint, model_index)
+            if write_platform(model_wrapper.getMeta(key, model_index)) == platform
         ]
 
     async_add_point_entities(hass, entry, async_add_entities, keys, entities)
@@ -91,7 +93,7 @@ class SunSpecEntity(CoordinatorEntity):
         self.model_wrapper = data["model"]
         self.model_info = self.model_wrapper.getGroupMeta()
         self.key = data["key"]
-        self._meta = self.model_wrapper.getMeta(self.key)
+        self._meta = self.model_wrapper.getMeta(self.key, self.model_index)
         self._uniqe_id = get_sunspec_unique_id(
             config_entry.entry_id, self.key, self.model_id, self.model_index
         )
