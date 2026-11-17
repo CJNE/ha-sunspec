@@ -292,7 +292,11 @@ class SunSpecApiClient:
             )
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(sock_timeout)
-            sock_res = sock.connect_ex((host, port))
+            try:
+                sock_res = sock.connect_ex((host, port))
+            except socket.gaierror as err:
+                sock.close()
+                raise ConnectionError(f"Cannot resolve {host}: {err}") from err
             is_open = sock_res == 0  # True if open, False if not
             if is_open:
                 sock.shutdown(socket.SHUT_RDWR)
