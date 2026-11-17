@@ -120,7 +120,6 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
 
     def __init__(self, coordinator, config_entry, data):
         super().__init__(coordinator, config_entry, data)
-        self._point_meta = self.model_wrapper.getPoint(self.key, self.model_index).pdef
         sunspec_unit = self._meta.get("units", self._meta.get("type", ""))
         ha_meta = HA_META.get(sunspec_unit, [sunspec_unit, ICON_DEFAULT, None])
         self.unit = ha_meta[0]
@@ -134,14 +133,12 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
 
         vtype = self._meta["type"]
         if vtype.startswith("enum"):
-            self._options = self._point_meta.get("symbols", None)
+            self._options = self._meta.get("symbols", None)
             if self._options is None:
                 self.use_device_class = None
             else:
                 self.use_device_class = SensorDeviceClass.ENUM
                 self._options = [item["name"] for item in self._options]
-
-        self._device_id = config_entry.entry_id
 
         desc = self._meta.get("label", self.key)
         if self.unit == UnitOfElectricCurrent.AMPERE and "DC" in desc:
@@ -187,7 +184,7 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
             return None
         vtype = self._meta["type"]
         if vtype.startswith(("enum", "bitfield")):
-            symbols = self._point_meta.get("symbols", None)
+            symbols = self._meta.get("symbols", None)
             if symbols is None:
                 return val
             if vtype.startswith("enum"):
@@ -242,7 +239,8 @@ class SunSpecEnergySensor(SunSpecSensor, RestoreSensor):
         # For an energy sensor a value of 0 woulld mess up long term stats because of how total_increasing works
         if val == 0:
             _LOGGER.debug(
-                "Returning last known value instead of 0 for {self.name) to avoid resetting total_increasing counter"
+                "Returning last known value instead of 0 for %s to avoid resetting total_increasing counter",
+                self.name,
             )
             self._assumed_state = True
             return self.lastKnown

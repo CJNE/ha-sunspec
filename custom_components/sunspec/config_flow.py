@@ -111,7 +111,7 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             host = user_input[CONF_HOST]
             port = user_input[CONF_PORT]
-            unit_id = user_input.get(CONF_UNIT_ID, user_input.get("slave_id", 1))
+            unit_id = user_input.get(CONF_UNIT_ID, 1)
             connection = {CONF_HOST: host, CONF_PORT: port, CONF_UNIT_ID: unit_id}
             if await self._test_connection(connection):
                 return await self._add_device(connection, user_input)
@@ -223,7 +223,6 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             self.connection = connection
             self.client = api_client(self.hass, connection)
             self._device_info = await self.client.async_get_device_info()
-            _LOGGER.info(self._device_info)
             return True
         except Exception as err:
             set_connection_error(self._errors, entry_title(connection), err)
@@ -232,8 +231,6 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
 class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
     """Config flow options handler for sunspec."""
-
-    VERSION = 1
 
     def __init__(self):
         """Initialize options flow."""
@@ -272,7 +269,7 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
             )
         host = settings.get(CONF_HOST)
         port = settings.get(CONF_PORT)
-        unit_id = settings.get(CONF_UNIT_ID, settings.get("slave_id", 1))
+        unit_id = settings.get(CONF_UNIT_ID, 1)
 
         return self.async_show_form(
             step_id="host_options",
