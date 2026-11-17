@@ -193,7 +193,6 @@ async def test_entries_share_connection(hass, mocker):
     mocker.patch(
         "custom_components.sunspec.SunSpecApiClient.check_port", return_value=True
     )
-    mocker.patch("custom_components.sunspec.api.time.sleep")
     inverter = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
     meter = SunSpecApiClient(host="test", port=123, unit_id=2, hass=hass)
 
@@ -380,7 +379,6 @@ async def test_read_model_delay(hass, mocker, manufacturer, delay):
 
 async def test_poll_waits_for_write(hass, mocker):
     """Test that a poll does not read a model while a write to it is under way."""
-    mocker.patch("custom_components.sunspec.api.time.sleep")
     order = []
     writing, done = threading.Event(), threading.Event()
     model = mocker.MagicMock()

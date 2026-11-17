@@ -63,6 +63,13 @@ def skip_notifications_fixture():
         yield
 
 
+@pytest.fixture(autouse=True)
+def no_read_delay():
+    """Skip the pauses between Modbus requests."""
+    with patch("custom_components.sunspec.api.time.sleep"):
+        yield
+
+
 @pytest.fixture(name="auto_enable_custom_integrations", autouse=True)
 def auto_enable_custom_integrations(
     hass: Any,
