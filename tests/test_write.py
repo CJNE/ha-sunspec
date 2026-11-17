@@ -6,6 +6,7 @@ from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 import pytest
+from sunspec2.modbus.client import SunSpecModbusValueError
 from sunspec2.modbus.modbus import ModbusClientError
 from sunspec2.modbus.modbus import ModbusClientException
 from sunspec2.modbus.modbus import ModbusClientTimeout
@@ -261,6 +262,20 @@ NO_ANSWER = ModbusClientTimeout("Response timeout")
             {"write": ModbusClientError("Socket write error")},
             "write_unconfirmed",
             True,
+            STATE_UNAVAILABLE,
+        ),
+        # The device reset the connection instead of answering the write.
+        (
+            {"write": ConnectionResetError(104, "Connection reset by peer")},
+            "write_unconfirmed",
+            True,
+            STATE_UNAVAILABLE,
+        ),
+        # The value does not fit the point at the scale factor read before it.
+        (
+            {"write": SunSpecModbusValueError("Point value error")},
+            "write_unconfirmed",
+            False,
             STATE_UNAVAILABLE,
         ),
         ({"read back": NO_ANSWER}, "write_unconfirmed", True, STATE_UNAVAILABLE),
