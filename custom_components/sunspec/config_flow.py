@@ -6,6 +6,9 @@ from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import section
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.selector import NumberSelector
+from homeassistant.helpers.selector import NumberSelectorConfig
+from homeassistant.helpers.selector import NumberSelectorMode
 import voluptuous as vol
 
 from . import SCAN_INTERVAL
@@ -38,6 +41,13 @@ def entry_title(data):
     return f"{data[CONF_HOST]}:{data[CONF_PORT]}:{data[CONF_UNIT_ID]}"
 
 
+# A whole number in a number box: the frontend asks for a number when the
+# field holds something else, where an integer field says "Required".
+NUMBER = vol.All(
+    NumberSelector(NumberSelectorConfig(mode=NumberSelectorMode.BOX)), vol.Coerce(int)
+)
+
+
 def serial_schema(data):
     """Return the serial connection form, filled in from data."""
     return vol.Schema(
@@ -45,12 +55,12 @@ def serial_schema(data):
             vol.Required(
                 CONF_DEVICE, default=data.get(CONF_DEVICE, "/dev/ttyUSB0")
             ): str,
-            vol.Required(CONF_BAUDRATE, default=data.get(CONF_BAUDRATE, 9600)): int,
+            vol.Required(CONF_BAUDRATE, default=data.get(CONF_BAUDRATE, 9600)): NUMBER,
             # pysunspec2 sends 8 data bits and 1 stop bit, with no or even parity.
             vol.Required(CONF_PARITY, default=data.get(CONF_PARITY, "N")): vol.In(
                 {"N": "None", "E": "Even"}
             ),
-            vol.Required(CONF_UNIT_ID, default=data.get(CONF_UNIT_ID, 1)): int,
+            vol.Required(CONF_UNIT_ID, default=data.get(CONF_UNIT_ID, 1)): NUMBER,
         }
     )
 
@@ -169,8 +179,8 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_HOST, default=defaults[CONF_HOST]): str,
-                    vol.Required(CONF_PORT, default=defaults[CONF_PORT]): int,
-                    vol.Required(CONF_UNIT_ID, default=defaults[CONF_UNIT_ID]): int,
+                    vol.Required(CONF_PORT, default=defaults[CONF_PORT]): NUMBER,
+                    vol.Required(CONF_UNIT_ID, default=defaults[CONF_UNIT_ID]): NUMBER,
                 }
             ),
             errors=self._errors,
@@ -276,8 +286,8 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_HOST, default=host): str,
-                    vol.Required(CONF_PORT, default=port): int,
-                    vol.Required(CONF_UNIT_ID, default=unit_id): int,
+                    vol.Required(CONF_PORT, default=port): NUMBER,
+                    vol.Required(CONF_UNIT_ID, default=unit_id): NUMBER,
                 }
             ),
             errors=errors,
