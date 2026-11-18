@@ -17,42 +17,34 @@ from custom_components.sunspec.api import SunSpecApiClient
 from .const import MOCK_CONFIG
 
 TEST_CONFIG_ENTRY_ID = "77889900aa"
-TEST_INVERTER_SENSOR_STATE_ENTITY_ID = (
-    "sensor.inverter_three_phase_inverter_operating_state"
-)
-TEST_INVERTER_SENSOR_POWER_ENTITY_ID = "sensor.inverter_three_phase_inverter_watts"
-TEST_INVERTER_SENSOR_VAR_ID = "sensor.inverter_three_phase_inverter_var"
-TEST_INVERTER_SENSOR_PF_ID = "sensor.inverter_three_phase_inverter_pf"
-TEST_INVERTER_SENSOR_ENERGY_ENTITY_ID = "sensor.inverter_three_phase_inverter_watthours"
-TEST_INVERTER_SENSOR_EVENT_ENTITY_ID = "sensor.inverter_three_phase_inverter_event1"
+TEST_INVERTER_SENSOR_STATE_ENTITY_ID = "sensor.inverter_three_phase_operating_state"
+TEST_INVERTER_SENSOR_POWER_ENTITY_ID = "sensor.inverter_three_phase_watts"
+TEST_INVERTER_SENSOR_VAR_ID = "sensor.inverter_three_phase_var"
+TEST_INVERTER_SENSOR_PF_ID = "sensor.inverter_three_phase_pf"
+TEST_INVERTER_SENSOR_ENERGY_ENTITY_ID = "sensor.inverter_three_phase_watthours"
+TEST_INVERTER_SENSOR_EVENT_ENTITY_ID = "sensor.inverter_three_phase_event1"
 TEST_INVERTER_SENSOR_TMPSNK_ENTITY_ID = (
-    "sensor.inverter_three_phase_inverter_heat_sink_temperature"
+    "sensor.inverter_three_phase_heat_sink_temperature"
 )
-TEST_INVERTER_MM_SENSOR_STATE_ENTITY_ID = (
-    "sensor.der_ac_measurement_dermeasureac_1_operating_state"
-)
-TEST_INVERTER_MM_SENSOR_VAR_ID = "sensor.der_ac_measurement_dermeasureac_reactive_power"
-TEST_INVERTER_MM_SENSOR_VARH_ID = (
-    "sensor.der_ac_measurement_dermeasureac_total_reactive_energy_inj"
-)
-TEST_INVERTER_MM_SENSOR_POWER_ENTITY_ID = (
-    "sensor.der_ac_measurement_dermeasureac_1_active_power"
-)
+TEST_INVERTER_MM_SENSOR_STATE_ENTITY_ID = "sensor.der_ac_measurement_1_operating_state"
+TEST_INVERTER_MM_SENSOR_VAR_ID = "sensor.der_ac_measurement_reactive_power"
+TEST_INVERTER_MM_SENSOR_VARH_ID = "sensor.der_ac_measurement_total_reactive_energy_inj"
+TEST_INVERTER_MM_SENSOR_POWER_ENTITY_ID = "sensor.der_ac_measurement_1_active_power"
 TEST_INVERTER_MM_SENSOR_ENERGY_ENTITY_ID = (
-    "sensor.der_ac_measurement_dermeasureac_total_energy_absorbed"
+    "sensor.der_ac_measurement_total_energy_absorbed"
 )
-TEST_METER_FLOAT_HZ_ENTITY_ID = "sensor.wye_connect_three_phase_abcn_meter_ac_meter_hz"
+TEST_METER_FLOAT_HZ_ENTITY_ID = "sensor.wye_connect_three_phase_abcn_meter_hz"
 TEST_METER_FLOAT_VOLTAGE_ENTITY_ID = (
-    "sensor.wye_connect_three_phase_abcn_meter_ac_meter_phase_voltage_an"
+    "sensor.wye_connect_three_phase_abcn_meter_phase_voltage_an"
 )
 TEST_METER_FLOAT_ENERGY_ENTITY_ID = (
-    "sensor.wye_connect_three_phase_abcn_meter_ac_meter_total_watt_hours_imported"
+    "sensor.wye_connect_three_phase_abcn_meter_total_watt_hours_imported"
 )
 TEST_INVERTER_SENSOR_DC_ENTITY_ID = (
-    "sensor.multiple_mppt_inverter_extension_model_mppt_module_0_dc_current"
+    "sensor.multiple_mppt_inverter_extension_model_module_0_dc_current"
 )
 TEST_INVERTER_PREFIX_SENSOR_DC_ENTITY_ID = (
-    "sensor.multiple_mppt_inverter_extension_model_test_mppt_module_0_dc_current"
+    "sensor.multiple_mppt_inverter_extension_model_test_module_0_dc_current"
 )
 
 
