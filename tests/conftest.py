@@ -221,7 +221,7 @@ def error_on_get_data():
         ),
         patch(
             "custom_components.sunspec.SunSpecApiClient.async_get_data",
-            side_effect=ConnectionError,
+            side_effect=ConnectionError("No route to host"),
         ),
     ):
         yield
@@ -243,7 +243,7 @@ def timeout_error_on_get_data():
         ),
         patch(
             "custom_components.sunspec.SunSpecApiClient.async_get_data",
-            side_effect=ConnectionTimeoutError,
+            side_effect=ConnectionTimeoutError("Response timeout"),
         ),
     ):
         yield
@@ -266,7 +266,7 @@ def connect_error_on_get_data():
         ),
         patch(
             "custom_components.sunspec.SunSpecApiClient.async_get_data",
-            side_effect=ConnectionError,
+            side_effect=ConnectionError("Connection refused"),
         ),
     ):
         yield
