@@ -84,6 +84,8 @@ def async_add_write_entities(hass, entry, async_add_entities, platform, entities
 
 
 class SunSpecEntity(CoordinatorEntity):
+    _attr_has_entity_name = True
+
     def __init__(self, coordinator, config_entry, data):
         super().__init__(coordinator)
         self._device_data = data["device_info"]
@@ -98,19 +100,19 @@ class SunSpecEntity(CoordinatorEntity):
             config_entry.entry_id, self.key, self.model_id, self.model_index
         )
 
-        name = self.model_info.get("name", str(self.model_id))
-        if self.model_index > 0:
-            name = f"{name} {self.model_index}"
+        # The device is the model, and Home Assistant puts the device's name in
+        # front of the entity's, so the entity's name leaves the model out.
+        name = self._meta.get("label", self.key)
         key_parts = self.key.split(":")
         if len(key_parts) > 1:
-            name = f"{name} {key_parts[0]} {key_parts[1]}"
+            name = f"{key_parts[0]} {key_parts[1]} {name}"
+        if self.model_index > 0:
+            name = f"{self.model_index} {name}"
+        # The prefix stays in the entity's name, so a device the user renamed
+        # keeps it too. It keeps the letters it was entered with.
         if data["prefix"] != "":
-            # The prefix keeps the letters it was entered with.
-            prefix = data["prefix"]
-            name = f"{prefix[:1].upper()}{prefix[1:]} {name.lower()}"
-        else:
-            name = name.capitalize()
-        self._name = f"{name} {self._meta.get('label', self.key)}"
+            name = f"{data['prefix']} {name}"
+        self._name = f"{name[:1].upper()}{name[1:]}"
 
     @property
     def available(self):

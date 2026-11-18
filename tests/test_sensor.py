@@ -3,6 +3,7 @@
 from homeassistant.const import STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
 from homeassistant.core import State
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 import pytest
 from pytest_homeassistant.common import mock_restore_cache_with_extra_data
@@ -69,7 +70,7 @@ async def test_sensor_dc(hass: HomeAssistant, sunspec_client_mock) -> None:
         # An angle, not a temperature.
         (
             {**MOCK_CONFIG_MM, "models_enabled": [304]},
-            "sensor.inclinometer_model_inclinometer_incl_0_x",
+            "sensor.inclinometer_model_incl_0_x",
             "°",
             None,
         ),
@@ -88,25 +89,55 @@ async def test_sensor_unit(
 
 
 @pytest.mark.parametrize(
-    ("prefix", "name"),
+    ("config", "device_name", "entity_id", "name"),
     [
-        ("test", "Test mppt module 0 DC Current"),
-        ("SE7600", "SE7600 mppt module 0 DC Current"),
+        (
+            None,
+            None,
+            TEST_INVERTER_SENSOR_DC_ENTITY_ID,
+            "Multiple MPPT Inverter Extension Model Module 0 DC Current",
+        ),
+        (
+            MOCK_CONFIG_PREFIX,
+            None,
+            TEST_INVERTER_PREFIX_SENSOR_DC_ENTITY_ID,
+            "Multiple MPPT Inverter Extension Model Test module 0 DC Current",
+        ),
+        # The prefix keeps the letters it was entered with.
+        (
+            {**MOCK_CONFIG_PREFIX, "prefix": "SE7600"},
+            None,
+            "sensor.multiple_mppt_inverter_extension_model_se7600_module_0_dc_current",
+            "Multiple MPPT Inverter Extension Model SE7600 module 0 DC Current",
+        ),
+        # A device the user renamed keeps the prefix in its entities' names.
+        (
+            MOCK_CONFIG_PREFIX,
+            "Roof",
+            TEST_INVERTER_PREFIX_SENSOR_DC_ENTITY_ID,
+            "Roof Test module 0 DC Current",
+        ),
+        # The second instance of a model.
+        (
+            MOCK_CONFIG_MM,
+            None,
+            TEST_INVERTER_MM_SENSOR_POWER_ENTITY_ID,
+            "DER AC Measurement 1 Active Power",
+        ),
     ],
 )
-async def test_sensor_with_prefix(
-    hass: HomeAssistant, sunspec_client_mock, prefix, name
+async def test_sensor_name(
+    hass: HomeAssistant, sunspec_client_mock, config, device_name, entity_id, name
 ) -> None:
-    """Verify the prefix leads the sensor names with the letters it was entered with."""
+    """Verify a name gives the device, the prefix and the point, the model once."""
 
-    await setup_mock_sunspec_config_entry(
-        hass, {**MOCK_CONFIG_PREFIX, "prefix": prefix}
-    )
+    await setup_mock_sunspec_config_entry(hass, config)
+    if device_name:
+        device_id = er.async_get(hass).async_get(entity_id).device_id
+        dr.async_get(hass).async_update_device(device_id, name_by_user=device_name)
+        await hass.async_block_till_done()
 
-    entity_id = TEST_INVERTER_PREFIX_SENSOR_DC_ENTITY_ID.replace("test", prefix.lower())
-    assert hass.states.get(entity_id).attributes["friendly_name"] == (
-        f"Multiple MPPT Inverter Extension Model {name}"
-    )
+    assert hass.states.get(entity_id).attributes["friendly_name"] == name
 
 
 async def test_sensor_state(hass: HomeAssistant, sunspec_client_mock) -> None:
@@ -285,9 +316,9 @@ async def test_sensor_power_mm(hass: HomeAssistant, sunspec_client_mock) -> None
     ("entity_id", "state"),
     [
         # A 16-bit bitfield.
-        ("sensor.measurements_status_status_pvconn", "CONNECTED,AVAILABLE,OPERATING"),
+        ("sensor.measurements_status_pvconn", "CONNECTED,AVAILABLE,OPERATING"),
         # A 32-bit enum, without symbols in its definition.
-        ("sensor.basic_aggregator_aggregator_vendor_control", "5"),
+        ("sensor.basic_aggregator_vendor_control", "5"),
     ],
 )
 async def test_sensor_flags_and_enums(
