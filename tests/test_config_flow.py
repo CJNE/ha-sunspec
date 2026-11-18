@@ -430,25 +430,47 @@ async def test_number_fields(hass, sunspec_client_mock, form, fields):
 
 # Our config flow also has an options flow, so we must test it as well.
 @pytest.mark.parametrize(
-    ("data", "step_id", "user_input", "title"),
+    ("data", "title", "step_id", "user_input", "new_title"),
     [
-        (MOCK_CONFIG, "host_options", MOCK_CONFIG_STEP_1, "test_host:123:1"),
+        # A title that names the connection follows it.
+        (
+            MOCK_CONFIG,
+            "test_host:123:1",
+            "host_options",
+            {**MOCK_CONFIG_STEP_1, CONF_PORT: 502},
+            "test_host:502:1",
+        ),
         (
             {**MOCK_CONFIG, CONF_UNIT_ID: 0},
+            "test_host:123:0",
             "host_options",
             {**MOCK_CONFIG_STEP_1, CONF_UNIT_ID: 0},
             "test_host:123:0",
         ),
-        (MOCK_SERIAL_CONFIG, "serial_options", MOCK_SERIAL_STEP_1, "/dev/ttyUSB0:1"),
+        (
+            MOCK_SERIAL_CONFIG,
+            "/dev/ttyUSB0:1",
+            "serial_options",
+            MOCK_SERIAL_STEP_1,
+            "/dev/ttyUSB0:1",
+        ),
+        # A title the user gave stays.
+        (
+            MOCK_CONFIG,
+            "Roof inverter",
+            "host_options",
+            {**MOCK_CONFIG_STEP_1, CONF_PORT: 502},
+            "Roof inverter",
+        ),
     ],
 )
 async def test_options_flow(
-    hass, sunspec_client_mock, data, step_id, user_input, title
+    hass, sunspec_client_mock, data, title, step_id, user_input, new_title
 ):
     """Test an options flow."""
     # Create a new MockConfigEntry and add to HASS (we're bypassing config
     # flow entirely)
-    entry = MockConfigEntry(domain=DOMAIN, data=data, entry_id="test")
+    entry = MockConfigEntry(domain=DOMAIN, data=data, title=title, entry_id="test")
     entry.add_to_hass(hass)
 
     coordinator = MockSunSpecDataUpdateCoordinator(hass, [1, 2])
@@ -498,7 +520,7 @@ async def test_options_flow(
     # Verify that the flow finishes
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["title"] == ""
-    assert entry.title == title
+    assert entry.title == new_title
     assert entry.options[CONF_MODEL_INTERVALS] == {"103": 5}
     assert entry.options[CONF_ALLOW_WRITING] is True
 

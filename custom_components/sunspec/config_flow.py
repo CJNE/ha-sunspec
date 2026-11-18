@@ -41,6 +41,16 @@ def entry_title(data):
     return f"{data[CONF_HOST]}:{data[CONF_PORT]}:{data[CONF_UNIT_ID]}"
 
 
+def moved_title(entry, data):
+    """Return the title of an entry that gets the connection in data."""
+    # A title that names the entry's connection follows it; a title the user
+    # gave stays, and so does that of an entry not set up since its unit ID
+    # was slave_id, which entry_title() cannot read.
+    if CONF_UNIT_ID in entry.data and entry.title == entry_title(entry.data):
+        return entry_title(data)
+    return entry.title
+
+
 # A whole number in a number box: the frontend asks for a number when the
 # field holds something else, where an integer field says "Required".
 NUMBER = vol.All(
@@ -148,18 +158,11 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         _LOGGER.debug(f"Sunspec device unique id: {uid}")
         entry = await self.async_set_unique_id(uid)
 
-        # Adding a configured device again moves it to this connection, and a
-        # title that names the old connection then names the new one. An
-        # ignored entry keeps its title, and so does one not set up since its
-        # unit ID was slave_id, which entry_title() cannot read.
-        if (
-            entry
-            and entry.source != config_entries.SOURCE_IGNORE
-            and CONF_UNIT_ID in entry.data
-            and entry.title == entry_title(entry.data)
-        ):
+        # Adding a configured device again moves it to this connection. An
+        # ignored entry keeps its title.
+        if entry and entry.source != config_entries.SOURCE_IGNORE:
             self.hass.config_entries.async_update_entry(
-                entry, title=entry_title(connection)
+                entry, title=moved_title(entry, connection)
             )
         self._abort_if_unique_id_configured(updates={CONF_DEVICE: None, **connection})
         self.init_info = user_input
@@ -386,7 +389,7 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
 
     async def _update_options(self):
         """Update config entry options."""
-        title = entry_title(self.settings)
+        title = moved_title(self.config_entry, self.settings)
         _LOGGER.debug(
             "Saving config entry with title %s, data: %s options %s",
             title,
