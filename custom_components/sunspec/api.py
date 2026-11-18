@@ -60,6 +60,9 @@ class SunSpecModelWrapper:
             return False
         if point.pdef["type"].startswith(("enum", "bitfield")):
             return True
+        # Text has no sensor, also where its unit names a format, as YYYYMMDD.
+        if point.pdef["type"] == "string":
+            return False
         if point.pdef.get("units", None) is None:
             return False
         return True

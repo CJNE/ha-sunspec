@@ -1,0 +1,28 @@
+{
+  "name": "gps",
+  "models": [
+    {
+      "ID": 1,
+      "Mn": "SunSpecTest",
+      "Md": "Test-GPS",
+      "Opt": "o",
+      "Vr": "1.2.3",
+      "SN": "sn-gps-1",
+      "DA": 1,
+      "Pad": 0
+    },
+    {
+      "ID": 305,
+      "Tm": "123456.789Z",
+      "Date": "20261117",
+      "Loc": "somewhere",
+      "Lat": 590000000,
+      "Long": 180000000,
+      "Alt": 12
+    },
+    {
+      "ID": 65535,
+      "L": 0
+    }
+  ]
+}
