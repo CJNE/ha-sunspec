@@ -131,16 +131,9 @@ class SunSpecModelWrapper:
         if type(group) is list:
             return group[int(point_path[1])].points[point_path[2]]
         else:
-            if len(point_path) > 2:
-                return group.points[
-                    point_path[2]
-                ]  # Access to the specific point within the group
-            return group.points[
-                point_name
-            ]  # Generic access if no specific subgrouping is specified
+            return group.points[point_path[2]]
 
 
-# pragma: not covered
 def progress(msg):
     _LOGGER.debug(msg)
     return True
