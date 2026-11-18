@@ -155,7 +155,8 @@ async def test_config_flow_connection(
     else:
         # The dialog is closed.
         hass.config_entries.flow.async_abort(result["flow_id"])
-    await hass.async_block_till_done()
+    # The connection closes in an executor job that runs as a background task.
+    await hass.async_block_till_done(wait_background_tasks=True)
 
     assert disconnect.called is closed
 
