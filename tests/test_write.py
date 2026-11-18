@@ -29,12 +29,6 @@ from .const import MOCK_CONFIG_STEP_1
 pytestmark = pytest.mark.parametrize("sunspec_fixture", ["controls.json"])
 
 
-@pytest.fixture(autouse=True)
-def no_read_delay(mocker):
-    """Skip the pauses between Modbus requests."""
-    mocker.patch("custom_components.sunspec.api.time.sleep")
-
-
 async def setup_controls(hass, allow_writing=True):
     """Set up an entry for the controls fixture."""
     entry = create_mock_sunspec_config_entry(
