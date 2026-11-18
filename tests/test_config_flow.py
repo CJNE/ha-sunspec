@@ -166,17 +166,60 @@ async def test_config_flow_connection(
 
 
 @pytest.mark.parametrize(
-    ("data", "connection", "user_input", "device"),
+    ("data", "title", "connection", "user_input", "device", "new_title"),
     [
-        (MOCK_CONFIG, "serial", MOCK_SERIAL_STEP_1, "/dev/ttyUSB0"),
-        (MOCK_SERIAL_CONFIG, "tcp", MOCK_CONFIG_STEP_1, None),
+        (
+            MOCK_CONFIG,
+            "test_host:123:1",
+            "serial",
+            MOCK_SERIAL_STEP_1,
+            "/dev/ttyUSB0",
+            "/dev/ttyUSB0:1",
+        ),
+        (
+            MOCK_SERIAL_CONFIG,
+            "/dev/ttyUSB0:1",
+            "tcp",
+            MOCK_CONFIG_STEP_1,
+            None,
+            "test_host:123:1",
+        ),
+        # A title the user gave the entry stays, whether it moves or not.
+        (
+            MOCK_CONFIG,
+            "Roof inverter",
+            "serial",
+            MOCK_SERIAL_STEP_1,
+            "/dev/ttyUSB0",
+            "Roof inverter",
+        ),
+        (
+            MOCK_CONFIG,
+            "Roof inverter",
+            "tcp",
+            MOCK_CONFIG_STEP_1,
+            None,
+            "Roof inverter",
+        ),
+        # An entry not set up since its unit ID was slave_id, such as a
+        # disabled one, keeps its title.
+        (
+            {"host": "test_host", "port": 123, "slave_id": 1},
+            "test_host:123:1",
+            "serial",
+            MOCK_SERIAL_STEP_1,
+            "/dev/ttyUSB0",
+            "test_host:123:1",
+        ),
     ],
 )
 async def test_config_flow_moves_device(
-    hass, sunspec_client_mock, data, connection, user_input, device
+    hass, sunspec_client_mock, data, title, connection, user_input, device, new_title
 ):
     """Test that adding a configured device again moves it to the new connection."""
-    entry = MockConfigEntry(domain=DOMAIN, data=data, unique_id="sn-123456789")
+    entry = MockConfigEntry(
+        domain=DOMAIN, data=data, title=title, unique_id="sn-123456789"
+    )
     entry.add_to_hass(hass)
 
     result = await start_flow(hass, connection)
@@ -186,6 +229,29 @@ async def test_config_flow_moves_device(
 
     assert result["type"] == FlowResultType.ABORT
     assert entry.data[CONF_DEVICE] == device
+    assert entry.title == new_title
+
+
+async def test_config_flow_ignored_device(hass, sunspec_client_mock):
+    """Test that setup goes on for an ignored device and keeps its entry's title."""
+    # Home Assistant fills in the connection of an ignored entry that a setup
+    # passed, and its title can name that connection.
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        source=config_entries.SOURCE_IGNORE,
+        data=MOCK_SERIAL_CONFIG,
+        title="/dev/ttyUSB0:1",
+        unique_id="sn-123456789",
+    )
+    entry.add_to_hass(hass)
+
+    result = await start_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input=MOCK_CONFIG_STEP_1
+    )
+
+    assert result["step_id"] == "settings"
+    assert entry.title == "/dev/ttyUSB0:1"
 
 
 # In this case, we want to simulate a failure during the config flow.
