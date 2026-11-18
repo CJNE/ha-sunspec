@@ -17,6 +17,10 @@ yet a proper fix: find the root cause and fix it in the right layer.
 - `sensor.py` - `SunSpecSensor`, `SunSpecEnergySensor`.
 - `number.py`, `select.py`, `switch.py` - the entities that write a point.
 - `services.py` - the `sunspec.write` action.
+- `const.py` - platforms, configuration keys, the models that write, are read
+  by default or are the float versions of those, and the models' group names.
+- `recorder.py` - lets statistics recorded under a SunSpec unit spelling go
+  on under the Home Assistant unit a sensor now shows.
 - `tests/` - pytest with a mocked device (`tests/test_data/*.json`).
 - `scripts/simulator.py` - serves a fixture over Modbus TCP on 127.0.0.1:5020.
 
