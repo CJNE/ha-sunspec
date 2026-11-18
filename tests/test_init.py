@@ -231,15 +231,18 @@ async def test_moved_model_scanned_again(hass, sunspec_client_mock, mocker):
             for key, value in {"ID": 701, "W": 12345, "TmpSnk": 45}.items()
         ],
     )
-    await coordinator.async_refresh()
+    # The reload that the refresh schedules waits for this lock, so its scan
+    # comes after the device is back.
+    async with config_entry.setup_lock:
+        await coordinator.async_refresh()
 
-    assert hass.states.get(TEST_INVERTER_SENSOR_POWER_ENTITY_ID).state == (
-        STATE_UNAVAILABLE
-    )
-    assert "test:123:1" not in SunSpecApiClient.CLIENT_CACHE
+        assert hass.states.get(TEST_INVERTER_SENSOR_POWER_ENTITY_ID).state == (
+            STATE_UNAVAILABLE
+        )
+        assert "test:123:1" not in SunSpecApiClient.CLIENT_CACHE
+        read.side_effect = None
 
     # The new scan finds model 103 where it is now.
-    read.side_effect = None
     await hass.async_block_till_done(wait_background_tasks=True)
 
     assert connect.call_count == 2

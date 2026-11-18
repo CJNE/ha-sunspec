@@ -5,7 +5,6 @@ For more details about this integration, please refer to
 https://github.com/cjne/ha-sunspec
 """
 
-import asyncio
 from datetime import timedelta
 import logging
 from time import monotonic
@@ -129,14 +128,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Handle removal of an entry."""
 
     _LOGGER.debug("Unload entry")
-    unloaded = all(
-        await asyncio.gather(
-            *[
-                hass.config_entries.async_forward_entry_unload(entry, platform)
-                for platform in PLATFORMS
-            ]
-        )
-    )
+    unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unloaded:
         coordinator = hass.data[DOMAIN].pop(entry.entry_id)
         # A device may allow only one connection, and the entry may come back
