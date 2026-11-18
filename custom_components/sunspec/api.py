@@ -228,16 +228,19 @@ class SunSpecApiClient:
         """Forget the scanned device and close its connection if no other uses it."""
         with self._lock:
             self._closed = True
-            client = SunSpecApiClient.CLIENT_CACHE.pop(self._client_key, None)
-            if client is None:
-                return
-            if all(
-                other.client is not client.client
-                for other in SunSpecApiClient.CLIENT_CACHE.values()
-            ):
-                client.disconnect()
-            # A serial device leaves its port, which closes with the last one.
-            client.close()
+            self._release()
+
+    def _release(self):
+        client = SunSpecApiClient.CLIENT_CACHE.pop(self._client_key, None)
+        if client is None:
+            return
+        if all(
+            other.client is not client.client
+            for other in SunSpecApiClient.CLIENT_CACHE.values()
+        ):
+            client.disconnect()
+        # A serial device leaves its port, which closes with the last one.
+        client.close()
 
     async def async_get_data(self, model_id) -> SunSpecModelWrapper:
         _LOGGER.debug("Get data for model %s", model_id)
@@ -274,6 +277,10 @@ class SunSpecApiClient:
             if config is None:
                 client = self.get_client()
             else:
+                if self._device and config.get("device") == self._device:
+                    # pysunspec2 opens a port with one baud rate and parity at a
+                    # time, so the entry lets go of it until its next poll.
+                    self._release()
                 # The entry reloads with changed settings and connects anew, so
                 # their scan neither stays open nor takes the entry's place.
                 client = self.modbus_connect(config)
