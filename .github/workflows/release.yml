@@ -1,7 +1,9 @@
 name: Release
 
 # Merging a new version into main publishes it; pushing a version tag
-# publishes the commit it names, such as a pre-release on another branch.
+# publishes the commit it names, such as a pre-release on another branch. In a
+# fork only a pushed tag publishes: updating its main from upstream would
+# otherwise publish upstream's new version as a release of the fork.
 on:
   push:
     branches:
@@ -17,6 +19,7 @@ permissions: {}
 jobs:
   release:
     name: Publish the release
+    if: github.ref_type == 'tag' || !github.event.repository.fork
     runs-on: ubuntu-latest
     permissions:
       contents: write
