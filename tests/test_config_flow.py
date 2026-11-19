@@ -7,7 +7,6 @@ from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.data_entry_flow import InvalidData
 import homeassistant.helpers.config_validation as cv
-import probatio
 import pytest
 from pytest_homeassistant.common import MockConfigEntry
 
@@ -416,10 +415,13 @@ async def test_number_fields(hass, sunspec_client_mock, form, fields):
     else:
         result = await start_flow(hass, form)
 
-    # Serialized as Home Assistant sends the form to the frontend.
-    schema = probatio.to_field_list(
-        result["data_schema"], custom_serializer=cv.custom_serializer
-    )
+    # Serialized as Home Assistant sends the form to the frontend: with
+    # probatio since 2026.9, with voluptuous-serialize before.
+    try:
+        from probatio import to_field_list as serialize
+    except ImportError:
+        from voluptuous_serialize import convert as serialize
+    schema = serialize(result["data_schema"], custom_serializer=cv.custom_serializer)
     boxes = {
         field["name"]
         for field in schema
