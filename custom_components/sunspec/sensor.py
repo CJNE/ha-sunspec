@@ -92,6 +92,12 @@ HA_META = {
 # The units of lifetime counters: of active, reactive and apparent energy.
 COUNTERS = {"Wh", "WH", "kWh", "varh", "Varh", "VAh"}
 
+# Points in degrees that give a direction, such as the wind's or a tracker's
+# azimuth. Home Assistant averages their statistics around the circle, into 0
+# to 360 degrees, which would make a wrong mean of an angle that can be
+# negative, such as a latitude, an inclination or an elevation.
+DIRECTIONS = {307: {"WndDir"}, 601: {"GlblAzCtl", "AzTrgt", "AzPos", "AzCtl"}}
+
 
 def float32_decimal(value):
     """Return the shortest decimal that is the same float32 as value."""
@@ -238,6 +244,8 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
             return None
         if self._meta.get("units") in COUNTERS:
             return SensorStateClass.TOTAL_INCREASING
+        if self._meta["name"] in DIRECTIONS.get(self.model_id, ()):
+            return SensorStateClass.MEASUREMENT_ANGLE
         return SensorStateClass.MEASUREMENT
 
 

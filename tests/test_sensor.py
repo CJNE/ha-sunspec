@@ -64,16 +64,24 @@ async def test_sensor_dc(hass: HomeAssistant, sunspec_client_mock) -> None:
 
 
 @pytest.mark.parametrize(
-    ("sunspec_fixture", "config", "entity_id", "unit", "device_class"),
+    ("sunspec_fixture", "config", "entity_id", "unit", "device_class", "state_class"),
     [
-        ("inverter.json", None, TEST_INVERTER_SENSOR_VAR_ID, "var", "reactive_power"),
-        ("inverter.json", None, TEST_INVERTER_SENSOR_PF_ID, "%", None),
+        (
+            "inverter.json",
+            None,
+            TEST_INVERTER_SENSOR_VAR_ID,
+            "var",
+            "reactive_power",
+            "measurement",
+        ),
+        ("inverter.json", None, TEST_INVERTER_SENSOR_PF_ID, "%", None, "measurement"),
         (
             "inverter.json",
             MOCK_CONFIG_MM,
             TEST_INVERTER_MM_SENSOR_VAR_ID,
             "var",
             "reactive_power",
+            "measurement",
         ),
         (
             "inverter.json",
@@ -81,6 +89,7 @@ async def test_sensor_dc(hass: HomeAssistant, sunspec_client_mock) -> None:
             TEST_INVERTER_MM_SENSOR_VARH_ID,
             "varh",
             "reactive_energy",
+            "total_increasing",
         ),
         (
             "status.json",
@@ -88,29 +97,71 @@ async def test_sensor_dc(hass: HomeAssistant, sunspec_client_mock) -> None:
             TEST_STATUS_VARH_ENTITY_ID,
             "varh",
             "reactive_energy",
+            "total_increasing",
         ),
         # Home Assistant has no device class for apparent energy.
-        ("status.json", MOCK_CONFIG_STATUS, TEST_STATUS_VAH_ENTITY_ID, "VAh", None),
-        # An angle, not a temperature.
+        (
+            "status.json",
+            MOCK_CONFIG_STATUS,
+            TEST_STATUS_VAH_ENTITY_ID,
+            "VAh",
+            None,
+            "total_increasing",
+        ),
+        # An angle, not a temperature, and one that can be negative.
         (
             "inverter.json",
             {**MOCK_CONFIG_MM, "models_enabled": [304]},
             "sensor.inclinometer_model_incl_0_x",
             "°",
             None,
+            "measurement",
+        ),
+        # Directions, which Home Assistant averages around the circle.
+        (
+            "tracker.json",
+            {**MOCK_CONFIG, "models_enabled": [307, 601]},
+            "sensor.base_met_wind_direction",
+            "°",
+            None,
+            "measurement_angle",
+        ),
+        (
+            "tracker.json",
+            {**MOCK_CONFIG, "models_enabled": [307, 601]},
+            "sensor.tracker_controller_draft_2_tracker_0_azimuth",
+            "°",
+            None,
+            "measurement_angle",
+        ),
+        # The same tracker's elevation, which can be negative.
+        (
+            "tracker.json",
+            {**MOCK_CONFIG, "models_enabled": [307, 601]},
+            "sensor.tracker_controller_draft_2_tracker_0_elevation",
+            "°",
+            None,
+            "measurement",
         ),
     ],
 )
 async def test_sensor_unit(
-    hass: HomeAssistant, sunspec_client_mock, config, entity_id, unit, device_class
+    hass: HomeAssistant,
+    sunspec_client_mock,
+    config,
+    entity_id,
+    unit,
+    device_class,
+    state_class,
 ) -> None:
-    """Verify SunSpec units show as Home Assistant units and device classes."""
+    """Verify SunSpec units show as Home Assistant units, device and state classes."""
 
     await setup_mock_sunspec_config_entry(hass, config)
 
     entity_state = hass.states.get(entity_id)
     assert entity_state.attributes["unit_of_measurement"] == unit
     assert entity_state.attributes.get("device_class") == device_class
+    assert entity_state.attributes["state_class"] == state_class
 
 
 @pytest.mark.parametrize(
