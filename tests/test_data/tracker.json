@@ -1,0 +1,31 @@
+{
+  "name": "tracker",
+  "models": [
+    {
+      "ID": 1,
+      "Mn": "SunSpecTest",
+      "Md": "Test-Tracker",
+      "Opt": "o",
+      "Vr": "1.2.3",
+      "SN": "sn-tracker-1",
+      "DA": 1,
+      "Pad": 0
+    },
+    {
+      "ID": 307,
+      "L": null,
+      "WndDir": 350
+    },
+    {
+      "ID": 601,
+      "L": null,
+      "Dgr_SF": -2,
+      "N": 1,
+      "tracker": [{ "ElPos": -500, "AzPos": 35000 }]
+    },
+    {
+      "ID": 65535,
+      "L": 0
+    }
+  ]
+}
