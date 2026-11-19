@@ -86,3 +86,41 @@ jobs:
             -n auto \
             -p no:sugar \
             tests
+
+  # The oldest Home Assistant that hacs.json lets install the integration.
+  # Its test helpers were published as pytest-homeassistant-custom-component,
+  # under that name, until Home Assistant 2026.11.
+  tests-minimum:
+    runs-on: "ubuntu-latest"
+    name: Run tests on the minimum Home Assistant
+    steps:
+      - name: Check out code from GitHub
+        uses: "actions/checkout@v7"
+        with:
+          persist-credentials: false
+      - name: Setup Python 3.13
+        uses: "actions/setup-python@v7.1.0"
+        with:
+          python-version: "3.13"
+      # aiodns 3.4.0, which Home Assistant 2025.6.0 requires, fails to import
+      # with pycares 5, released half a year later.
+      - name: Install requirements
+        run: |
+          pip install \
+            "homeassistant==$(jq -r .homeassistant hacs.json)" \
+            pytest-homeassistant-custom-component \
+            "$(grep '^pysunspec2==' requirements_dev.txt)" \
+            "pycares<5" \
+            pytest-cov \
+            pytest-mock \
+            pytest-timeout \
+            pytest-xdist
+      - name: Tests suite
+        run: |
+          sed -i 's/\bpytest_homeassistant\b/pytest_homeassistant_custom_component/g' tests/*.py
+          pytest \
+            --timeout=9 \
+            --durations=10 \
+            -n auto \
+            -p no:sugar \
+            tests
