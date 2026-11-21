@@ -428,6 +428,10 @@ async def test_number_fields(hass, sunspec_client_mock, form, fields):
         if field.get("selector", {}).get("number", {}).get("mode") == "box"
     }
     assert boxes == fields
+    if CONF_PORT in fields:
+        port = next(field for field in schema if field["name"] == CONF_PORT)
+        assert port["selector"]["number"]["min"] == 1
+        assert port["selector"]["number"]["max"] == 65535
 
 
 # Our config flow also has an options flow, so we must test it as well.

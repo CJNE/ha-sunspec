@@ -56,6 +56,13 @@ def moved_title(entry, data):
 NUMBER = vol.All(
     NumberSelector(NumberSelectorConfig(mode=NumberSelectorMode.BOX)), vol.Coerce(int)
 )
+# A TCP port.
+PORT = vol.All(
+    NumberSelector(
+        NumberSelectorConfig(mode=NumberSelectorMode.BOX, min=1, max=65535)
+    ),
+    vol.Coerce(int),
+)
 
 
 def serial_schema(data):
@@ -194,7 +201,7 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_HOST, default=defaults[CONF_HOST]): str,
-                    vol.Required(CONF_PORT, default=defaults[CONF_PORT]): NUMBER,
+                    vol.Required(CONF_PORT, default=defaults[CONF_PORT]): PORT,
                     vol.Required(CONF_UNIT_ID, default=defaults[CONF_UNIT_ID]): NUMBER,
                 }
             ),
@@ -301,7 +308,7 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_HOST, default=host): str,
-                    vol.Required(CONF_PORT, default=port): NUMBER,
+                    vol.Required(CONF_PORT, default=port): PORT,
                     vol.Required(CONF_UNIT_ID, default=unit_id): NUMBER,
                 }
             ),
