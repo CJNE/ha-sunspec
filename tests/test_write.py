@@ -24,7 +24,6 @@ from . import TEST_CONFIG_ENTRY_ID
 from . import create_mock_sunspec_config_entry
 from . import setup_mock_sunspec_config_entry
 from .const import MOCK_CONFIG_CONTROLS
-from .const import MOCK_CONFIG_STEP_1
 
 pytestmark = pytest.mark.parametrize("sunspec_fixture", ["controls.json"])
 
@@ -97,9 +96,6 @@ async def test_turning_writing_off_removes_write_entities(hass, sunspec_client_m
     entry = await setup_controls(hass)
 
     result = await hass.config_entries.options.async_init(entry.entry_id)
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"], user_input=MOCK_CONFIG_STEP_1
-    )
     await hass.config_entries.options.async_configure(
         result["flow_id"],
         user_input={

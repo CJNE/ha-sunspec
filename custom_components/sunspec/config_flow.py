@@ -58,6 +58,17 @@ NUMBER = vol.All(
 )
 
 
+def tcp_schema(data):
+    """Return the Modbus TCP connection form, filled in from data."""
+    return vol.Schema(
+        {
+            vol.Required(CONF_HOST, default=data.get(CONF_HOST, "")): str,
+            vol.Required(CONF_PORT, default=data.get(CONF_PORT, 502)): NUMBER,
+            vol.Required(CONF_UNIT_ID, default=data.get(CONF_UNIT_ID, 1)): NUMBER,
+        }
+    )
+
+
 def serial_schema(data):
     """Return the serial connection form, filled in from data."""
     return vol.Schema(
@@ -114,7 +125,7 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         if uid in (None, ""):
             _LOGGER.info(
-                "Device did not provide serial number during setup, using %s as unique ID",
+                "Device did not provide a serial number, using %s as unique ID",
                 fallback_uid,
             )
             return fallback_uid
@@ -181,6 +192,45 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         return await self._show_settings_form(user_input)
 
+    async def async_step_reconfigure(self, user_input=None):
+        """Change the connection of a configured device."""
+        entry = self._get_reconfigure_entry()
+        self._errors = {}
+        if user_input is not None:
+            coordinator = self.hass.data.get(DOMAIN, {}).get(entry.entry_id)
+            client = (
+                coordinator.api if coordinator else api_client(self.hass, entry.data)
+            )
+            current = {key: entry.data.get(key) for key in user_input}
+            try:
+                # A loaded entry's connection serves unchanged settings: a device
+                # with one Modbus TCP slot refuses a second connection while the
+                # entry polls.
+                self._device_info = await client.async_get_device_info(
+                    None if coordinator and user_input == current else user_input
+                )
+            except Exception as err:
+                set_connection_error(self._errors, entry_title(user_input), err)
+            else:
+                # Only a serial number tells devices apart: a device without one
+                # keeps the entry's unique ID, and an entry without a unique ID
+                # has none to compare.
+                if entry.unique_id:
+                    await self.async_set_unique_id(self._get_unique_id(entry.unique_id))
+                    self._abort_if_unique_id_mismatch()
+                return self.async_update_reload_and_abort(
+                    entry, title=moved_title(entry, user_input), data_updates=user_input
+                )
+
+        schema = serial_schema if entry.data.get(CONF_DEVICE) else tcp_schema
+        # An entry not set up since its unit ID was slave_id holds it there.
+        data = {CONF_UNIT_ID: entry.data.get("slave_id", 1), **entry.data}
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=schema(user_input or data),
+            errors=self._errors,
+        )
+
     @staticmethod
     @callback
     def async_get_options_flow(config_entry):
@@ -188,17 +238,8 @@ class SunSpecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def _show_config_form(self, user_input):
         """Show the configuration form to edit connection data."""
-        defaults = user_input or {CONF_HOST: "", CONF_PORT: 502, CONF_UNIT_ID: 1}
         return self.async_show_form(
-            step_id="tcp",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(CONF_HOST, default=defaults[CONF_HOST]): str,
-                    vol.Required(CONF_PORT, default=defaults[CONF_PORT]): NUMBER,
-                    vol.Required(CONF_UNIT_ID, default=defaults[CONF_UNIT_ID]): NUMBER,
-                }
-            ),
-            errors=self._errors,
+            step_id="tcp", data_schema=tcp_schema(user_input or {}), errors=self._errors
         )
 
     async def _show_settings_form(self, user_input):
@@ -260,7 +301,6 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
     def __init__(self):
         """Initialize options flow."""
         self._errors = {}
-        self.settings = {}
         self.options = {}
         self.coordinator = None
 
@@ -269,44 +309,7 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
         self._errors = {}
         self.options = dict(self.config_entry.options)
         self.coordinator = self.hass.data[DOMAIN][self.config_entry.entry_id]
-        return await self.async_step_host_options()
-
-    async def async_step_host_options(self, user_input=None):
-        """Handle a flow initialized by the user."""
-        if user_input is not None:
-            self.settings.update(user_input)
-            _LOGGER.debug("Sunspec host setttins: %s", user_input)
-            return await self.async_step_model_options()
-
-        return await self.show_settings_form()
-
-    async def async_step_serial_options(self, user_input=None):
-        """Handle the serial connection settings."""
-        return await self.async_step_host_options(user_input)
-
-    async def show_settings_form(self, data=None, errors=None):
-        settings = data or self.config_entry.data
-        if settings.get(CONF_DEVICE):
-            return self.async_show_form(
-                step_id="serial_options",
-                data_schema=serial_schema(settings),
-                errors=errors,
-            )
-        host = settings.get(CONF_HOST)
-        port = settings.get(CONF_PORT)
-        unit_id = settings.get(CONF_UNIT_ID, 1)
-
-        return self.async_show_form(
-            step_id="host_options",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(CONF_HOST, default=host): str,
-                    vol.Required(CONF_PORT, default=port): NUMBER,
-                    vol.Required(CONF_UNIT_ID, default=unit_id): NUMBER,
-                }
-            ),
-            errors=errors,
-        )
+        return await self.async_step_model_options()
 
     async def async_step_model_options(self, user_input=None):
         """Handle a flow initialized by the user."""
@@ -325,12 +328,8 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
             ),
         )
         intervals = self.config_entry.options.get(CONF_MODEL_INTERVALS, {})
-        connection = {key: self.config_entry.data.get(key) for key in self.settings}
         try:
-            # The entry's connection serves unchanged settings: a device with one
-            # Modbus TCP slot refuses a second connection while the entry polls.
-            config = None if self.settings == connection else self.settings
-            models = set(await self.coordinator.api.async_get_models(config))
+            models = set(await self.coordinator.api.async_get_models())
             model_filter = sorted(models)
             default_enabled = {model for model in DEFAULT_MODELS if model in models}
             default_models = self.config_entry.options.get(
@@ -382,22 +381,14 @@ class SunSpecOptionsFlowHandler(config_entries.OptionsFlow):
                 ),
             )
         except Exception as e:
-            set_connection_error(self._errors, entry_title(self.settings), e)
-            return await self.show_settings_form(
-                data=self.settings, errors=self._errors
-            )
+            set_connection_error(self._errors, entry_title(self.config_entry.data), e)
+            return self.async_abort(reason=self._errors["base"])
 
     async def _update_options(self):
         """Update config entry options."""
-        title = moved_title(self.config_entry, self.settings)
-        _LOGGER.debug(
-            "Saving config entry with title %s, data: %s options %s",
-            title,
-            self.settings,
-            self.options,
-        )
+        _LOGGER.debug("Saving config entry options %s", self.options)
         if self.hass.config_entries.async_update_entry(
-            self.config_entry, data=self.settings, options=self.options, title=title
+            self.config_entry, options=self.options
         ):
             self.hass.config_entries.async_schedule_reload(self.config_entry.entry_id)
         return self.async_create_entry(title="", data=self.options)

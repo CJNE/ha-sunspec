@@ -78,7 +78,7 @@ custom_components/sunspec/switch.py
 
 ## Configuration is done in the UI
 
-Add the integration under Settings > Devices & services > Add integration > SunSpec. Configure, on its entry, changes the connection, the models read and how often, and Allow writing.
+Add the integration under Settings > Devices & services > Add integration > SunSpec. Configure, on its entry, changes the models read and how often, and Allow writing. Reconfigure, in the entry's menu, changes the connection to the same device.
 
 ## Writing to the device
 
