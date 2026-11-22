@@ -91,9 +91,6 @@ async def test_options_change_reloads_entry(hass, sunspec_client_mock):
     config_entry = await setup_mock_sunspec_config_entry(hass)
 
     result = await hass.config_entries.options.async_init(config_entry.entry_id)
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"], user_input=MOCK_CONFIG_STEP_1
-    )
     await hass.config_entries.options.async_configure(
         result["flow_id"],
         user_input={CONF_ENABLED_MODELS: [103], CONF_SCAN_INTERVAL: 20},
@@ -106,20 +103,29 @@ async def test_options_change_reloads_entry(hass, sunspec_client_mock):
     assert hass.states.get(TEST_INVERTER_SENSOR_POWER_ENTITY_ID).state == "800"
 
 
-async def test_options_flow_uses_entry_connection(hass, sunspec_client_mock, mocker):
-    """Test that the options flow lists the models without a second connection."""
-    config_entry = await setup_mock_sunspec_config_entry(hass)
+@pytest.mark.parametrize("flow", ["options", "reconfigure"])
+async def test_flows_use_entry_connection(hass, sunspec_client_mock, mocker, flow):
+    """Test that Configure, and Reconfigure with the same settings, read the device without a second connection."""
+    config_entry = MockConfigEntry(
+        domain=DOMAIN, data=MOCK_CONFIG, unique_id="sn-123456789"
+    )
+    config_entry.add_to_hass(hass)
+    await setup_mock_sunspec_config_entry(hass, config_entry=config_entry)
     mocker.patch(
         "custom_components.sunspec.SunSpecApiClient.modbus_connect",
         side_effect=ConnectionRefusedError,
     )
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"], user_input=MOCK_CONFIG_STEP_1
-    )
-
-    assert result["step_id"] == "model_options"
+    if flow == "options":
+        result = await hass.config_entries.options.async_init(config_entry.entry_id)
+        assert result["step_id"] == "model_options"
+    else:
+        result = await config_entry.start_reconfigure_flow(hass)
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], user_input=MOCK_CONFIG_STEP_1
+        )
+        assert result["reason"] == "reconfigure_successful"
+    await hass.async_block_till_done(wait_background_tasks=True)
 
 
 async def test_setup_does_not_wait_for_the_device(hass, sunspec_client_mock, mocker):
@@ -127,9 +133,9 @@ async def test_setup_does_not_wait_for_the_device(hass, sunspec_client_mock, moc
     scanned = threading.Event()
     get_models = SunSpecApiClient.get_models
 
-    def slow_get_models(self, config=None):
+    def slow_get_models(self):
         scanned.wait(5)
-        return get_models(self, config)
+        return get_models(self)
 
     mocker.patch.object(SunSpecApiClient, "get_models", slow_get_models)
     config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG, entry_id="test")

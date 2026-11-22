@@ -275,17 +275,22 @@ async def test_failed_config_flow(
     assert result["errors"] == {"base": "device_error"}
 
 
+@pytest.mark.parametrize("step_id", ["tcp", "reconfigure"])
 @pytest.mark.parametrize(
     ("error", "base"),
     [(ConnectionTimeoutError, "timeout"), (NoSunSpecError, "no_sunspec")],
 )
-async def test_config_flow_error(hass, sunspec_client_mock, error, base):
-    """Test that setup names why it cannot read the device."""
-
-    result = await start_flow(hass)
+async def test_config_flow_error(hass, sunspec_client_mock, step_id, error, base):
+    """Test that setup and Reconfigure name why they cannot read the device."""
+    if step_id == "reconfigure":
+        entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG)
+        entry.add_to_hass(hass)
+        result = await entry.start_reconfigure_flow(hass)
+    else:
+        result = await start_flow(hass)
 
     assert result["type"] == FlowResultType.FORM
-    assert result["step_id"] == "tcp"
+    assert result["step_id"] == step_id
 
     with patch(
         "custom_components.sunspec.SunSpecApiClient.async_get_device_info",
@@ -296,6 +301,7 @@ async def test_config_flow_error(hass, sunspec_client_mock, error, base):
         )
 
     assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == step_id
     assert result["errors"] == {"base": base}
 
 
@@ -358,9 +364,6 @@ async def test_scan_interval_at_least_one(hass, sunspec_client_mock, scan_interv
     entry.add_to_hass(hass)
     hass.data[DOMAIN] = {entry.entry_id: MockSunSpecDataUpdateCoordinator(hass, [1])}
     result = await hass.config_entries.options.async_init(entry.entry_id)
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"], user_input=MOCK_CONFIG_STEP_1
-    )
     with pytest.raises(InvalidData):
         await hass.config_entries.options.async_configure(
             result["flow_id"],
@@ -385,9 +388,6 @@ async def test_fields_left_out(hass, bypass_get_data, sunspec_client_mock):
     coordinator = MockSunSpecDataUpdateCoordinator(hass, [1])
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
     result = await hass.config_entries.options.async_init(entry.entry_id)
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"], user_input=MOCK_CONFIG_STEP_1
-    )
     await hass.config_entries.options.async_configure(
         result["flow_id"], user_input={CONF_ENABLED_MODELS: []}
     )
@@ -400,18 +400,15 @@ async def test_fields_left_out(hass, bypass_get_data, sunspec_client_mock):
     [
         ("tcp", {CONF_PORT, CONF_UNIT_ID}),
         ("serial", {CONF_BAUDRATE, CONF_UNIT_ID}),
-        ("host_options", {CONF_PORT, CONF_UNIT_ID}),
+        ("reconfigure", {CONF_PORT, CONF_UNIT_ID}),
     ],
 )
 async def test_number_fields(hass, sunspec_client_mock, form, fields):
     """Test that the number fields are number boxes, which ask for a number."""
-    if form == "host_options":
-        entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG, entry_id="test")
+    if form == "reconfigure":
+        entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG)
         entry.add_to_hass(hass)
-        hass.data[DOMAIN] = {
-            entry.entry_id: MockSunSpecDataUpdateCoordinator(hass, [1])
-        }
-        result = await hass.config_entries.options.async_init(entry.entry_id)
+        result = await entry.start_reconfigure_flow(hass)
     else:
         result = await start_flow(hass, form)
 
@@ -430,70 +427,125 @@ async def test_number_fields(hass, sunspec_client_mock, form, fields):
     assert boxes == fields
 
 
-# Our config flow also has an options flow, so we must test it as well.
 @pytest.mark.parametrize(
-    ("data", "title", "step_id", "user_input", "new_title"),
+    ("data", "title", "user_input", "new_title"),
     [
         # A title that names the connection follows it.
         (
             MOCK_CONFIG,
             "test_host:123:1",
-            "host_options",
             {**MOCK_CONFIG_STEP_1, CONF_PORT: 502},
             "test_host:502:1",
         ),
         (
             {**MOCK_CONFIG, CONF_UNIT_ID: 0},
             "test_host:123:0",
-            "host_options",
             {**MOCK_CONFIG_STEP_1, CONF_UNIT_ID: 0},
             "test_host:123:0",
         ),
         (
             MOCK_SERIAL_CONFIG,
             "/dev/ttyUSB0:1",
-            "serial_options",
-            MOCK_SERIAL_STEP_1,
+            {**MOCK_SERIAL_STEP_1, CONF_BAUDRATE: 19200},
             "/dev/ttyUSB0:1",
         ),
         # A title the user gave stays.
         (
             MOCK_CONFIG,
             "Roof inverter",
-            "host_options",
             {**MOCK_CONFIG_STEP_1, CONF_PORT: 502},
             "Roof inverter",
         ),
+        # An entry not set up since its unit ID was slave_id, such as a
+        # disabled one, shows that unit ID and keeps its title.
+        (
+            {"host": "test_host", "port": 123, "slave_id": 7},
+            "test_host:123:7",
+            {**MOCK_CONFIG_STEP_1, CONF_PORT: 502, CONF_UNIT_ID: 7},
+            "test_host:123:7",
+        ),
     ],
 )
-async def test_options_flow(
-    hass, sunspec_client_mock, data, title, step_id, user_input, new_title
+async def test_reconfigure_flow(
+    hass, sunspec_client_mock, mocker, data, title, user_input, new_title
 ):
-    """Test an options flow."""
-    # Create a new MockConfigEntry and add to HASS (we're bypassing config
-    # flow entirely)
-    entry = MockConfigEntry(domain=DOMAIN, data=data, title=title, entry_id="test")
+    """Test that Reconfigure moves an entry to a new connection to its device."""
+    reload = mocker.patch.object(hass.config_entries, "async_schedule_reload")
+    entry = MockConfigEntry(
+        domain=DOMAIN, data=data, title=title, unique_id="sn-123456789"
+    )
     entry.add_to_hass(hass)
 
-    coordinator = MockSunSpecDataUpdateCoordinator(hass, [1, 2])
-    hass.data[DOMAIN] = {entry.entry_id: coordinator}
+    result = await entry.start_reconfigure_flow(hass)
 
-    # Initialize an options flow
-    result = await hass.config_entries.options.async_init(entry.entry_id)
-
-    # Verify that the first options step is a user form
-    assert result["type"] == FlowResultType.FORM
-    assert result["step_id"] == step_id
-    # It shows the entry's unit ID.
+    assert result["step_id"] == "reconfigure"
+    # It shows the entry's unit ID, which each row keeps.
     unit_id = next(key for key in result["data_schema"].schema if key == CONF_UNIT_ID)
-    assert unit_id.default() == data[CONF_UNIT_ID]
+    assert unit_id.default() == user_input[CONF_UNIT_ID]
 
-    # Enter some fake data into the form
-    result = await hass.config_entries.options.async_configure(
+    result = await hass.config_entries.flow.async_configure(
         result["flow_id"], user_input=user_input
     )
 
-    # Verify that the second options step is a user form
+    assert result["type"] == FlowResultType.ABORT
+    assert result["reason"] == "reconfigure_successful"
+    reload.assert_called_once_with(entry.entry_id)
+    # The entry keeps the settings chosen at setup, and no entry is added.
+    assert entry.data == {**data, **user_input}
+    assert entry.title == new_title
+    assert hass.config_entries.async_entries(DOMAIN) == [entry]
+
+
+@pytest.mark.parametrize(
+    ("unique_id", "serial_number", "reason"),
+    [
+        ("sn-123456789", True, "reconfigure_successful"),
+        ("sn-555", True, "unique_id_mismatch"),
+        # A device without a serial number cannot be told apart, and an entry
+        # without a unique ID has none to compare.
+        ("test_host:123:1", False, "reconfigure_successful"),
+        (None, True, "reconfigure_successful"),
+    ],
+)
+async def test_reconfigure_same_device(
+    hass,
+    sunspec_client_mock,
+    device_info_without_serial,
+    mocker,
+    unique_id,
+    serial_number,
+    reason,
+):
+    """Test that Reconfigure keeps an entry on its own device."""
+    if not serial_number:
+        mocker.patch.object(
+            SunSpecApiClient,
+            "async_get_device_info",
+            return_value=device_info_without_serial,
+        )
+    entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG, unique_id=unique_id)
+    entry.add_to_hass(hass)
+    result = await entry.start_reconfigure_flow(hass)
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input={**MOCK_CONFIG_STEP_1, CONF_PORT: 502}
+    )
+    await hass.async_block_till_done()
+
+    assert result["reason"] == reason
+    assert entry.data[CONF_PORT] == (502 if reason == "reconfigure_successful" else 123)
+    assert entry.unique_id == unique_id
+
+
+# Our config flow also has an options flow, so we must test it as well.
+async def test_options_flow(hass, sunspec_client_mock):
+    """Test that Configure opens on the models, without the connection."""
+    entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG, entry_id="test")
+    entry.add_to_hass(hass)
+    hass.data[DOMAIN] = {entry.entry_id: MockSunSpecDataUpdateCoordinator(hass, [1])}
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "model_options"
     assert list(dict(result["data_schema"].schema)[CONF_ENABLED_MODELS].options) == [
@@ -507,7 +559,7 @@ async def test_options_flow(
     models = next(
         key for key in result["data_schema"].schema if key == CONF_ENABLED_MODELS
     )
-    assert models.default() == set(data[CONF_ENABLED_MODELS])
+    assert models.default() == set(MOCK_CONFIG[CONF_ENABLED_MODELS])
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
@@ -519,10 +571,8 @@ async def test_options_flow(
         },
     )
 
-    # Verify that the flow finishes
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["title"] == ""
-    assert entry.title == new_title
     assert entry.options[CONF_MODEL_INTERVALS] == {"103": 5}
     assert entry.options[CONF_ALLOW_WRITING] is True
 
@@ -538,9 +588,6 @@ async def test_options_flow_clears_prefix(hass, sunspec_client_mock):
     entry.add_to_hass(hass)
     hass.data[DOMAIN] = {entry.entry_id: MockSunSpecDataUpdateCoordinator(hass, [1])}
     result = await hass.config_entries.options.async_init(entry.entry_id)
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"], user_input=MOCK_CONFIG_STEP_1
-    )
     prefix = next(key for key in result["data_schema"].schema if key == CONF_PREFIX)
     assert prefix.description == {"suggested_value": "SE7600"}
 
@@ -552,30 +599,13 @@ async def test_options_flow_clears_prefix(hass, sunspec_client_mock):
     assert entry.options[CONF_PREFIX] == ""
 
 
-# Test faild connection in options flow
 async def test_options_flow_connect_error(hass, sunspec_client_mock_connect_error):
-    """Test an options flow."""
-    # Create a new MockConfigEntry and add to HASS (we're bypassing config
-    # flow entirely)
+    """Test that Configure says why it cannot read the device's models."""
     entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG, entry_id="test")
     entry.add_to_hass(hass)
+    hass.data[DOMAIN] = {entry.entry_id: MockSunSpecDataUpdateCoordinator(hass, [1])}
 
-    coordinator = MockSunSpecDataUpdateCoordinator(hass, [1, 2])
-    hass.data[DOMAIN] = {entry.entry_id: coordinator}
-
-    # Initialize an options flow
     result = await hass.config_entries.options.async_init(entry.entry_id)
 
-    # Verify that the first options step is a user form
-    assert result["type"] == FlowResultType.FORM
-    assert result["step_id"] == "host_options"
-
-    # Enter some fake data into the form
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"], user_input=MOCK_CONFIG_STEP_1
-    )
-
-    # Verify that we return to host settings
-    assert result["type"] == FlowResultType.FORM
-    assert result["step_id"] == "host_options"
-    assert result["errors"] == {"base": "connection"}
+    assert result["type"] == FlowResultType.ABORT
+    assert result["reason"] == "connection"

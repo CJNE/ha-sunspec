@@ -18,6 +18,13 @@
           "prefix": "Predpona snímačov",
           "scan_interval": "Interval skenovania (sekundy)"
         }
+      },
+      "reconfigure": {
+        "data": {
+          "host": "Meno hosťa/IP",
+          "port": "Port",
+          "unit_id": "Unit ID"
+        }
       }
     },
     "error": {
@@ -28,15 +35,6 @@
   },
   "options": {
     "step": {
-      "host_options": {
-        "title": "SunSpec Modbus TCP pripojenie",
-        "description": "Aktualizujte hostiteľa, port a Unit ID pre toto pripojenie SunSpec.",
-        "data": {
-          "host": "Meno hosťa/IP",
-          "port": "Port",
-          "unit_id": "Unit ID"
-        }
-      },
       "model_options": {
         "title": "Možnosti zariadenia",
         "description": "Vyberte modely SunSpec (údajové registre), pre ktoré chcete vytvoriť senzory.",
@@ -46,7 +44,7 @@
         }
       }
     },
-    "error": {
+    "abort": {
       "connection": "Nepodarilo sa pripojiť, skontrolujte názov hostiteľa a port",
       "device_error": "Spojenie dosiahlo zariadenie, ale inicializácia zlyhala. Podrobnosti nájdete v logoch Home Assistant.",
       "timeout": "Časový limit spojenia vypršal. Skontrolujte, či je zariadenie online a odpovedá na nakonfigurovanom hostiteľovi, porte a Unit ID."

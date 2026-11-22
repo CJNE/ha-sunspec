@@ -265,28 +265,39 @@ class SunSpecApiClient:
         except ModbusClientError as err:
             raise ConnectionError(err) from err
 
-    async def async_get_device_info(self) -> SunSpecModelWrapper:
-        return await self.async_get_data(1)
+    async def async_get_device_info(self, config=None) -> SunSpecModelWrapper:
+        """Read model 1, or with other connection settings over their own connection."""
+        if config is None:
+            return await self.async_get_data(1)
+        return await self.run(self.read_device_info, config)
 
-    def get_models(self, config=None) -> list:
+    def read_device_info(self, config) -> SunSpecModelWrapper:
         with self._lock:
-            if config is None:
-                client = self.get_client()
-            else:
-                if self._device and config.get("device") == self._device:
-                    # pysunspec2 opens a port with one baud rate and parity at a
-                    # time, so the entry lets go of it until its next poll.
-                    self._release()
-                # The entry reloads with changed settings and connects anew, so
-                # their scan neither stays open nor takes the entry's place.
-                client = self.modbus_connect(config)
+            if self._device and config.get("device") == self._device:
+                # pysunspec2 opens a port with one baud rate and parity at a
+                # time, so the entry lets go of it until its next poll.
+                self._release()
+            # The entry reloads with changed settings and connects anew, so
+            # their scan neither stays open nor takes the entry's place.
+            client = self.modbus_connect(config)
+            try:
+                models = client.models[1]
+                for model in models:
+                    time.sleep(read_delay(client))
+                    model.read()
+            finally:
                 client.disconnect()
                 client.close()
+        return SunSpecModelWrapper(models)
+
+    def get_models(self) -> list:
+        with self._lock:
+            client = self.get_client()
         return sorted(list(filter(lambda m: type(m) is int, client.models.keys())))
 
-    async def async_get_models(self, config=None) -> list:
+    async def async_get_models(self) -> list:
         _LOGGER.debug("Fetching models")
-        return await self._hass.async_add_executor_job(self.get_models, config)
+        return await self._hass.async_add_executor_job(self.get_models)
 
     def reconnect_next(self):
         self._reconnect = True

@@ -195,10 +195,18 @@ async def test_entries_share_connection(hass, mocker):
     device_end.close()
 
 
+def common_model(mocker, serial_number):
+    """Return a model 1 as a scan finds it, with the device's serial number."""
+    return mocker.Mock(
+        points={"Mn": mocker.Mock(value=None), "SN": mocker.Mock(cvalue=serial_number)}
+    )
+
+
 async def test_changed_settings_leave_entry_device(hass, mocker):
-    """Test that models read with changed settings leave the entry on its device."""
+    """Test that a device read with changed settings leaves the entry on its device."""
 
     def scan(self, **kwargs):
+        self.models[1] = [common_model(mocker, f"sn-{self.slave_id}")]
         self.models[self.slave_id * 100 + 3] = [mocker.Mock()]
 
     mocker.patch("sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.connect")
@@ -215,10 +223,11 @@ async def test_changed_settings_leave_entry_device(hass, mocker):
     )
     api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
 
-    assert await api.async_get_models() == [103]
+    assert await api.async_get_models() == [1, 103]
     changed = {"host": "test", "port": 123, "unit_id": 2}
-    assert await api.async_get_models(changed) == [203]
-    assert await api.async_get_models() == [103]
+    device_info = await api.async_get_device_info(changed)
+    assert device_info.getValue("SN") == "sn-2"
+    assert await api.async_get_models() == [1, 103]
     disconnect.assert_called_once()
 
 
@@ -233,14 +242,16 @@ async def test_changed_settings_reach_moved_device(hass, mocker):
         "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.is_connected",
         return_value=True,
     )
+    common = common_model(mocker, "sn-1")
     mocker.patch(
         "sunspec2.modbus.client.SunSpecModbusClientDeviceTCP.scan",
-        lambda self, **kwargs: self.models.update({103: []}),
+        lambda self, **kwargs: self.models.update({1: [common]}),
     )
     api = SunSpecApiClient(host="test", port=123, unit_id=1, hass=hass)
 
     moved = {"host": "new", "port": 124, "unit_id": 1}
-    assert await api.async_get_models(moved) == [103]
+    device_info = await api.async_get_device_info(moved)
+    assert device_info.getValue("SN") == "sn-1"
 
 
 @pytest.mark.parametrize("scan_error", [None, ModbusClientTimeout("Response timeout")])
@@ -269,15 +280,17 @@ async def test_serial_connection(hass, mocker, scan_error):
 async def test_serial_settings_changed(hass, mocker, changed):
     """Test that a loaded serial entry's port is read with other settings, then its own."""
     mocker.patch("sunspec2.modbus.modbus.serial.Serial")
+    common = common_model(mocker, "sn-1")
     mocker.patch(
         "sunspec2.modbus.client.SunSpecModbusClientDeviceRTU.scan",
-        lambda self, **kwargs: self.models.update({103: []}),
+        lambda self, **kwargs: self.models.update({1: [common]}),
     )
     api = SunSpecApiClient(None, None, 1, hass, "/dev/ttyUSB0", 9600, "N")
     api.get_client()
     config = {"device": "/dev/ttyUSB0", "baudrate": 9600, "parity": "N", "unit_id": 1}
 
-    assert await api.async_get_models({**config, **changed}) == [103]
+    device_info = await api.async_get_device_info({**config, **changed})
+    assert device_info.getValue("SN") == "sn-1"
     port = api.get_client().client
     assert (port.baudrate, port.parity) == (9600, "N")
     api.disconnect()
