@@ -49,7 +49,6 @@
       "Hz": 50,
       "VA": 800,
       "VAr": 800,
-      "VAr": 800,
       "PF": 100,
       "WH": 100000,
       "DCA": 22,
@@ -112,7 +111,6 @@
       "PFL3": 987,
       "AL3": 138,
       "VL3L1": 120,
-      "VL3N": 120,
       "TotWhInjL3": 51,
       "TotWhAbsL3": 0,
       "TotVarhInjL3": 4,
@@ -180,7 +178,6 @@
       "PFL3": 987,
       "AL3": 138,
       "VL3L1": 120,
-      "VL3N": 120,
       "TotWhInjL3": 51,
       "TotWhAbsL3": 0,
       "TotVarhInjL3": 4,
@@ -229,8 +226,6 @@
       "WUndExtPF": null,
       "VAMax": 10000,
       "AMax": null,
-      "Vnom": null,
-      "VRefOfs": null,
       "VMax": null,
       "VMin": null,
       "VarMaxInj": null,
@@ -272,12 +267,6 @@
       "PFWAbsEnaRvrt": null,
       "PFWAbsRvrtTms": null,
       "PFWAbsRvrtRem": null,
-      "WMaxLimEna": 0,
-      "WMaxLim": 1000,
-      "WMaxLimRvrt": null,
-      "WMaxLimEnaRvrt": null,
-      "WMaxLimRvrtTms": null,
-      "WMaxLimRvrtRem": null,
       "WSetEna": null,
       "WSetMod": null,
       "WSet": null,
@@ -296,9 +285,7 @@
       "VarSetPctRvrt": null,
       "VarSetRvrtTms": null,
       "VarSetRvrtRem": null,
-      "RGra": null,
       "PF_SF": -3,
-      "WMaxLim_SF": -1,
       "WSet_SF": null,
       "WSetPct_SF": null,
       "VarSet_SF": null,
@@ -323,7 +310,6 @@
     {
       "ID": 705,
       "Ena": 1,
-      "CrvSt": 1,
       "AdptCrvReq": 0,
       "AdptCrvRslt": 0,
       "NPt": 4,
@@ -340,7 +326,6 @@
           "Pri": 1,
           "VRef": 1,
           "VRefAuto": 0,
-          "VRefTms": 5,
           "RspTms": 6,
           "ReadOnly": 1,
           "Pt": [
@@ -368,7 +353,6 @@
           "Pri": 1,
           "VRef": 1,
           "VRefAuto": 0,
-          "VRefTms": 5,
           "RspTms": 6,
           "ReadOnly": 0,
           "Pt": [
@@ -396,7 +380,6 @@
           "Pri": 1,
           "VRef": 1,
           "VRefAuto": 0,
-          "VRefTms": 5,
           "RspTms": 6,
           "ReadOnly": 0,
           "Pt": [
@@ -423,7 +406,6 @@
     {
       "ID": 706,
       "Ena": 0,
-      "CrvSt": 1,
       "AdptCrvReq": 0,
       "AdptCrvRslt": 0,
       "NPt": 2,
@@ -472,7 +454,6 @@
       "ID": 707,
       "L": null,
       "Ena": 1,
-      "CrvSt": null,
       "AdptCrvReq": null,
       "AdptCrvRslt": null,
       "NPt": 1,
@@ -515,7 +496,6 @@
       "ID": 708,
       "L": null,
       "Ena": 1,
-      "CrvSt": null,
       "AdptCrvReq": null,
       "AdptCrvRslt": null,
       "NPt": 1,
@@ -558,12 +538,10 @@
       "ID": 709,
       "L": null,
       "Ena": 1,
-      "CrvSt": null,
       "AdptCrvReq": null,
       "AdptCrvRslt": null,
       "NPt": 1,
       "NCrvSet": 1,
-      "Freq_SF": null,
       "Tms_SF": -2,
       "Crv": [
         {
@@ -571,7 +549,6 @@
             "ActPt": 1,
             "Pt": [
               {
-                "Freq": 5300,
                 "Tms": 5
               }
             ]
@@ -580,7 +557,6 @@
             "ActPt": 1,
             "Pt": [
               {
-                "Freq": 5850,
                 "Tms": 5
               }
             ]
@@ -589,7 +565,6 @@
             "ActPt": 1,
             "Pt": [
               {
-                "Freq": 5850,
                 "Tms": 5
               }
             ]
@@ -601,12 +576,10 @@
       "ID": 710,
       "L": null,
       "Ena": null,
-      "CrvSt": null,
       "AdptCrvReq": null,
       "AdptCrvRslt": null,
       "NPt": 1,
       "NCrvSet": 1,
-      "Freq_SF": null,
       "Tms_SF": -2,
       "Crv": [
         {
@@ -614,7 +587,6 @@
             "ActPt": 1,
             "Pt": [
               {
-                "Freq": 6500,
                 "Tms": 5
               }
             ]
@@ -623,7 +595,6 @@
             "ActPt": 1,
             "Pt": [
               {
-                "Freq": 6050,
                 "Tms": 5
               }
             ]
@@ -632,7 +603,6 @@
             "ActPt": 1,
             "Pt": [
               {
-                "Freq": 6050,
                 "Tms": 5
               }
             ]
@@ -644,13 +614,9 @@
       "ID": 711,
       "L": null,
       "Ena": null,
-      "CrvSt": null,
-      "AdptCrvReq": null,
-      "AdptCrvRslt": null,
       "NCtl": 1,
       "RvrtTms": 0,
       "RvrtRem": 0,
-      "RvrtCrv": 0,
       "Db_SF": -2,
       "K_SF": -2,
       "RspTms_SF": 0,
@@ -668,7 +634,6 @@
       "ID": 712,
       "L": null,
       "Ena": null,
-      "CrvSt": null,
       "AdptCrvReq": null,
       "AdptCrvRslt": null,
       "NPt": 1,
