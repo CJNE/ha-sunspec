@@ -32,11 +32,14 @@ from . import TEST_INVERTER_SENSOR_VAR_ID
 from . import TEST_METER_FLOAT_ENERGY_ENTITY_ID
 from . import TEST_METER_FLOAT_HZ_ENTITY_ID
 from . import TEST_METER_FLOAT_VOLTAGE_ENTITY_ID
+from . import TEST_STATUS_VAH_ENTITY_ID
+from . import TEST_STATUS_VARH_ENTITY_ID
 from . import setup_mock_sunspec_config_entry
 from .const import MOCK_CONFIG
 from .const import MOCK_CONFIG_METER_FLOAT
 from .const import MOCK_CONFIG_MM
 from .const import MOCK_CONFIG_PREFIX
+from .const import MOCK_CONFIG_STATUS
 
 
 async def test_sensor_overflow_error(
@@ -61,14 +64,36 @@ async def test_sensor_dc(hass: HomeAssistant, sunspec_client_mock) -> None:
 
 
 @pytest.mark.parametrize(
-    ("config", "entity_id", "unit", "device_class"),
+    ("sunspec_fixture", "config", "entity_id", "unit", "device_class"),
     [
-        (None, TEST_INVERTER_SENSOR_VAR_ID, "var", "reactive_power"),
-        (None, TEST_INVERTER_SENSOR_PF_ID, "%", None),
-        (MOCK_CONFIG_MM, TEST_INVERTER_MM_SENSOR_VAR_ID, "var", "reactive_power"),
-        (MOCK_CONFIG_MM, TEST_INVERTER_MM_SENSOR_VARH_ID, "varh", None),
+        ("inverter.json", None, TEST_INVERTER_SENSOR_VAR_ID, "var", "reactive_power"),
+        ("inverter.json", None, TEST_INVERTER_SENSOR_PF_ID, "%", None),
+        (
+            "inverter.json",
+            MOCK_CONFIG_MM,
+            TEST_INVERTER_MM_SENSOR_VAR_ID,
+            "var",
+            "reactive_power",
+        ),
+        (
+            "inverter.json",
+            MOCK_CONFIG_MM,
+            TEST_INVERTER_MM_SENSOR_VARH_ID,
+            "varh",
+            "reactive_energy",
+        ),
+        (
+            "status.json",
+            MOCK_CONFIG_STATUS,
+            TEST_STATUS_VARH_ENTITY_ID,
+            "varh",
+            "reactive_energy",
+        ),
+        # Home Assistant has no device class for apparent energy.
+        ("status.json", MOCK_CONFIG_STATUS, TEST_STATUS_VAH_ENTITY_ID, "VAh", None),
         # An angle, not a temperature.
         (
+            "inverter.json",
             {**MOCK_CONFIG_MM, "models_enabled": [304]},
             "sensor.inclinometer_model_incl_0_x",
             "°",
@@ -170,22 +195,44 @@ async def test_sensor_energy(hass: HomeAssistant, sunspec_client_mock) -> None:
     assert entity_state.state == "100000"
 
 
-async def test_sensor_energy_restored(hass: HomeAssistant, sunspec_client_mock) -> None:
-    """Verify an energy sensor reading 0 keeps its value from before a restart."""
+@pytest.mark.parametrize(
+    ("sunspec_fixture", "config", "entity_id", "unit"),
+    [
+        (
+            "inverter.json",
+            MOCK_CONFIG_MM,
+            TEST_INVERTER_MM_SENSOR_ENERGY_ENTITY_ID,
+            "Wh",
+        ),
+        (
+            "inverter.json",
+            MOCK_CONFIG_MM,
+            "sensor.der_ac_measurement_total_reactive_energy_abs",
+            "varh",
+        ),
+        ("status.json", MOCK_CONFIG_STATUS, TEST_STATUS_VARH_ENTITY_ID, "varh"),
+        ("status.json", MOCK_CONFIG_STATUS, TEST_STATUS_VAH_ENTITY_ID, "VAh"),
+    ],
+)
+async def test_sensor_energy_restored(
+    hass: HomeAssistant, sunspec_client_mock, config, entity_id, unit
+) -> None:
+    """Verify an energy counter reading 0 keeps its value from before a restart, as a running total."""
     mock_restore_cache_with_extra_data(
         hass,
         [
             (
-                State(TEST_INVERTER_MM_SENSOR_ENERGY_ENTITY_ID, "1234"),
-                {"native_value": 1234, "native_unit_of_measurement": "Wh"},
+                State(entity_id, "1234"),
+                {"native_value": 1234, "native_unit_of_measurement": unit},
             )
         ],
     )
 
-    await setup_mock_sunspec_config_entry(hass, MOCK_CONFIG_MM)
+    await setup_mock_sunspec_config_entry(hass, config)
 
-    entity_state = hass.states.get(TEST_INVERTER_MM_SENSOR_ENERGY_ENTITY_ID)
+    entity_state = hass.states.get(entity_id)
     assert entity_state.state == "1234"
+    assert entity_state.attributes["state_class"] == "total_increasing"
 
 
 async def test_sensor_added_with_first_value(

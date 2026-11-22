@@ -40,6 +40,8 @@ TEST_METER_FLOAT_VOLTAGE_ENTITY_ID = (
 TEST_METER_FLOAT_ENERGY_ENTITY_ID = (
     "sensor.wye_connect_three_phase_abcn_meter_total_watt_hours_imported"
 )
+TEST_STATUS_VARH_ENTITY_ID = "sensor.measurements_status_actvarhq1"
+TEST_STATUS_VAH_ENTITY_ID = "sensor.measurements_status_actvah"
 TEST_INVERTER_SENSOR_DC_ENTITY_ID = (
     "sensor.multiple_mppt_inverter_extension_model_module_0_dc_current"
 )
