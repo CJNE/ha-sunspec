@@ -158,6 +158,11 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
         desc = self._meta.get("label", self.key)
         if self.unit == UnitOfElectricCurrent.AMPERE and "DC" in desc:
             self.use_icon = ICON_DC_AMPS
+        if (self.model_id, self._meta["name"]) == (307, "WndDir"):
+            # Home Assistant's icon for the device class: from 2025.7 an arrow
+            # that points with the wind, before that a compass.
+            self.use_device_class = SensorDeviceClass.WIND_DIRECTION
+            self.use_icon = None
 
         _LOGGER.debug(
             "Created sensor for %s in model %s using prefix %s: %s uid %s, device class %s unit %s",

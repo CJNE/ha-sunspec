@@ -53,14 +53,29 @@ async def test_sensor_overflow_error(
     assert entity_state
 
 
-async def test_sensor_dc(hass: HomeAssistant, sunspec_client_mock) -> None:
-    """Verify a DC current sensor gets the DC icon."""
+@pytest.mark.parametrize(
+    ("sunspec_fixture", "config", "entity_id", "icon"),
+    [
+        ("inverter.json", None, TEST_INVERTER_SENSOR_DC_ENTITY_ID, ICON_DC_AMPS),
+        # Home Assistant's icon for the wind direction device class.
+        (
+            "tracker.json",
+            {**MOCK_CONFIG, "models_enabled": [307]},
+            "sensor.base_met_wind_direction",
+            None,
+        ),
+    ],
+)
+async def test_sensor_icon(
+    hass: HomeAssistant, sunspec_client_mock, config, entity_id, icon
+) -> None:
+    """Verify a DC current sensor gets the DC icon, a wind direction none of its own."""
 
-    await setup_mock_sunspec_config_entry(hass)
+    await setup_mock_sunspec_config_entry(hass, config)
 
-    entity_state = hass.states.get(TEST_INVERTER_SENSOR_DC_ENTITY_ID)
+    entity_state = hass.states.get(entity_id)
     assert entity_state
-    assert entity_state.attributes["icon"] == ICON_DC_AMPS
+    assert entity_state.attributes.get("icon") == icon
 
 
 @pytest.mark.parametrize(
@@ -123,7 +138,7 @@ async def test_sensor_dc(hass: HomeAssistant, sunspec_client_mock) -> None:
             {**MOCK_CONFIG, "models_enabled": [307, 601]},
             "sensor.base_met_wind_direction",
             "°",
-            None,
+            "wind_direction",
             "measurement_angle",
         ),
         (
