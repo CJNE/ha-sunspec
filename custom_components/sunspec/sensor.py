@@ -56,7 +56,16 @@ HA_META = {
         ICON_POWER,
         SensorDeviceClass.REACTIVE_POWER,
     ],
-    "Varh": [UnitOfReactiveEnergy.VOLT_AMPERE_REACTIVE_HOUR, ICON_DEFAULT, None],
+    "varh": [
+        UnitOfReactiveEnergy.VOLT_AMPERE_REACTIVE_HOUR,
+        ICON_DEFAULT,
+        SensorDeviceClass.REACTIVE_ENERGY,
+    ],
+    "Varh": [
+        UnitOfReactiveEnergy.VOLT_AMPERE_REACTIVE_HOUR,
+        ICON_DEFAULT,
+        SensorDeviceClass.REACTIVE_ENERGY,
+    ],
     "W": [UnitOfPower.WATT, ICON_POWER, SensorDeviceClass.POWER],
     "W/m2": [UnitOfIrradiance.WATTS_PER_SQUARE_METER, ICON_DEFAULT, None],
     "Wh": [UnitOfEnergy.WATT_HOUR, ICON_ENERGY, SensorDeviceClass.ENERGY],
@@ -79,6 +88,9 @@ HA_META = {
     "bitfield16": [None, ICON_DEFAULT, None],
     "bitfield32": [None, ICON_DEFAULT, None],
 }
+
+# The units of lifetime counters: of active, reactive and apparent energy.
+COUNTERS = {"Wh", "WH", "kWh", "varh", "Varh", "VAh"}
 
 
 def float32_decimal(value):
@@ -106,10 +118,7 @@ async def async_setup_entry(hass, entry, async_add_devices):
 def sensors(coordinator, entry, data):
     """Return the sensor of a point."""
     meta = data["model"].getMeta(data["key"], data["model_index"])
-    sunspec_unit = meta.get("units", "")
-    ha_meta = HA_META.get(sunspec_unit, [sunspec_unit, None, None])
-    device_class = ha_meta[2]
-    if device_class == SensorDeviceClass.ENERGY:
+    if meta.get("units") in COUNTERS:
         _LOGGER.debug("Adding energy sensor")
         return [SunSpecEnergySensor(coordinator, entry, data)]
     return [SunSpecSensor(coordinator, entry, data)]
@@ -227,7 +236,7 @@ class SunSpecSensor(SunSpecEntity, SensorEntity):
         """Return de device class of the sensor."""
         if self.unit == "" or self.unit is None:
             return None
-        if self.device_class == SensorDeviceClass.ENERGY:
+        if self._meta.get("units") in COUNTERS:
             return SensorStateClass.TOTAL_INCREASING
         return SensorStateClass.MEASUREMENT
 
