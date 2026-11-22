@@ -371,6 +371,23 @@ async def test_scan_interval_at_least_one(hass, sunspec_client_mock, scan_interv
         )
 
 
+@pytest.mark.parametrize("step_id", ["tcp", "reconfigure"])
+@pytest.mark.parametrize("port", [0, 65536])
+async def test_port_in_range(hass, sunspec_client_mock, step_id, port):
+    """Test that setup and Reconfigure refuse a port outside 1 to 65535."""
+    if step_id == "reconfigure":
+        entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG)
+        entry.add_to_hass(hass)
+        result = await entry.start_reconfigure_flow(hass)
+    else:
+        result = await start_flow(hass)
+
+    with pytest.raises(InvalidData):
+        await hass.config_entries.flow.async_configure(
+            result["flow_id"], user_input={**MOCK_CONFIG_STEP_1, CONF_PORT: port}
+        )
+
+
 async def test_fields_left_out(hass, bypass_get_data, sunspec_client_mock):
     """Test that setup and Configure take the values an entry runs with for fields left out."""
     result = await start_flow(hass)

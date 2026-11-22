@@ -56,6 +56,10 @@ def moved_title(entry, data):
 NUMBER = vol.All(
     NumberSelector(NumberSelectorConfig(mode=NumberSelectorMode.BOX)), vol.Coerce(int)
 )
+PORT = vol.All(
+    NumberSelector(NumberSelectorConfig(min=1, max=65535, mode=NumberSelectorMode.BOX)),
+    vol.Coerce(int),
+)
 
 
 def tcp_schema(data):
@@ -63,7 +67,7 @@ def tcp_schema(data):
     return vol.Schema(
         {
             vol.Required(CONF_HOST, default=data.get(CONF_HOST, "")): str,
-            vol.Required(CONF_PORT, default=data.get(CONF_PORT, 502)): NUMBER,
+            vol.Required(CONF_PORT, default=data.get(CONF_PORT, 502)): PORT,
             vol.Required(CONF_UNIT_ID, default=data.get(CONF_UNIT_ID, 1)): NUMBER,
         }
     )
